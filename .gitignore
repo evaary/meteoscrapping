@@ -1,0 +1,15 @@
+.vscode
+
+__pycache__/
+app/__pycache__
+
+results/
+config/
+exemples/ogimet
+exemples/wunderground
+
+config_ogimet.json
+config_wunderground.json
+
+app/tests.py
+meteoscrapping.exe

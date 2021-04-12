@@ -1,4 +1,5 @@
-Un programme de webscrapping pour récupérer des données météorologiques depuis 2 sites : ogimet et wunderground
+Un programme de webscrapping pour récupérer des données météorologiques depuis 2 sites : ogimet et wunderground. Téléchargez l'éxecutable depuis google drive :
+https://drive.google.com/file/d/1MSPUNDm41Wm-4-wgdgY0detc7vnisJJ_/view?usp=sharing
 
 exemples de tableaux récupérés:
     1 - http://www.ogimet.com/cgi-bin/gsynres?lang=en&ind=08180&ano=2017&mes=8&day=0&hora=0&min=0&ndays=31
@@ -15,7 +16,7 @@ pour lancer le programme:
     créer des fichiers json dans le répertoire config, autant que voulu
         - le nom de chaque fichier doit commencer par config et finir par .json
         - les fichiers dont le nom ne respecte pas cette règle seront ignorés
-        - 1 fichier par période continue (les mois 1 à 12 de 2015 à 2020 : 1 fichier / mois 3 pour 2020 et mois 7 pour 2020 : 2 fichiers)
+        - 1 fichier par période continue (les mois 1 A 12 de 2015 à 2020 : 1 fichier. Les mois 3 ET 7 pour 2020 : 2 fichiers)
         - des exemples de fichiers config sont donnés ci-après ou dans le répertoire exemples
 
     lancer l'éxecutable

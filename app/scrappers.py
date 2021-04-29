@@ -237,13 +237,13 @@ class OgimetScrapper(BaseScrapper):
 
         try:
             T_index = main_names.index([x for x in main_names if "Temperature" in x][0])
-            sub_names[T_index] = [x for x in sub_values if x in ["Max", "Min", "Avg"]]
+            sub_names[T_index] = [x for x in sub_values if x in ["Max", "Min", "Avg", "Max.", "Min.", "Avg."]]
         except:
             pass
 
         try:
             W_index = main_names.index([x for x in main_names if "Wind" in x][0])
-            sub_names[W_index] = [x for x in sub_values if x in ["Dir.", "Int.", "Gust."]]
+            sub_names[W_index] = [x for x in sub_values if x in ["Dir.", "Int.", "Gust.", "Dir", "Int", "Gust"]]
         except:
             pass
         # (3)
@@ -298,7 +298,7 @@ class OgimetScrapper(BaseScrapper):
         # (1)
         done = []
         todo = values.copy()
-
+        
         while len(done) != n_filled :            
             # (2)
             try:

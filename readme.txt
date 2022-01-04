@@ -37,7 +37,7 @@ Les données ogimet sont déjà dans de bonnes unités.
 
 
 structure du fichier config wounderground
-les infos country_code, city, et region sont à récupérer directement dans l'url du site pour la station voulue (voir exemple 2)
+les infos country_code, city, et region sont à récupérer directement dans l'url du site pour la station voulue (voir ligne 6)
 le champ waiting sert à patienter suffisamment longtemps pour que le javascript des pages s'éxecute. Si un problème de chargement
 de la page html survient, essayez d'augmenter le waiting.
 {
@@ -47,19 +47,19 @@ de la page html survient, essayez d'augmenter le waiting.
     "region": "LEBL",
     "waiting": 5,
     "year": {
-        "from_": 2020,
-        "to_": 2020
+        "from": 2020,
+        "to": 2020
     },
     "month": {
-        "from_": 2,
-        "to_": 12
+        "from": 2,
+        "to": 12
     }
 }
 
 
 
 structure du fichier config ogimet
-l'ind est à récupérer directement dans l'url du site pour la station voule (voir exemple 1)
+l'ind est à récupérer directement dans l'url du site pour la station voule (voir ligne 5)
 Le champ city sert juste à nommer le fichier csv
 {
     "scrapper": "ogimet",
@@ -67,11 +67,11 @@ Le champ city sert juste à nommer le fichier csv
     "city": "barcelone",
     "waiting": 5,
     "year": {
-        "from_": 2017,
-        "to_": 2017
+        "from": 2017,
+        "to": 2017
     },
     "month": {
-        "from_": 1,
-        "to_": 12
+        "from": 1,
+        "to": 12
     }
 }

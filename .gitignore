@@ -5,11 +5,12 @@ app/__pycache__
 
 results/
 config/
+errors/
+
 exemples/ogimet
 exemples/wunderground
 
 config_ogimet.json
 config_wunderground.json
 
-app/tests.py
 meteoscrapping.exe

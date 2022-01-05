@@ -19,7 +19,7 @@ pour lancer le programme:
         - 1 fichier par période continue (les mois 1 A 12 de 2015 à 2020 : 1 fichier. Les mois 3 ET 7 pour 2020 : 2 fichiers)
         - des exemples de fichiers config sont donnés ci-après ou dans le répertoire exemples
 
-    lancer l'éxecutable
+    double cliquer sur l'éxecutable ou ouvrir une fenêtre powershell (alt + f dans le répertoire ou se trouve l'exécutable puis taper .\meteoscrapping.exe) pour plus de détails en cas d'erreurs
         - des tableaux incomplets, auxquels il manque des données voir des colonnes, ne posent pas de problèmes
         - les colonnes daily weather summary sur ogimet sont ignorées
 
@@ -75,3 +75,5 @@ Le champ city sert juste à nommer le fichier csv
         "to": 12
     }
 }
+
+/!\ Dans l'ancienne version (celle qui est téléchargeable), des _ sont à rajouter après les champs from et to (from_ et to_)

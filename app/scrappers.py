@@ -39,29 +39,9 @@ class BaseScrapper(ABC):
         # (5)
         self.errors = {}
 
+    @abstractmethod
     def _set_url(self, year, month):
-
-        '''créer l'adresse url où se trouvent les données à récupérer.
-            args: year (int), month (int)
-            return: url (string)
-
-        On complète l'url selon le scrapper demandé avec les infos du fichier config.
-        '''
-
-        y = str(year)
-        m = str(month)
-
-        if self._scrapper == "ogimet" and month < 10 :
-            m = "0" + m
-
-        try:
-            # cas ogimet
-            url = self._base_url + f"&ano={y}&mes={self.ASSOCIATIONS[m]['num']}&day=0&hora=0&min=0&ndays={self.ASSOCIATIONS[m]['days']}"
-        except AttributeError:
-            # cas wunderground
-            url = self._base_url + f"/{y}-{m}"
-
-        return url
+        '''crétion de l'url'''
 
     def _get_html_page(self, url):
         
@@ -238,6 +218,18 @@ class OgimetScrapper(BaseScrapper):
     def __init__(self, config):
         super().__init__(config)
         self._base_url = f"http://www.ogimet.com/cgi-bin/gsynres?lang=en&ind={config['ind']}"
+
+    def _set_url(self, year, month):
+        
+        y = str(year)
+        m = str(month)
+
+        if month < 10 :
+            m = "0" + m
+        
+        url = self._base_url + f"&ano={y}&mes={self.ASSOCIATIONS[m]['num']}&day=0&hora=0&min=0&ndays={self.ASSOCIATIONS[m]['days']}"
+
+        return url
 
     @staticmethod
     def _scrap_columns_names(table):
@@ -434,6 +426,15 @@ class WundergroundScrapper(BaseScrapper):
     def __init__(self, config):
         super().__init__(config)
         self._base_url = f"https://www.wunderground.com/history/monthly/{config['country_code']}/{config['city']}/{config['region']}/date"
+
+    def _set_url(self, year, month):
+
+        y = str(year)
+        m = str(month)
+        
+        url = self._base_url + f"/{y}-{m}"
+
+        return url
 
     @staticmethod
     def _scrap_columns_names(table):

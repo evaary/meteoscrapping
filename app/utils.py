@@ -4,9 +4,7 @@ import os
 
 class ConfigFilesChecker:
 
-    '''
-        Singleton contrôlant la validité d'un fichier de config.
-    '''
+    '''Singleton contrôlant la validité d'un fichier de config.'''
 
     _instance = None
     

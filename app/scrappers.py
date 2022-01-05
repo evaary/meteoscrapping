@@ -6,10 +6,7 @@ from requests.exceptions import ConnectionError
 
 class BaseScrapper(ABC):
 
-    '''
-    Scrapper de base qui récupère les données brutes d'une table html.
-    Donné en héritage à WundergroundScrapper et OgimetScrapper.
-    '''
+    '''Scrapper de base qui récupère les données brutes d'une table html.'''
     
     def __init__(self, config):
 
@@ -64,7 +61,10 @@ class BaseScrapper(ABC):
                 html_page = session.get(url) # long
             except ConnectionError:
                 i += 1
-                continue       
+                continue
+            except Exception:
+                html_page = None
+                break  
         # (3)
         try:
             html_page.html.render(sleep=self._waiting, keep_page=True, scrolldown=1)

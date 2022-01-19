@@ -1,14 +1,12 @@
 {
-    "waiting": 1,
+    "waiting": 10,
 
     "ogimet":[
-        {
-            "ind": "16138",
-            "city": "Ferrara",
-            "year": [2021, 2021],
-            "month": [2,12]
-        }
+        { "ind":"16138", "city":"Ferrara", "year":[2021], "month":[2] },
+        { "ind":"16288", "city":"Caserta", "year":[2020, 2021], "month":[1,2] }
     ],
 
-    "wunderground":[]
+    "wunderground":[
+        { "country_code":"it", "region": "LIBD", "city":"matera", "year":[2021], "month":[1,6] }
+    ]
 }

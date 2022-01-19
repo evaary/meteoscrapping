@@ -12,33 +12,12 @@ class ConfigCheckerTester(unittest.TestCase):
         "waiting": 1,
 
         "ogimet":[
-
-            {
-                "ind": "16138",
-                "city": "Ferrara",
-                "year": [2014, 2021],
-                "month": [1,12]
-            },
-
-            {
-                "ind": "16288",
-                "city": "Caserta",
-                "year": [2020, 2020],
-                "month": [1,1]
-            }
-
+            { "ind": "16138", "city": "Ferrara", "year": [2014, 2021], "month": [1,12] },
+            { "ind": "16288", "city": "Caserta", "year": [2020, 2020], "month": [1,1] },
         ],
 
         "wunderground":[
-
-            {
-                "country_code": "it",
-                "city": "matera",
-                "region": "LIBD",
-                "year": [2020, 2020],
-                "month": [1,1]
-            }
-            
+            {  "country_code": "it", "city": "matera", "region": "LIBD", "year": [2020, 2020], "month": [1,1] }
         ]
     }
 

@@ -30,7 +30,7 @@ class ConfigFilesChecker:
 
         reference = cls.ALLOWED_SCRAPPERS.union({"waiting"})
         # On vérifie que les clés du dict sont correctes.
-        if reference != set(config.keys()):
+        if not set(config.keys()).issubset(reference):
             return False, f"les champ principaux doivent être {reference}"        
 
         return True, ""
@@ -57,25 +57,25 @@ class ConfigFilesChecker:
 
             for x in ("year", "month"):
 
-                isList = all( [ isinstance(dico[x], list) and len(dico[x]) == 2 for dico in dicos] )
+                isList = all( [ isinstance(dico[x], list) and len(dico[x]) in (1,2) for dico in dicos] )
                 if not isList:
-                    return False, "year et month doivent être des listes de 2 entiers positifs ordonnés"  
+                    return False, "year et month doivent être des listes de 1 ou 2 entiers positifs ordonnés"  
 
                 arePositiveInts = all( [ isinstance(y, int) and y > 0 for dico in dicos for y in dico[x] ] )
                 if not arePositiveInts:
-                    return False, "year et month doivent être des listes de 2 entiers positifs ordonnés"  
+                    return False, "year et month doivent être des listes de 1 ou 2 entiers positifs ordonnés"  
 
-                areOrdered = all( [ dico[x][0] <= dico[x][1] for dico in dicos ] )
+                areOrdered = all( [ dico[x][0] <= dico[x][-1] for dico in dicos ] )
                 if not areOrdered:
-                    return False, "year et month doivent être des listes de 2 entiers positifs ordonnés"  
+                    return False, "year et month doivent être des listes de 1 ou 2 entiers positifs ordonnés"  
 
             todo = {field for field in cls.EXPECTED_KEYS[scrapper] if field not in ("year", "month")}
             
             if not all( [ isinstance(dico[field], str) for dico in dicos for field in todo ] ):
                 return False, "les champs autres que year et month doivent être des strings"
 
-            if not all([dico["month"][0] in range(1,13) and dico["month"][1] in range(1,13) for dico in dicos]):
-                return False, "month doit être une liste de 2 entiers positifs ordonnés compris entre 1 et 12"
+            if not all([dico["month"][0] in range(1,13) and dico["month"][-1] in range(1,13) for dico in dicos]):
+                return False, "month doit être une liste de 1 ou 2 entiers positifs ordonnés compris entre 1 et 12"
 
         return True, ""
     
@@ -151,7 +151,10 @@ class Runner:
 
                 cls.JOB_ID += 1
 
-                config["waiting"] = configs["waiting"]
+                try:
+                    config["waiting"] = configs["waiting"]
+                except KeyError:
+                    pass
 
                 scrapper = scrapper.from_config(config)
                 

@@ -29,31 +29,18 @@ class BaseScrapper(ABC):
             return: html_page (requests.Response ou None, voir doc requests python)
         '''
         # (1) Instanciation de l'objet qui récupèrera le code html. i est le nombre de tentatives de connexion.
-        # (2) On tente 3 fois de charger la page à l'url donnée, en cas de problème de réseau.
-        # (3) Si le chargement réussit, on garde la page. Sinon, on la déclare inexistante.
-        #     waiting nécéssaire pour charger les données sur wunderground.
-        
+        # (2) On tente de charger la page à l'url donnée. Si le chargement réussit, on garde la page. 
+        #     Sinon, on la déclare inexistante.
+        #     waiting nécéssaire pour charger les données sur wunderground et ogimet.
         # (1)
         html_page = None
         session = HTMLSession()
-        i = 0
-        # (2)
-        while html_page is None and i < 3:
-                        
-            try:
-                html_page = session.get(url) # long
-            except ConnectionError:
-                i += 1
-                print("retrying...")
-                continue
-            except Exception:
-                html_page = None
-                break  
-        # (3)
+        # (2)             
         try:
+            html_page = session.get(url) # long
             html_page.html.render(sleep=self._waiting, keep_page=True, scrolldown=1)
-        except AttributeError:
-            pass
+        except Exception:
+            html_page = None
         
         session.close()
 
@@ -134,30 +121,34 @@ class BaseScrapper(ABC):
             if html_page is None:
                 error = "error while loading html page"
                 self.errors[f"{self._city}_{year}_{month}"] = {"url": url, "error": error}
+                print(f"\t{error}")
                 continue
             # (3)
             table = self._find_table_in_html(html_page)
             if table is None:
                 error = "no data table found"
                 self.errors[f"{self._city}_{year}_{month}"] = {"url": url, "error": error}
+                print(f"\t{error}")
                 continue
             # (4)
             month = "0" + str(month) if month < 10 else str(month)
             # (5)
-            # try:
-            col_names = self._scrap_columns_names(table)
-            values = self._scrap_columns_values(table)
-            # except Exception:
-            #     error = "error while scrapping data"
-            #     self.errors[f"{self._city}_{year}_{month}"] = {"url": url, "error": error}
-            #     continue
+            try:
+                col_names = self._scrap_columns_names(table)
+                values = self._scrap_columns_values(table)
+            except Exception:
+                error = "error while scrapping data"
+                self.errors[f"{self._city}_{year}_{month}"] = {"url": url, "error": error}
+                print(f"\t{error}")
+                continue
             # (6)
-            # try:
-            df = self._rework_data(values, col_names, year, month)
-            # except Exception:
-            #     error = "error while reworking data"
-            #     self.errors[f"{self._city}_{year}_{month}"] = {"url": url, "error": error}
-            #     continue
+            try:
+                df = self._rework_data(values, col_names, year, month)
+            except Exception:
+                error = "error while reworking data"
+                self.errors[f"{self._city}_{year}_{month}"] = {"url": url, "error": error}
+                print(f"\t{error}")
+                continue
 
             yield df
 
@@ -207,14 +198,19 @@ class OgimetScrapper(BaseScrapper):
     BASE_URL = f"http://www.ogimet.com/cgi-bin/gsynres?lang=en&ind="
     
     def from_config(self, config):
+        
         self.errors = {}
         self._url = self.BASE_URL + config["ind"]
         self._city = config["city"]
         self._todos = (
             (year, month)
-            for year in range(config["year"][0], config["year"][1] + 1)
-            for month in range(config["month"][0], config["month"][1] + 1)
+            for year in range(config["year"][0], config["year"][-1] + 1)
+            for month in range(config["month"][0], config["month"][-1] + 1)
         )
+        try:
+            self._waiting = config["waiting"]
+        except KeyError:
+            self._waiting = 10
 
         return self
 
@@ -401,48 +397,40 @@ class WundergroundScrapper(BaseScrapper):
 
     UNITS_CONVERSION = {
         
-        "°_f": {
-            "new_unit": "°C",
-            "func": (lambda x: (x-32)*5/9)
-        },
-        "(mph)": {
-            "new_unit": "(km/h)",
-            "func": (lambda x: x*1.609344)
-        },
-        "(in)": {
-            "new_unit": "(mm)",
-            "func": (lambda x: x*25.4)
-        },
-        "(hg)": {
-            "new_unit": "(hPa)",
-            "func": (lambda x: x*33.86388)
-        }
+        "°_f": { "new_unit": "°C", "func": (lambda x: (x-32)*5/9 )},
+        "(mph)": { "new_unit": "(km/h)", "func": (lambda x: x*1.609344) },
+        "(in)": { "new_unit": "(mm)", "func": (lambda x: x*25.4) },
+        "(hg)": { "new_unit": "(hPa)",  "func": (lambda x: x*33.86388) }
     }
 
     # Critère de sélection qui servira à récupérer le tableau voulu
     CRITERIA = ("aria-labelledby", "History days")
     SCRAPPER = "wunderground"
     BASE_URL = "https://www.wunderground.com/history/monthly/"
-
+    
     def from_config(self, config):
 
         self.errors = {}
         self._url = self.BASE_URL + f"{config['country_code']}/{config['city']}/{config['region']}/date"
         self._city = config["city"]
-        self._waiting = config["waiting"]
-        
         self._todos = (
             (year, month)
-            for year in range(config["year"][0], config["year"][1] + 1)
-            for month in range(config["month"][0], config["month"][1] + 1)
+            for year in range(config["year"][0], config["year"][-1] + 1)
+            for month in range(config["month"][0], config["month"][-1] + 1)
         )
+        try:
+            self._waiting = config["waiting"]
+        except KeyError:
+            self._waiting = 10
+
+        return self
 
     def _set_url(self, year, month):
 
         y = str(year)
         m = str(month)
         
-        url = self._base_url + f"/{y}-{m}"
+        url = self._url + f"/{y}-{m}"
 
         return url
 
@@ -569,7 +557,5 @@ class WundergroundScrapper(BaseScrapper):
 
         return df
 
-    def __repr__(self):
-        return f"wunderground {self._city}"
 class MeteocielScrapper(BaseScrapper):
     pass

@@ -47,12 +47,12 @@ de la page html survient, essayez d'augmenter le waiting.
     "region": "LEBL",
     "waiting": 5,
     "year": {
-        "from": 2020,
-        "to": 2020
+        "from_": 2020,
+        "to_": 2020
     },
     "month": {
-        "from": 2,
-        "to": 12
+        "from_": 2,
+        "to_": 12
     }
 }
 
@@ -67,13 +67,13 @@ Le champ city sert juste à nommer le fichier csv
     "city": "barcelone",
     "waiting": 5,
     "year": {
-        "from": 2017,
-        "to": 2017
+        "from_": 2017,
+        "to_": 2017
     },
     "month": {
-        "from": 1,
-        "to": 12
+        "from_": 1,
+        "to_": 12
     }
 }
 
-/!\ Dans l'ancienne version (celle qui est téléchargeable), des _ sont à rajouter après les champs from et to (from_ et to_)
+/!\ dans la version actuelle du code, les _ de from et to sont à retirer. Pour utliser l'executable, il faut les garder.

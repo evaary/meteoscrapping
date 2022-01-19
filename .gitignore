@@ -14,5 +14,3 @@ config_ogimet.json
 config_wunderground.json
 
 meteoscrapping.exe
-
-exemples/exemple_config.json

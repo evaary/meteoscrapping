@@ -1,187 +1,153 @@
-from datetime import time
 import unittest
 import copy
 from app.utils import ConfigFilesChecker
-# from scrappers import OgimetScrapper, WundergroundScrapper
 
 class ConfigCheckerTester(unittest.TestCase):
 
     CHECKER = ConfigFilesChecker.instance()
 
     # version correcte des config ogimet et wunderground
-    CONFIG_OGIMET = {
-        "scrapper": "ogimet",
-        "ind": "16288",
-        "city": "Caserta",
+    CONFIG = {
+
         "waiting": 1,
-        "year": {
-            "from": 2020,
-            "to": 2020
-        },
-        "month": {
-            "from": 1,
-            "to": 12
-        }
+
+        "ogimet":[
+
+            {
+                "ind": "16138",
+                "city": "Ferrara",
+                "year": [2014, 2021],
+                "month": [1,12]
+            },
+
+            {
+                "ind": "16288",
+                "city": "Caserta",
+                "year": [2020, 2020],
+                "month": [1,1]
+            }
+
+        ],
+
+        "wunderground":[
+
+            {
+                "country_code": "it",
+                "city": "matera",
+                "region": "LIBD",
+                "year": [2020, 2020],
+                "month": [1,1]
+            }
+            
+        ]
     }
 
-    CONFIG_WUNDERGROUND = {
-        "scrapper": "wunderground",
-        "country_code": "it",
-        "city": "matera",
-        "region": "LIBD",
-        "waiting": 5,
-        "year": {
-            "from": 2020,
-            "to": 2020
-        },
-        "month": {
-            "from": 1,
-            "to": 12
-        }
-    }
-
-    CONFIGS = [CONFIG_OGIMET, CONFIG_WUNDERGROUND]
-
-    def test_missing_scrapper(self):
+    def test_wrong_scrapper(self):
         
-        '''
-            test lorsqu'il manque le type de scrapper souhaité pour le job
-        '''
-        # on supprime le champ scrapper dans chaque configuration
-        todos = [
-            {key: value for key, value in dico.items() if key != "scrapper"}
-            for dico in self.CONFIGS
-        ]
-
-        for config in todos:
-            
-            is_correct, error = self.CHECKER.check(config)
-            # on cherche un terme spécifique à l'erreur attendue dans l'erreur retournée
-            self.assertIn("'scrapper'", error)
-            self.assertFalse(is_correct)
-    
-    def test_wrong_scrapper_value(self):
-
-        '''
-            test lorsqu le type de scrapper souhaité pour le job est présent mais erroné
-        '''
-
-        todos = [
-            { key : "bouh" if key == "scrapper" else value for config in self.CONFIGS for key, value in config.items() }
-        ]
-
-        for config in todos:
-            
-            is_correct, error = self.CHECKER.check(config)
-            self.assertIn("'scrapper'", error)
-            self.assertFalse(is_correct)
-    
-    def test_missing_fields(self):
+        '''test lorsqu'un scrapper inconnu est présent'''
         
-        '''
-            test lorsqu'il manque une des clés du dict autre que scrapper
-        '''
-        # pour chaque clé du dict de config autre que scrapper, on créé un dict
-        # identique à l'original, sauf qu'il ne contient pas la clé courante.
-        todos = [
-            {key: value for key, value in dico.items() if key != key_to_delete}
-            for dico in self.CONFIGS
-            for key_to_delete in dico.keys() if key_to_delete != "scrapper"
-        ]
-
-        for config in todos:
+        todo = copy.deepcopy(self.CONFIG)
+        todo["bouh"] = ["test"]
             
-            is_correct, error = self.CHECKER.check(config)
-            self.assertIn("pour le scrapper", error)
-            self.assertFalse(is_correct)
-
-    def test_no_positive_int_year_month(self):
+        is_correct, error = self.CHECKER.check(todo)
+        # on cherche un terme spécifique à l'erreur attendue dans l'erreur retournée
+        self.assertIn("principaux", error)
+        self.assertFalse(is_correct)
         
-        '''
-            test lorsque les champs from et to des dicts year et month ne sont pas des entiers positifs
-        '''
-        to_change = [
-            
-            (timescale, field, wrong)
-            
-            for timescale in ["year", "month"]
-            for field in ["from", "to"]
-            for wrong in [11.1, "bouh"]
-        ]
+    def test_wrong_fields_ogimet(self):
         
-        todos = [ [copy.deepcopy(config) for _ in to_change] for config in self.CONFIGS ]
-
-        for ogimet_config, wunderground_config, tup in zip(*todos, to_change):
+        '''test lorsque les clés d'un dict ne correspondent pas à celles attendues'''
+        
+        todo = copy.deepcopy(self.CONFIG)
+        del todo["ogimet"][0]["ind"]
             
-            timescale, field, wrong = tup
-            ogimet_config[timescale][field] = wrong
-            wunderground_config[timescale][field] = wrong
+        is_correct, error = self.CHECKER.check(todo)
+        self.assertIn("ogimet", error)
+        self.assertFalse(is_correct)
 
-        todos = [ x for liste in todos for x in liste ]
-
-        for config in todos:
+    def test_wrong_fields_wunderground(self):
+        
+        '''test lorsque les clés d'un dict ne correspondent pas à celles attendues'''
+        
+        todo = copy.deepcopy(self.CONFIG)
+        todo["wunderground"][0]["bouh"] = 5
             
-            is_correct, error = self.CHECKER.check(config)                    
-            self.assertIn("entiers positifs", error)
-            self.assertFalse(is_correct)
+        is_correct, error = self.CHECKER.check(todo)
+        self.assertIn("wunderground", error)
+        self.assertFalse(is_correct)
 
-    def test_min_max_inversion_year_month(self):
+    def test_year_month_not_list(self):
+        
+        '''test lorsque les year et month ne sont pas des listes de 2 entiers positifs'''
+        
+        todo = copy.deepcopy(self.CONFIG)
+        todo["ogimet"][0]["year"] = "bouh"
 
-        '''
-            test lorsque le champ from est supérieur au champ to
-        '''
+        is_correct, error = self.CHECKER.check(todo)
+        self.assertIn("listes", error)
+        self.assertFalse(is_correct)
 
-        todos = [ [copy.deepcopy(config) for _ in range(2)] for config in self.CONFIGS ]
+    def test_year_month_not_len_2(self):
+        
+        '''test lorsque les year et month ne sont pas des listes de 2 entiers positifs'''
+        
+        todo = copy.deepcopy(self.CONFIG)
+        todo["wunderground"][0]["month"] = [1,2,3]
 
-        for ogimet_config, wunderground_config, timescale in zip(*todos, ("year", "month")):
+        is_correct, error = self.CHECKER.check(todo)
+        self.assertIn("2", error)
+        self.assertFalse(is_correct)
 
-            ogimet_config[timescale]["from"] = 10
-            ogimet_config[timescale]["to"] = 5
-            wunderground_config[timescale]["from"] = 10
-            wunderground_config[timescale]["to"] = 5
+    def test_year_month_not_ints(self):
+        
+        '''test lorsque les year et month ne sont pas des listes de 2 entiers positifs'''
+        
+        todo = copy.deepcopy(self.CONFIG)
+        todo["wunderground"][0]["year"] = [1.1, "bouh"]
 
-        todos = [ x for liste in todos for x in liste ]
+        is_correct, error = self.CHECKER.check(todo)
+        self.assertIn("entiers", error)
+        self.assertFalse(is_correct)
 
-        for config in todos:
+    def test_year_month_not_ordered(self):
+        
+        '''test lorsque les year et month ne sont pas des listes ordonnées'''
+        
+        todo = copy.deepcopy(self.CONFIG)
+        todo["ogimet"][0]["month"] = [2,1]
 
-            is_correct, error = self.CHECKER.check(config)                    
-            self.assertIn("inférieur", error)
-            self.assertFalse(is_correct)
+        is_correct, error = self.CHECKER.check(todo)
+        self.assertIn("ordonnés", error)
+        self.assertFalse(is_correct)
 
     def test_outbound_month(self):
 
-        '''
-            test lorsque le mois n'est pas inférieur à 12 (la valeur 0 est traitée dans test_no_positive_int_year_month)
-        '''
+        '''test lorsque le mois n'est pas entre 1 et 12'''
 
-        todos = [ [copy.deepcopy(config) for _ in range(1)] for config in self.CONFIGS ]
+        todo = copy.deepcopy(self.CONFIG)
+        todo["ogimet"][1]["month"] = [1,17]
+        
+        is_correct, error = self.CHECKER.check(todo)                    
+        self.assertIn("compris", error)
+        self.assertFalse(is_correct)
 
-        for ogimet_config, wunderground_config in zip(*todos):
+    def test_not_str_value(self):
 
-            ogimet_config["month"]["to"] = 15
-            wunderground_config["month"]["to"] = 15
+        '''si une des clés hors year / month d'une config n'a pas pour valeur une string'''
+        
+        todo = copy.deepcopy(self.CONFIG)
+        todo["wunderground"][0]["city"] = 12
 
-        todos = [ x for liste in todos for x in liste ]
-
-        for config in todos:
-
-            is_correct, error = self.CHECKER.check(config)                    
-            self.assertIn("compris", error)
-            self.assertFalse(is_correct)
+        is_correct, error = self.CHECKER.check(todo)                    
+        self.assertIn("autres que", error)
+        self.assertFalse(is_correct)
 
     def test_correct_config(self):
 
-        for config in self.CONFIGS:
+        is_correct, error = self.CHECKER.check(self.CONFIG)
 
-            is_correct, _ = self.CHECKER.check(config)
-
-            self.assertTrue(is_correct)
-
-class OgimetScrapperTester(unittest.TestCase):
-    pass
-
-class WundergroundScrapperTester(unittest.TestCase):
-    pass
+        self.assertTrue(is_correct)
+        self.assertEqual(error, "")
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,0 +1,14 @@
+{
+    "waiting": 1,
+
+    "ogimet":[
+        {
+            "ind": "16138",
+            "city": "Ferrara",
+            "year": [2021, 2021],
+            "month": [2,12]
+        }
+    ],
+
+    "wunderground":[]
+}

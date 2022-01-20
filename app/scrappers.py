@@ -2,7 +2,6 @@ from requests_html import HTMLSession
 from abc import ABC, abstractmethod
 import numpy as np
 import pandas as pd
-from requests.exceptions import ConnectionError
 
 class BaseScrapper(ABC):
 
@@ -18,10 +17,25 @@ class BaseScrapper(ABC):
         cls._instance = cls._instance if cls._instance is not None else cls.__new__(cls)
         return cls._instance
     
+    ### METHODES ABSTRAITES ###
     @abstractmethod
     def _set_url(self, year, month):
         '''crétion de l'url'''
 
+    @abstractmethod
+    def _scrap_columns_names(table):
+        '''fonction à redéfinir dans chaque scrapper qui récupère les noms des colonnes'''
+    
+    @abstractmethod
+    def _scrap_columns_values(table):
+        '''fonction à redéfinir dans chaque scrapper qui récupère les valeurs du tableau de données'''
+
+    @abstractmethod
+    def _rework_data(self):
+        '''fonction à redéfinir dans chaque scrapper qui met en forme le tableau de données'''
+    
+
+    ### METHODES CONCRETES ###
     def _get_html_page(self, url):
         
         '''_get_html_page : charge la page internet où se trouvent les données à récupérer
@@ -29,20 +43,23 @@ class BaseScrapper(ABC):
             return: html_page (requests.Response ou None, voir doc requests python)
         '''
         # (1) Instanciation de l'objet qui récupèrera le code html. i est le nombre de tentatives de connexion.
-        # (2) On tente de charger la page à l'url donnée. Si le chargement réussit, on garde la page. 
+        # (2) On tente max 3 fois de charger la page à l'url donnée. Si le chargement réussit, on garde la page. 
         #     Sinon, on la déclare inexistante.
         #     waiting nécéssaire pour charger les données sur wunderground et ogimet.
         # (1)
         html_page = None
-        session = HTMLSession()
-        # (2)             
-        try:
-            html_page = session.get(url) # long
-            html_page.html.render(sleep=self._waiting, keep_page=True, scrolldown=1)
-        except Exception:
-            html_page = None
-        
-        session.close()
+        i = 0
+        with HTMLSession() as session:
+        # (2)
+            while(html_page is None and i < 3):
+                i += 1
+                if(i > 1):
+                    print("\tretrying...")
+                try:
+                    html_page = session.get(url) # long
+                    html_page.html.render(sleep=self._waiting, keep_page=True, scrolldown=1)
+                except Exception:
+                    html_page = None
 
         return html_page
 
@@ -81,18 +98,6 @@ class BaseScrapper(ABC):
             pass
 
         return table
-
-    @abstractmethod
-    def _scrap_columns_names(table):
-        '''fonction à redéfinir dans chaque scrapper qui récupère les noms des colonnes'''
-    
-    @abstractmethod
-    def _scrap_columns_values(table):
-        '''fonction à redéfinir dans chaque scrapper qui récupère les valeurs du tableau de données'''
-
-    @abstractmethod
-    def _rework_data(self):
-        '''fonction à redéfinir dans chaque scrapper qui met en forme le tableau de données'''
 
     def _scrap_data(self):
         
@@ -168,6 +173,8 @@ class BaseScrapper(ABC):
         
         return data
 
+
+    ### DUNDER METHODS ###
     def __repr__(self):
         return f"<{self.__class__.__name__}> ville:{self._city}, url:{self._url}"
 
@@ -215,16 +222,10 @@ class OgimetScrapper(BaseScrapper):
         return self
 
     def _set_url(self, year, month):
-        
-        y = str(year)
-        m = str(month)
 
-        if month < 10 :
-            m = "0" + m
+        m = "0" + str(month) if month < 10 else str(month)
         
-        url = self._url + f"&ano={y}&mes={self.ASSOCIATIONS[m]['num']}&day=0&hora=0&min=0&ndays={self.ASSOCIATIONS[m]['days']}"
-
-        return url
+        return self._url + f"&ano={str(year)}&mes={self.ASSOCIATIONS[m]['num']}&day=0&hora=0&min=0&ndays={self.ASSOCIATIONS[m]['days']}"
 
     @staticmethod
     def _scrap_columns_names(table):
@@ -396,7 +397,6 @@ class WundergroundScrapper(BaseScrapper):
     ''' scrapper pour le site wunderground'''
 
     UNITS_CONVERSION = {
-        
         "°_f": { "new_unit": "°C", "func": (lambda x: (x-32)*5/9 )},
         "(mph)": { "new_unit": "(km/h)", "func": (lambda x: x*1.609344) },
         "(in)": { "new_unit": "(mm)", "func": (lambda x: x*25.4) },
@@ -426,13 +426,7 @@ class WundergroundScrapper(BaseScrapper):
         return self
 
     def _set_url(self, year, month):
-
-        y = str(year)
-        m = str(month)
-        
-        url = self._url + f"/{y}-{m}"
-
-        return url
+        return self._url + f"/{str(year)}-{str(month)}"
 
     @staticmethod
     def _scrap_columns_names(table):
@@ -520,7 +514,7 @@ class WundergroundScrapper(BaseScrapper):
         
         # (4)
         col_names = [
-            "_".join(f"{main.strip()} {sub.strip()}".split(" ")).lower()
+            "_".join( [ main.strip(), sub.strip() ] ).lower()
 
             for main, subs in zip(main_names, sub_names)
             for sub in subs
@@ -532,10 +526,8 @@ class WundergroundScrapper(BaseScrapper):
         df = df.drop([0], axis="index")
         # (6)
         df["date"] = [
-            f"{year}/{month}/0{day}"
             
-            if int(day) < 10
-            else f"{year}/{month}/{day}" 
+            f"{year}/{month}/0{day}" if int(day) < 10 else f"{year}/{month}/{day}" 
             
             for day in df.date
         ]

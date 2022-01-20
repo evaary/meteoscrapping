@@ -1,79 +1,58 @@
-Un programme de webscrapping pour récupérer des données météorologiques depuis 2 sites : ogimet et wunderground. Téléchargez l'éxecutable depuis google drive :
-https://drive.google.com/file/d/1rzYzcwpMB3Am9tvkz5qTfLILYBuQ-NvY/view?usp=sharing
+Un programme de webscrapping pour récupérer des données météorologiques depuis 2 sites : ogimet et wunderground.
 
 exemples de tableaux récupérés:
     1 - http://www.ogimet.com/cgi-bin/gsynres?lang=en&ind=08180&ano=2017&mes=8&day=0&hora=0&min=0&ndays=31
     2 - https://www.wunderground.com/history/monthly/it/bergamo/LIME/date/2020-3
 
+/!\ Une ConnectionResetError peut être levée aléatoirement, cela n'influe pas sur le bon fonctionnement du programme. Je ne sais pas d'où elle sort, des corrections
+seront apportées.
 
-pour lancer le programme:
+Pour lancer le programme:
 
-    télécharger l'éxecutable
-        https://drive.google.com/file/d/1rzYzcwpMB3Am9tvkz5qTfLILYBuQ-NvY/view?usp=sharing
+    télécharger l'éxecutable (version 2)
+        https://drive.google.com/file/d/1Ua1SSmowC9_f7Ny6HCCb9_yZsdTaGMrK/view?usp=sharing
     
-    créer un répertoire "config" à côté l'éxecutable
-    
-    créer des fichiers json dans le répertoire config, autant que voulu
-        - le nom de chaque fichier doit commencer par config et finir par .json
-        - les fichiers dont le nom ne respecte pas cette règle seront ignorés
-        - 1 fichier par période continue (les mois 1 A 12 de 2015 à 2020 : 1 fichier. Les mois 3 ET 7 pour 2020 : 2 fichiers)
-        - des exemples de fichiers config sont donnés ci-après ou dans le répertoire exemples
+    créer un fichier "config.json" à côté l'éxecutable
+        - un modèle de fichier config est donné ci-après ou dans le fichier exemple_config.json (à renommer en config.json)
 
-    double cliquer sur l'éxecutable ou ouvrir une fenêtre powershell (alt + f dans le répertoire ou se trouve l'exécutable puis taper .\meteoscrapping.exe) pour plus de détails en cas d'erreurs
-        - des tableaux incomplets, auxquels il manque des données voir des colonnes, ne posent pas de problèmes
-        - les colonnes daily weather summary sur ogimet sont ignorées
+    double cliquer sur l'éxecutable
+    ou
+    ouvrir un powershell (alt + f dans le répertoire où se trouve l'exécutable puis taper .\meteoscrapping.exe) pour plus de détails.
 
-    les résultats seront stockés dans un répertoire results créé automatiquement à côté du répertoire config
-        - les résultats sont des fichiers csv, 1 par fichier config si des données ont été récupérées
+    les résultats seront stockés dans un répertoire "results" créé automatiquement à côté du fichier config
+        - les résultats sont des fichiers csv, 1 par job, si des données ont été récupérées
     
-    les erreurs seront stockées dans un répertoire errors créé automatiquement à côté du répertoire config
-        - les erreurs sont des fichiers json, 1 par fichier config s'il y a eu des erreurs
+    les erreurs seront stockées dans un répertoire "errors" créé automatiquement à côté du fichier config
+        - les erreurs sont des fichiers json, 1 par job s'il y a eu des erreurs
         - chaque fichier json contient les url à partir desquelles aucune donnée n'a pu être récupérée par le programme.
 
-
-Le scrapper wunderground convertit les températures (°F --> °C) les vents (mph --> km/h), les précipitations (in --> mm) et les pressions (inHg --> hPa).
-Les données ogimet sont déjà dans de bonnes unités.
-
-
-
-structure du fichier config wounderground
-les infos country_code, city, et region sont à récupérer directement dans l'url du site pour la station voulue (voir ligne 6)
-le champ waiting sert à patienter suffisamment longtemps pour que le javascript des pages s'éxecute. Si un problème de chargement
-de la page html survient, essayez d'augmenter le waiting.
+structure du fichier config.json
 {
-    "scrapper": "wunderground",
-    "country_code": "es",
-    "city": "barcelona",
-    "region": "LEBL",
-    "waiting": 5,
-    "year": {
-        "from": 2020,
-        "to": 2020
-    },
-    "month": {
-        "from": 2,
-        "to": 12
-    }
+    "waiting": 10,
+
+    "ogimet":[
+        { "ind":"16138", "city":"Ferrara", "year":[2021], "month":[2] },
+        { "ind":"16288", "city":"Caserta", "year":[2020, 2021], "month":[1,2] }
+    ],
+
+    "wunderground":[
+        { "country_code":"it", "region": "LIBD", "city":"matera", "year":[2021], "month":[1,6] }
+    ]
 }
 
+Le champ waiting est optionnel, il sert à patienter suffisamment longtemps pour que les données soient disponibles sur la page.
+Si un problème de chargement de la page html survient, essayez d'augmenter le waiting. Par défaut il vaut 10.
+
+Chaque élément dans les listes ogimet ou wounderground correspond aux paramètres pour 1 job.
+
+Les champs month et year doivent être des listes ordonnées d'1 ou 2 entiers positifs.
+
+Les autres champs sont à récupérer directement depuis le site ou l'url voulue (voir ligne 5 et 6 de ce readme), sauf le "city" de ogimet qui est à choisir soi-même.
 
 
-structure du fichier config ogimet
-l'ind est à récupérer directement dans l'url du site pour la station voule (voir ligne 5)
-Le champ city sert juste à nommer le fichier csv
-{
-    "scrapper": "ogimet",
-    "ind": "08180",
-    "city": "barcelone",
-    "waiting": 5,
-    "year": {
-        "from": 2017,
-        "to": 2017
-    },
-    "month": {
-        "from": 1,
-        "to": 12
-    }
-}
+Pour les jobs ogimet:
+    - Le champ city sert juste à nommer le fichier csv.
+    - Les colonnes daily weather summary sur ogimet sont ignorées.
 
-/!\ Dans l'ancienne version (celle qui est téléchargeable), des _ sont à rajouter après les champs from et to (from_ et to_)
+Pour les jobs wunderground:
+    - Les unités sont converties vers le S.I. : températures (°F -> °C), vitesses (mph -> km/h), précipitations (in -> mm), pressions (inHg -> hPa).

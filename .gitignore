@@ -6,6 +6,7 @@ app/__pycache__
 results/
 errors/
 output/
+config/
 
 config.json
 

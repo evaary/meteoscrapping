@@ -39,7 +39,10 @@ class ConfigFilesChecker:
     def _check_keys(cls, config:dict) -> tuple:
         
         # On contrôle que toutes les clés des configs correspondent à ce qu'on attend.
-        for x in ("ogimet", "wunderground"):
+        for x in config.keys():
+            
+            if x == "waiting":
+                continue
             
             test = [ set(dico.keys()) == cls.EXPECTED_KEYS[x] for dico in config[x] ]
             
@@ -51,7 +54,10 @@ class ConfigFilesChecker:
     @classmethod
     def _check_values(cls, config):
 
-        for scrapper in ("ogimet", "wunderground"):
+        for scrapper in config.keys():
+
+            if scrapper == "waiting":
+                continue
             
             dicos = config[scrapper]
 

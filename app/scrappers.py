@@ -2,7 +2,6 @@ from requests_html import HTMLSession
 from abc import ABC, abstractmethod
 import numpy as np
 import pandas as pd
-from requests.exceptions import ConnectionError
 
 class BaseScrapper(ABC):
 
@@ -48,7 +47,6 @@ class BaseScrapper(ABC):
         '''
         # (1) Instanciation de l'objet qui récupèrera le code html. i est le nombre de tentatives de connexion.
         # (2) On tente 3 fois de charger la page à l'url donnée, en cas de problème de réseau.
-        # (3) Si le chargement réussit, on garde la page. Sinon, on la déclare inexistante.
         
         # (1)
         html_page = None
@@ -56,20 +54,16 @@ class BaseScrapper(ABC):
         i = 0
         # (2)
         while html_page is None and i < 3:
-                        
+
+            i += 1
+            if(i > 1):
+                print("\tretrying...")
+                      
             try:
                 html_page = session.get(url) # long
-            except ConnectionError:
-                i += 1
-                continue
+                html_page.html.render(sleep=self._waiting, keep_page=True, scrolldown=1)
             except Exception:
                 html_page = None
-                break  
-        # (3)
-        try:
-            html_page.html.render(sleep=self._waiting, keep_page=True, scrolldown=1)
-        except AttributeError:
-            pass
         
         session.close()
 
@@ -102,9 +96,12 @@ class BaseScrapper(ABC):
         except IndexError:
             table = None
             return table
-        # (3)  
-        if "no valid" in table.find("thead")[0].find("th")[0].text.lower().strip():
-            table = None
+        # (3)
+        try: 
+            if "no valid" in table.find("thead")[0].find("th")[0].text.lower().strip():
+                table = None
+        except IndexError:
+            pass
 
         return table
 
@@ -161,7 +158,7 @@ class BaseScrapper(ABC):
             try:
                 col_names = self._scrap_columns_names(table)
                 values = self._scrap_columns_values(table)
-            except Exception:
+            except (Exception, IndexError):
                 error = "error while scrapping data"
                 self.errors[f"{self._city}_{year}_{month}"] = {"url": url, "error": error}
                 continue

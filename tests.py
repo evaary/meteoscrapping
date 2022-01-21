@@ -6,11 +6,9 @@ class ConfigCheckerTester(unittest.TestCase):
 
     CHECKER = ConfigFilesChecker.instance()
 
-    # version correcte des config ogimet et wunderground
+    # version correcte des config
     CONFIG = {
-
-        "waiting": 1,
-
+        
         "ogimet":[
             { "ind": "16138", "city": "Ferrara", "year": [2014, 2021], "month": [1,12] },
             { "ind": "16288", "city": "Caserta", "year": [2020, 2020], "month": [1,1] },
@@ -18,6 +16,10 @@ class ConfigCheckerTester(unittest.TestCase):
 
         "wunderground":[
             {  "country_code": "it", "city": "matera", "region": "LIBD", "year": [2020, 2020], "month": [1,1] }
+        ],
+
+        "meteociel":[
+            { "code_num":"2", "code": "7249", "city":"orleans", "year":[2020, 2021], "month":[2] }
         ]
     }
 
@@ -55,6 +57,17 @@ class ConfigCheckerTester(unittest.TestCase):
         self.assertIn("wunderground", error)
         self.assertFalse(is_correct)
 
+    def test_wrong_fields_meteociel(self):
+        
+        '''test lorsque les clés d'un dict ne correspondent pas à celles attendues'''
+        
+        todo = copy.deepcopy(self.CONFIG)
+        todo["meteociel"][0]["bouh"] = 5
+            
+        is_correct, error = self.CHECKER.check(todo)
+        self.assertIn("meteociel", error)
+        self.assertFalse(is_correct)
+
     def test_year_month_not_list(self):
         
         '''test lorsque les year et month ne sont pas des listes de 2 entiers positifs'''
@@ -66,12 +79,12 @@ class ConfigCheckerTester(unittest.TestCase):
         self.assertIn("listes", error)
         self.assertFalse(is_correct)
 
-    def test_year_month_not_len_2(self):
+    def test_year_month_not_len_1_or_2(self):
         
-        '''test lorsque les year et month ne sont pas des listes de 2 entiers positifs'''
+        '''test lorsque les year et month ne sont pas des listes de max 2 entiers positifs'''
         
         todo = copy.deepcopy(self.CONFIG)
-        todo["wunderground"][0]["month"] = [1,2,3]
+        todo["meteociel"][0]["month"] = [1,2,3]
 
         is_correct, error = self.CHECKER.check(todo)
         self.assertIn("2", error)
@@ -115,7 +128,7 @@ class ConfigCheckerTester(unittest.TestCase):
         '''si une des clés hors year / month d'une config n'a pas pour valeur une string'''
         
         todo = copy.deepcopy(self.CONFIG)
-        todo["wunderground"][0]["city"] = 12
+        todo["meteociel"][0]["city"] = 12
 
         is_correct, error = self.CHECKER.check(todo)                    
         self.assertIn("autres que", error)

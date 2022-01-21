@@ -1,5 +1,5 @@
 from app.data_managers import from_json, to_csv, to_json
-from app.scrappers import WundergroundScrapper, OgimetScrapper
+from app.scrappers import MeteocielScrapper, WundergroundScrapper, OgimetScrapper
 import os
 
 class ConfigFilesChecker:
@@ -8,11 +8,12 @@ class ConfigFilesChecker:
 
     _instance = None
     
-    ALLOWED_SCRAPPERS = {"wunderground", "ogimet"}
+    ALLOWED_SCRAPPERS = {"wunderground", "ogimet", "meteociel"}
     
     EXPECTED_KEYS = {
         "wunderground": {"country_code", "city", "region", "year", "month"},
-        "ogimet": {"ind", "city", "year", "month"}
+        "ogimet": {"ind", "city", "year", "month"},
+        "meteociel": {"city", "year", "month", "code_num", "code"}
     }
 
     def __init__(self):
@@ -109,7 +110,8 @@ class Runner:
 
     SCRAPPERS = {
         "ogimet": OgimetScrapper.instance(),
-        "wunderground": WundergroundScrapper.instance()
+        "wunderground": WundergroundScrapper.instance(),
+        "meteociel": MeteocielScrapper.instance()
     }
 
     CHECKER = ConfigFilesChecker.instance()

@@ -1,8 +1,9 @@
-Un programme de webscrapping pour récupérer des données météorologiques depuis 2 sites : ogimet et wunderground.
+Un programme de webscrapping pour récupérer des données météorologiques depuis 3 sites : ogimet, wunderground et meteociel.
 
 exemples de tableaux récupérés:
     1 - http://www.ogimet.com/cgi-bin/gsynres?lang=en&ind=08180&ano=2017&mes=8&day=0&hora=0&min=0&ndays=31
     2 - https://www.wunderground.com/history/monthly/it/bergamo/LIME/date/2020-3
+    3 - https://www.meteociel.com/climatologie/obs_villes.php?code2=7249&mois=1&annee=2021
 
 /!\ Une ConnectionResetError peut être levée aléatoirement, cela n'influe pas sur le bon fonctionnement du programme. Je ne sais pas d'où elle sort, des corrections
 seront apportées.
@@ -37,17 +38,22 @@ structure du fichier config.json
 
     "wunderground":[
         { "country_code":"it", "region": "LIBD", "city":"matera", "year":[2021], "month":[1,6] }
+    ],
+
+    "meteociel":[
+        { "code_num":"2", "code": "7249", "city":"orleans", "year":[2020], "month":[1,2] }
     ]
 }
 
 Le champ waiting est optionnel, il sert à patienter suffisamment longtemps pour que les données soient disponibles sur la page.
 Si un problème de chargement de la page html survient, essayez d'augmenter le waiting. Par défaut il vaut 10.
 
-Chaque élément dans les listes ogimet ou wounderground correspond aux paramètres pour 1 job.
+Chaque élément dans les listes ogimet, wounderground ... correspond aux paramètres pour 1 job.
 
 Les champs month et year doivent être des listes ordonnées d'1 ou 2 entiers positifs.
 
-Les autres champs sont à récupérer directement depuis le site ou l'url voulue (voir ligne 5 et 6 de ce readme), sauf le "city" de ogimet qui est à choisir soi-même.
+Les autres champs sont à récupérer directement depuis le site ou l'url voulue (voir ligne 4 à 6 de ce readme),
+sauf le "city" qui est à choisir soi-même pour les scrappers autres que wunderground.
 
 
 Pour les jobs ogimet:
@@ -55,4 +61,10 @@ Pour les jobs ogimet:
     - Les colonnes daily weather summary sur ogimet sont ignorées.
 
 Pour les jobs wunderground:
-    - Les unités sont converties vers le S.I. : températures (°F -> °C), vitesses (mph -> km/h), précipitations (in -> mm), pressions (inHg -> hPa).
+    - Les unités sont converties : températures (°F -> °C), vitesses (mph -> km/h), précipitations (in -> mm), pressions (inHg -> hPa).
+    - https://www.wunderground.com/history/monthly/<country_code>/<city>/<region>/date/2020-3
+
+Pour les job meteociel:
+    - La colonne des images est ignorée.
+    - Le champ city sert juste à nommer le fichier csv.
+    - https://www.meteociel.com/climatologie/obs_villes.php?code<code_num>=<code>&mois=1&annee=2021

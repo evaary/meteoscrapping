@@ -2,6 +2,7 @@ from requests_html import HTMLSession
 from abc import ABC, abstractmethod
 import numpy as np
 import pandas as pd
+import re
 
 class BaseScrapper(ABC):
 
@@ -16,6 +17,22 @@ class BaseScrapper(ABC):
     def instance(cls):
         cls._instance = cls._instance if cls._instance is not None else cls.__new__(cls)
         return cls._instance
+
+    def from_config(self, config):
+
+        self.errors = {}
+        self._city = config["city"]
+        self._todos = (
+            (year, month)
+            for year in range(config["year"][0], config["year"][-1] + 1)
+            for month in range(config["month"][0], config["month"][-1] + 1)
+        )
+        try:
+            self._waiting = config["waiting"]
+        except KeyError:
+            self._waiting = 10
+
+        return self
     
     ### METHODES ABSTRAITES ###
     @abstractmethod
@@ -105,53 +122,51 @@ class BaseScrapper(ABC):
             return: table (requests-html.Element, voir doc requests-html python) ou None
         '''
         # (1) On récupère l'année et le mois courant à partir du tuple todo.
-        # On affiche dans le terminal le job en cours.
+        # On affiche dans le terminal le job en cours. On convertit le mois (int) en string.
         # (2) On reconstitue l'url et on charge la page html correspondante. S'il y a une erreur,
         # on le signale et on passe au tuple suivant.
         # (3) On récupère la table de données html. Si elle n'existe pas, on le signal
         # et on passe au tuple suivant.
-        # (4) On convertit le mois (int) en string, on en aura besoin plus tard.
-        # (5) On récupère le noms des colonnes et les valeurs de la table de données html.
-        # (6) On met les données sous forme de dataframe.
+        # (4) On récupère le noms des colonnes et les valeurs de la table de données html.
+        # (5) On met les données sous forme de dataframe.
         # Si on ne peut pas, on le signale et on passe à la table suivante.
         
         for todo in self._todos:
             # (1)
             year, month = todo
+            m = "0" + str(month) if month < 10 else str(month)
             # (2)
             url = self._set_url(year, month)
-            print(f"\n{self.SCRAPPER} {year} {month} {self._city} - {url}")
+            print(f"\n{self.SCRAPPER} {year} {m} {self._city} - {url}")
             
             html_page = self._get_html_page(url)
             if html_page is None:
                 error = "error while loading html page"
-                self.errors[f"{self._city}_{year}_{month}"] = {"url": url, "error": error}
+                self.errors[f"{self._city}_{year}_{m}"] = {"url": url, "error": error}
                 print(f"\t{error}")
                 continue
             # (3)
             table = self._find_table_in_html(html_page)
             if table is None:
                 error = "no data table found"
-                self.errors[f"{self._city}_{year}_{month}"] = {"url": url, "error": error}
+                self.errors[f"{self._city}_{year}_{m}"] = {"url": url, "error": error}
                 print(f"\t{error}")
                 continue
             # (4)
-            month = "0" + str(month) if month < 10 else str(month)
-            # (5)
             try:
                 col_names = self._scrap_columns_names(table)
                 values = self._scrap_columns_values(table)
             except Exception:
                 error = "error while scrapping data"
-                self.errors[f"{self._city}_{year}_{month}"] = {"url": url, "error": error}
+                self.errors[f"{self._city}_{year}_{m}"] = {"url": url, "error": error}
                 print(f"\t{error}")
                 continue
-            # (6)
+            # (5)
             try:
-                df = self._rework_data(values, col_names, year, month)
+                df = self._rework_data(values, col_names, year, m)
             except Exception:
                 error = "error while reworking data"
-                self.errors[f"{self._city}_{year}_{month}"] = {"url": url, "error": error}
+                self.errors[f"{self._city}_{year}_{m}"] = {"url": url, "error": error}
                 print(f"\t{error}")
                 continue
 
@@ -206,18 +221,8 @@ class OgimetScrapper(BaseScrapper):
     
     def from_config(self, config):
         
-        self.errors = {}
+        super().from_config(config)
         self._url = self.BASE_URL + config["ind"]
-        self._city = config["city"]
-        self._todos = (
-            (year, month)
-            for year in range(config["year"][0], config["year"][-1] + 1)
-            for month in range(config["month"][0], config["month"][-1] + 1)
-        )
-        try:
-            self._waiting = config["waiting"]
-        except KeyError:
-            self._waiting = 10
 
         return self
 
@@ -225,7 +230,7 @@ class OgimetScrapper(BaseScrapper):
 
         m = "0" + str(month) if month < 10 else str(month)
         
-        return self._url + f"&ano={str(year)}&mes={self.ASSOCIATIONS[m]['num']}&day=0&hora=0&min=0&ndays={self.ASSOCIATIONS[m]['days']}"
+        return self._url + f"&ano={year}&mes={self.ASSOCIATIONS[m]['num']}&day=0&hora=0&min=0&ndays={self.ASSOCIATIONS[m]['days']}"
 
     @staticmethod
     def _scrap_columns_names(table):
@@ -410,23 +415,13 @@ class WundergroundScrapper(BaseScrapper):
     
     def from_config(self, config):
 
-        self.errors = {}
+        super().from_config(config)
         self._url = self.BASE_URL + f"{config['country_code']}/{config['city']}/{config['region']}/date"
-        self._city = config["city"]
-        self._todos = (
-            (year, month)
-            for year in range(config["year"][0], config["year"][-1] + 1)
-            for month in range(config["month"][0], config["month"][-1] + 1)
-        )
-        try:
-            self._waiting = config["waiting"]
-        except KeyError:
-            self._waiting = 10
 
         return self
 
     def _set_url(self, year, month):
-        return self._url + f"/{str(year)}-{str(month)}"
+        return self._url + f"/{year}-{month}"
 
     @staticmethod
     def _scrap_columns_names(table):
@@ -448,7 +443,7 @@ class WundergroundScrapper(BaseScrapper):
             args: table (requests_html.Element)
             return: col_names (list)
         '''
-        # (1) La structure html du tableau est tordue, ce qui conduit à des doublons dans values.
+        # La structure html du tableau est tordue, ce qui conduit à des doublons dans values.
         # Daily Observations compte 7 colonnes principales et 17 sous-colonnes.
         # Elle est donc de dimension (lignes, sous-colonnes).
         # values devrait être de longueur lignes * sous-colonnes.
@@ -459,11 +454,7 @@ class WundergroundScrapper(BaseScrapper):
         # et donc de toutes ses sous-colonnes.
         # On récupère ces 7 valeurs additionnelles qui contiennent le caractère \n.
         
-        values = [td.text for td in table.find("tbody")[0].find("td")]
-        # (1)
-        values = [value for value in values if "\n" in value]
-
-        return values
+        return [ td.text for td in table.find("tbody")[0].find("td") if "\n" in td.text ]
 
     @classmethod
     def _rework_data(cls, values, main_names, year, month):
@@ -550,4 +541,96 @@ class WundergroundScrapper(BaseScrapper):
         return df
 
 class MeteocielScrapper(BaseScrapper):
-    pass
+
+    CRITERIA = ("cellpadding", "2")
+    SCRAPPER = "meteociel"
+    BASE_URL = "https://www.meteociel.com/climatologie/obs_villes.php?"
+
+    def from_config(self, config):
+        
+        super().from_config(config)   
+        self._url = self.BASE_URL + f"code{config['code_num']}={config['code']}"
+
+        return self
+
+    def _set_url(self, year, month):
+        return self._url + f"&mois={month}&annee={year}"
+
+    @staticmethod
+    def _scrap_columns_names(table):
+        
+        '''
+        _scrap_columns_names: récupère les valeurs de chaque cellule td de la 1ère tr
+        du tableau html.
+            args: table (requests_html.Element)
+            return: (list)
+        '''
+        # (1) Dictionnaire permettant d'associer à chaque colonne son unité.
+        # (2) On récupère les noms des colonnes contenus dans la 1ère ligne du tableau.
+        # (3) Certains caractères à accents passent mal, on les remplace, et on enlève les . .
+        # (4) On remplace les espaces par des _, on renomme la colonne jour en date.
+        # (5) La dernière colonne contient des images etn'a pas de noms. On la supprimera,
+        #     on la nomme to_delete.
+        # (6) On ajoute au nom de la colonne son unité.
+        
+        # (1)
+        units = {
+            "temperature": "°C", "precipitations": "mm", "ensoleillement": "h"
+        }
+        # (2)
+        cols = [td.text.lower() for td in table.find("tr")[0].find("td")]
+        # (3)
+        cols = [col.replace("ã©", "e").replace(".", "") for col in cols]
+        # (4)
+        cols = ["date" if col == "jour" else "_".join(col.split(" ")) for col in cols]
+        # (5)
+        cols = ["to_delete" if col == "" else col for col in cols]
+        # (6)
+        cols = [ f"{col}_{units[col.split('_')[0]]}" if col not in ("date", "to_delete") else col for col in cols ]
+
+        return cols
+
+    @staticmethod
+    def _scrap_columns_values(table):
+        # On récupère toutes les valeurs des cellules de toutes les lignes,
+        # sauf la 1ère (noms des colonnes) et la denrière (cumul mensuel).
+        return [ td.text for tr in table.find("tr")[1:-1] for td in tr.find("td") ]
+
+    @staticmethod
+    def _rework_data(values, col_names, year, month):
+        
+        # (1) On définit les dimensions du tableau puis on le créé.
+        # (2) Si une colonne to_delete exite, on la supprime.
+        # (3) Le tableau ne contient que des string composées d'une valeur et d'une unité.
+        #     On définit une regex chargée de récupérer uniquement les float d'une string.
+        #     La regexp est ensuite utilisée par une fonction lambda vectorisée. La fonction
+        #     renvoie la valeur trouvée dans une string, convertie en float si elle existe, ou nan.
+        #     On définit aussi une fonction lambda vectorisée qui met la date en forme.
+        # (4) On reconstruit les dates à partir des numéros des jours extraits de la colonne des dates.
+        # (5) On extrait les valeurs des autres colonnes.
+        # (6) On réaffecte les nouvelles dates, puis on trie le dataframe selon la date.
+
+        # (1)
+        n_rows = len(values) // len(col_names)
+        n_cols = len(col_names)
+        df = pd.DataFrame(np.array(values).reshape(n_rows, n_cols), columns=col_names)
+        # (2)
+        try:
+            df = df.drop("to_delete", axis=1)
+        except KeyError:
+            pass
+        # (3)
+        template = r'-?\d+\.?\d*'
+        f_num_extract = np.vectorize(lambda string : np.NaN if string in("---", "") else float(re.findall(template, string)[0]))
+        f_rework_dates = np.vectorize(lambda numero : f"{year}-{month}-0{int(numero)}" if numero < 10 else f"{year}-{month}-{int(numero)}")
+        # (4)
+        dates = f_num_extract(df["date"])
+        dates = f_rework_dates(dates)
+        # (5)
+        df.iloc[:, 1:] = f_num_extract(df.iloc[:, 1:])
+        # (6)
+        df["date"] = dates
+        df["date"] = pd.to_datetime(df["date"])
+        df = df.sort_values(by="date")
+        
+        return df

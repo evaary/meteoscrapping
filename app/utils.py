@@ -1,5 +1,7 @@
 from app.data_managers import from_json, to_csv, to_json
-from app.scrappers import MeteocielScrapper, WundergroundScrapper, OgimetScrapper
+from app.scrappers.meteociel_scrappers import MeteocielDailyScrapper, MeteocielScrapper
+from app.scrappers.wunderground_scrapper import WundergroundScrapper
+from app.scrappers.ogimet_scrapper import OgimetScrapper
 import os
 
 class ConfigFilesChecker:
@@ -8,12 +10,13 @@ class ConfigFilesChecker:
 
     _instance = None
     
-    ALLOWED_SCRAPPERS = {"wunderground", "ogimet", "meteociel"}
+    ALLOWED_SCRAPPERS = {"wunderground", "ogimet", "meteociel", "meteociel_daily"}
     
     EXPECTED_KEYS = {
         "wunderground": {"country_code", "city", "region", "year", "month"},
         "ogimet": {"ind", "city", "year", "month"},
-        "meteociel": {"city", "year", "month", "code_num", "code"}
+        "meteociel": {"city", "year", "month", "code_num", "code"},
+        "meteociel_daily": {"city", "year", "month", "day", "code_num", "code"}
     }
 
     def __init__(self):
@@ -62,27 +65,35 @@ class ConfigFilesChecker:
             
             dicos = config[scrapper]
 
-            for x in ("year", "month"):
+            for x in ("year", "month", "day"):
+                try:
+                    isList = all( [ isinstance(dico[x], list) and len(dico[x]) in (1,2) for dico in dicos] )
+                    if not isList:
+                        return False, "year et month doivent être des listes de 1 ou 2 entiers positifs ordonnés"  
 
-                isList = all( [ isinstance(dico[x], list) and len(dico[x]) in (1,2) for dico in dicos] )
-                if not isList:
-                    return False, "year et month doivent être des listes de 1 ou 2 entiers positifs ordonnés"  
+                    arePositiveInts = all( [ isinstance(y, int) and y > 0 for dico in dicos for y in dico[x] ] )
+                    if not arePositiveInts:
+                        return False, "year et month doivent être des listes de 1 ou 2 entiers positifs ordonnés"  
 
-                arePositiveInts = all( [ isinstance(y, int) and y > 0 for dico in dicos for y in dico[x] ] )
-                if not arePositiveInts:
-                    return False, "year et month doivent être des listes de 1 ou 2 entiers positifs ordonnés"  
-
-                areOrdered = all( [ dico[x][0] <= dico[x][-1] for dico in dicos ] )
-                if not areOrdered:
-                    return False, "year et month doivent être des listes de 1 ou 2 entiers positifs ordonnés"  
-
-            todo = {field for field in cls.EXPECTED_KEYS[scrapper] if field not in ("year", "month")}
-            
-            if not all( [ isinstance(dico[field], str) for dico in dicos for field in todo ] ):
-                return False, "les champs autres que year et month doivent être des strings"
+                    areOrdered = all( [ dico[x][0] <= dico[x][-1] for dico in dicos ] )
+                    if not areOrdered:
+                        return False, "year et month doivent être des listes de 1 ou 2 entiers positifs ordonnés"
+                except KeyError:
+                    continue
 
             if not all([dico["month"][0] in range(1,13) and dico["month"][-1] in range(1,13) for dico in dicos]):
                 return False, "month doit être une liste de 1 ou 2 entiers positifs ordonnés compris entre 1 et 12"
+
+            try:
+                if not all([dico["day"][0] in range(1,32) and dico["day"][-1] in range(1,32) for dico in dicos]):
+                    return False, "day doit être une liste de 1 ou 2 entiers positifs ordonnés compris entre 1 et 31"
+            except KeyError:
+                pass
+
+            todo = {field for field in cls.EXPECTED_KEYS[scrapper] if field not in ("year", "month", "day")}
+            
+            if not all( [ isinstance(dico[field], str) for dico in dicos for field in todo ] ):
+                return False, "les champs autres que year, month et day doivent être des strings"
 
         return True, ""
     
@@ -111,7 +122,8 @@ class Runner:
     SCRAPPERS = {
         "ogimet": OgimetScrapper.instance(),
         "wunderground": WundergroundScrapper.instance(),
-        "meteociel": MeteocielScrapper.instance()
+        "meteociel": MeteocielScrapper.instance(),
+        "meteociel_daily": MeteocielDailyScrapper.instance()
     }
 
     CHECKER = ConfigFilesChecker.instance()

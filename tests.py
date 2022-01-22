@@ -20,6 +20,10 @@ class ConfigCheckerTester(unittest.TestCase):
 
         "meteociel":[
             { "code_num":"2", "code": "7249", "city":"orleans", "year":[2020, 2021], "month":[2] }
+        ],
+
+        "meteociel_daily":[
+            { "code_num":"2", "code": "7249", "city":"orleans", "year":[2020], "month":[2], "day": [31]}
         ]
     }
 
@@ -106,7 +110,7 @@ class ConfigCheckerTester(unittest.TestCase):
         '''test lorsque les year et month ne sont pas des listes ordonnées'''
         
         todo = copy.deepcopy(self.CONFIG)
-        todo["ogimet"][0]["month"] = [2,1]
+        todo["meteociel_daily"][0]["day"] = [2,1]
 
         is_correct, error = self.CHECKER.check(todo)
         self.assertIn("ordonnés", error)
@@ -137,7 +141,6 @@ class ConfigCheckerTester(unittest.TestCase):
     def test_correct_config(self):
 
         is_correct, error = self.CHECKER.check(self.CONFIG)
-
         self.assertTrue(is_correct)
         self.assertEqual(error, "")
 

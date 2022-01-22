@@ -4,14 +4,25 @@ exemples de tableaux récupérés:
     1 - http://www.ogimet.com/cgi-bin/gsynres?lang=en&ind=08180&ano=2017&mes=8&day=0&hora=0&min=0&ndays=31
     2 - https://www.wunderground.com/history/monthly/it/bergamo/LIME/date/2020-3
     3 - https://www.meteociel.com/climatologie/obs_villes.php?code2=7249&mois=1&annee=2021
+    4 - https://www.meteociel.com/temps-reel/obs_villes.php?code2=7249&jour2=1&mois2=0&annee2=2020
 
 /!\ Une ConnectionResetError peut être levée aléatoirement, cela n'influe pas sur le bon fonctionnement du programme. Je ne sais pas d'où elle sort, des corrections
 seront apportées.
 
 Pour lancer le programme:
 
-    télécharger l'éxecutable (version 2)
-        https://drive.google.com/file/d/1Ua1SSmowC9_f7Ny6HCCb9_yZsdTaGMrK/view?usp=sharing
+    créer un éxecutable
+        - cloner le projet meteoscrapping avec git
+        - dans le répertoire meteoscrapping, créer un environnement virtuel et l'activer:
+            python3 -m venv env
+            env\Scripts\activate
+        - installer les librairies: pip install -r requirements.txt
+        - lancer auto-py-to-exe depuis la console: auto-py-to-exe
+            dans script location, sélectionner meteoscrapping.py
+            dans one file, cliquer sur one file
+            dans additionnal files, cliquer sur add folder, sélectionner le dossier app
+            cliquer sur convert, tout en bas de la fenêtre.
+            Un répertoire "output" avec l'exécutable apparait à la fin.
     
     créer un fichier "config.json" à côté l'éxecutable
         - un modèle de fichier config est donné ci-après ou dans le fichier exemple_config.json (à renommer en config.json)
@@ -42,6 +53,10 @@ structure du fichier config.json
 
     "meteociel":[
         { "code_num":"2", "code": "7249", "city":"orleans", "year":[2020], "month":[1,2] }
+    ],
+
+    "meteociel_daily":[
+        { "code_num":"2", "code": "7249", "city":"orleans", "year":[2020], "month":[2], "day":[27,31] }
     ]
 }
 
@@ -50,15 +65,16 @@ Si un problème de chargement de la page html survient, essayez d'augmenter le w
 
 Chaque élément dans les listes ogimet, wounderground ... correspond aux paramètres pour 1 job.
 
-Les champs month et year doivent être des listes ordonnées d'1 ou 2 entiers positifs.
+Les champs day, month et year doivent être des listes ordonnées d'1 ou 2 entiers positifs.
 
-Les autres champs sont à récupérer directement depuis le site ou l'url voulue (voir ligne 4 à 6 de ce readme),
+Les autres champs sont à récupérer directement depuis le site ou l'url voulue (voir exemples de tableaux récupérés),
 sauf le "city" qui est à choisir soi-même pour les scrappers autres que wunderground.
 
 
 Pour les jobs ogimet:
     - Le champ city sert juste à nommer le fichier csv.
     - Les colonnes daily weather summary sur ogimet sont ignorées.
+    - les mois dans l'url sont numérotés différement. Dans la config, utiliser les numéros usuels.
 
 Pour les jobs wunderground:
     - Les unités sont converties : températures (°F -> °C), vitesses (mph -> km/h), précipitations (in -> mm), pressions (inHg -> hPa).
@@ -68,3 +84,13 @@ Pour les job meteociel:
     - La colonne des images est ignorée.
     - Le champ city sert juste à nommer le fichier csv.
     - https://www.meteociel.com/climatologie/obs_villes.php?code<code_num>=<code>&mois=1&annee=2021
+
+Pour les job meteociel_daily:
+    - La colonne temps et les directions du vent sont ignorées.
+    - Vent et rafale sont récupérées dans des colonnes distinctes.
+    - L'heure est convertie en datetime.
+    - Les jobs pour des jours qui n'existent pas (le 31 février typiquement) sont automatiquement
+        détectés et ignorés sans influencer le bon fonctionnement du programme.
+        Pour récupérer tous les jours des mois de janvier et février, on peut écrire day: [1,31].
+    - Les mois dans l'url sont numérotés différement. Dans la config, utiliser les numéros usuels.
+    - https://www.meteociel.com/temps-reel/obs_villes.php?code<code_num>=<code>&jour2=1&mois2=0&annee2=2020

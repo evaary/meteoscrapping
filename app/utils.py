@@ -2,13 +2,12 @@ from app.data_managers import from_json, to_csv, to_json
 from app.scrappers.meteociel_scrappers import MeteocielDailyScrapper, MeteocielScrapper
 from app.scrappers.wunderground_scrapper import WundergroundScrapper
 from app.scrappers.ogimet_scrapper import OgimetScrapper
+from app.scrappers.abcs import Singleton
 import os
 
-class ConfigFilesChecker:
+class ConfigFilesChecker(Singleton):
 
     '''Singleton contrôlant la validité d'un fichier de config.'''
-
-    _instance = None
     
     ALLOWED_SCRAPPERS = {"wunderground", "ogimet", "meteociel", "meteociel_daily"}
     
@@ -18,16 +17,6 @@ class ConfigFilesChecker:
         "meteociel": {"city", "year", "month", "code_num", "code"},
         "meteociel_daily": {"city", "year", "month", "day", "code_num", "code"}
     }
-
-    def __init__(self):
-        raise RuntimeError("call ConfigFilesChecker.instance() instead")
-
-    @classmethod
-    def instance(cls):
-
-        cls._instance = cls._instance if cls._instance is not None else cls.__new__(cls)
-        
-        return cls._instance
 
     @classmethod
     def _check_scrapper_type(cls, config:dict) -> tuple:

@@ -2,9 +2,7 @@ from requests_html import HTMLSession
 from abc import ABC, abstractmethod
 import pandas as pd
 
-class BaseScrapper(ABC):
-
-    '''Scrapper de base qui récupère les données brutes d'une table html.'''
+class Singleton:
 
     _instance = None
 
@@ -16,15 +14,29 @@ class BaseScrapper(ABC):
         cls._instance = cls._instance if cls._instance is not None else cls.__new__(cls)
         return cls._instance
 
+# entorse aux règles de l'héritage
+class MeteoScrapper(Singleton, ABC):
+
+    DAYS = {
+        "1" : 31,
+        "2" : 28,
+        "3" : 31,
+        "4" : 30,
+        "5" : 31,
+        "6" : 30,
+        "7" : 31,
+        "8" : 31,
+        "9" : 30,
+        "11": 30,
+        "10": 31,
+        "12": 31,
+    }
+
+    # initialisation
     def from_config(self, config):
 
         self.errors = {}
         self._city = config["city"]
-        self._todos = (
-            (year, month)
-            for year in range(config["year"][0], config["year"][-1] + 1)
-            for month in range(config["month"][0], config["month"][-1] + 1)
-        )
         try:
             self._waiting = config["waiting"]
         except KeyError:
@@ -34,23 +46,30 @@ class BaseScrapper(ABC):
     
     ### METHODES ABSTRAITES ###
     @abstractmethod
+    def _read_todo(self, todo):
+        '''récupération de la clé pour sauvegarder les erreurs dans le dictionnaire errors'''
+
+    @abstractmethod
     def _set_url(self, year, month):
         '''crétion de l'url'''
 
     @abstractmethod
     def _scrap_columns_names(table):
-        '''fonction à redéfinir dans chaque scrapper qui récupère les noms des colonnes'''
+        '''fonction qui récupère les noms des colonnes du tableau de données'''
     
     @abstractmethod
     def _scrap_columns_values(table):
-        '''fonction à redéfinir dans chaque scrapper qui récupère les valeurs du tableau de données'''
+        '''fonction qui récupère les valeurs du tableau de données'''
 
     @abstractmethod
     def _rework_data(self):
-        '''fonction à redéfinir dans chaque scrapper qui met en forme le tableau de données'''
-    
+        '''fonction qui met en forme le tableau de données'''
 
     ### METHODES CONCRETES ###
+    def _register_error(self, key, url, message):
+        self.errors[key] = {"url": url, "error": message}
+        print(f"\t{message}")
+
     def _get_html_page(self, url):
         
         '''_get_html_page : charge la page internet où se trouvent les données à récupérer
@@ -107,7 +126,7 @@ class BaseScrapper(ABC):
             return table
         # (3)
         try:
-            condition =  "no valid" in table.find("thead")[0].find("th")[0].text.lower().strip()
+            condition = "no valid" in table.find("thead")[0].find("th")[0].text.lower().strip()
             table = None if condition else table
         except IndexError:
             pass
@@ -119,6 +138,7 @@ class BaseScrapper(ABC):
         '''_scrap_data : générateur des dataframes à enregistrer.
             return: table (requests-html.Element, voir doc requests-html python) ou None
         '''
+        # (0) Pour éviter de chercher les data du 31 février, entre autre, pour les daily_scrapper
         # (1) On récupère l'année et le mois courant à partir du tuple todo.
         # On affiche dans le terminal le job en cours. On convertit le mois (int) en string.
         # (2) On reconstitue l'url et on charge la page html correspondante. S'il y a une erreur,
@@ -130,42 +150,38 @@ class BaseScrapper(ABC):
         # Si on ne peut pas, on le signale et on passe à la table suivante.
         
         for todo in self._todos:
+            # (0)
+            try:
+                if not self._check_days(todo):
+                    continue
+            except AttributeError:
+                pass
             # (1)
-            year, month = todo
-            month = "0" + str(month) if month < 10 else str(month)
+            key = self._read_todo(todo)
             # (2)
-            url = self._set_url(year, month)
-            print(f"\n{self.SCRAPPER} - {self._city} - {month}/{year} - {url}")
+            url = self._set_url(todo)
             
             html_page = self._get_html_page(url)
             if html_page is None:
-                error = "error while loading html page"
-                self.errors[f"{self._city}_{year}_{month}"] = {"url": url, "error": error}
-                print(f"\t{error}")
+                self._register_error(key, url, "error while loading html page")
                 continue
             # (3)
             table = self._find_table_in_html(html_page)
             if table is None:
-                error = "no data table found"
-                self.errors[f"{self._city}_{year}_{month}"] = {"url": url, "error": error}
-                print(f"\t{error}")
+                self._register_error(key, url, "no data table found")
                 continue
             # (4)
             try:
                 col_names = self._scrap_columns_names(table)
                 values = self._scrap_columns_values(table)
             except Exception:
-                error = "error while scrapping data"
-                self.errors[f"{self._city}_{year}_{month}"] = {"url": url, "error": error}
-                print(f"\t{error}")
+                self._register_error(key, url, "error while scrapping data")
                 continue
             # (5)
             try:
-                df = self._rework_data(values, col_names, year, month)
+                df = self._rework_data(values, col_names, todo)
             except Exception:
-                error = "error while reworking data"
-                self.errors[f"{self._city}_{year}_{month}"] = {"url": url, "error": error}
-                print(f"\t{error}")
+                self._register_error(key, url, "error while reworking data")
                 continue
 
             yield df
@@ -185,7 +201,62 @@ class BaseScrapper(ABC):
         
         return data
 
-
     ### DUNDER METHODS ###
     def __repr__(self):
         return f"<{self.__class__.__name__}> ville:{self._city}, url:{self._url}"
+
+class MonthlyScrapper(MeteoScrapper):
+
+    '''Scrapper de base qui récupère les données brutes d'une table html.'''
+
+    def from_config(self, config):
+        
+        super().from_config(config)
+
+        self._todos = (
+            (year, month)
+            for year in range(config["year"][0], config["year"][-1] + 1)
+            for month in range(config["month"][0], config["month"][-1] + 1)
+        )
+
+        return self
+
+    def _read_todo(self, todo):
+        
+        year, month = todo
+        month = "0" + str(month) if month < 10 else str(month)
+        
+        return f"{self._city}_{year}_{month}"
+
+class DailyScrapper(MeteoScrapper):
+
+    def from_config(self, config):
+        
+        super().from_config(config)
+
+        self._todos = (
+            (year, month, day)
+            for year in range(config["year"][0], config["year"][-1] + 1)
+            for month in range(config["month"][0], config["month"][-1] + 1)
+            for day in range(config["day"][0], config["day"][-1] + 1)
+        )
+
+        return self
+
+    def _read_todo(self, todo):
+        
+        year, month, day = todo
+        month = "0" + str(month) if month < 10 else str(month)
+        day = "0" + str(day) if day < 10 else str(day)
+        
+        return f"{self._city}_{year}_{month}_{day}"
+
+    @classmethod
+    def _check_days(cls, todo):
+
+        _, month, day = todo
+
+        if day > cls.DAYS[str(month)]:
+            return False
+
+        return True

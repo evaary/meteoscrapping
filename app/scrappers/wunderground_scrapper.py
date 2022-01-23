@@ -1,13 +1,13 @@
 import numpy as np
 import pandas as pd
-from app.scrappers.abcs import BaseScrapper
+from app.scrappers.abcs import MonthlyScrapper
 
-class WundergroundScrapper(BaseScrapper):
+class WundergroundScrapper(MonthlyScrapper):
     
     ''' scrapper pour le site wunderground'''
 
     UNITS_CONVERSION = {
-        "°_f": { "new_unit": "°C", "func": (lambda x: (x-32)*5/9 )},
+        "(°_f)": { "new_unit": "°C", "func": (lambda x: (x-32)*5/9 )},
         "(mph)": { "new_unit": "(km/h)", "func": (lambda x: x*1.609344) },
         "(in)": { "new_unit": "(mm)", "func": (lambda x: x*25.4) },
         "(hg)": { "new_unit": "(hPa)",  "func": (lambda x: x*33.86388) }
@@ -25,8 +25,15 @@ class WundergroundScrapper(BaseScrapper):
 
         return self
 
-    def _set_url(self, year, month):
-        return self._url + f"/{year}-{int(month)}"
+    def _set_url(self, todo):
+
+        year, month = todo
+        url = self._url + f"/{year}-{month}"
+        
+        month = "0" + str(month) if month < 10 else str(month)
+        print(f"\n{self.SCRAPPER} - {self._city} - {month}/{year} - {url}")
+        
+        return url
 
     @staticmethod
     def _scrap_columns_names(table):
@@ -62,7 +69,7 @@ class WundergroundScrapper(BaseScrapper):
         return [ td.text for td in table.find("tbody")[0].find("td") if "\n" in td.text ]
 
     @classmethod
-    def _rework_data(cls, values, main_names, year, month):
+    def _rework_data(cls, values, main_names, todo):
         '''_rework_data : création du dataframe final
             args: values (list), main_names (list), year (int), month (str)
             return : df (pandas.DataFrame)
@@ -110,7 +117,7 @@ class WundergroundScrapper(BaseScrapper):
         
         # (4)
         col_names = [
-            "_".join( [ main.strip(), sub.strip() ] ).lower()
+            "_".join( [ main.strip(), sub.strip() ] ).lower().replace(" ", "_")
 
             for main, subs in zip(main_names, sub_names)
             for sub in subs
@@ -121,6 +128,8 @@ class WundergroundScrapper(BaseScrapper):
         df = pd.DataFrame(df, columns=col_names)
         df = df.drop([0], axis="index")
         # (6)
+        year, month = todo
+        month = "0" + str(month) if month < 10 else str(month)
         df["date"] = [
             
             f"{year}/{month}/0{day}" if int(day) < 10 else f"{year}/{month}/{day}" 
@@ -134,13 +143,13 @@ class WundergroundScrapper(BaseScrapper):
             df[col] = pd.to_numeric(df[col])
         # (8)
         for old_unit, dico in cls.UNITS_CONVERSION.items():
-
-            cols_toconvert = [col for col in df.columns if old_unit in col]
-
-            df[cols_toconvert] = np.round(dico["func"](df[cols_toconvert]), 1)
-
+            
+            cols_to_convert = [col for col in df.columns if old_unit in col]
+            
+            df[cols_to_convert] = np.round(dico["func"](df[cols_to_convert]), 1)
+            
             df = df.rename(columns={
-                col: col.replace(old_unit, dico["new_unit"]) for col in cols_toconvert
+                col: col.replace(old_unit, dico["new_unit"]) for col in cols_to_convert
             })
-
+            
         return df

@@ -2,10 +2,9 @@
 import numpy as np
 import pandas as pd
 import re
-from requests_html import HTMLSession
-from app.scrappers.abcs import BaseScrapper
+from app.scrappers.abcs import MonthlyScrapper, DailyScrapper
 
-class MeteocielScrapper(BaseScrapper):
+class MeteocielScrapper(MonthlyScrapper):
 
     UNITS = {"temperature": "°C", "precipitations": "mm", "ensoleillement": "h"}
 
@@ -20,8 +19,15 @@ class MeteocielScrapper(BaseScrapper):
 
         return self
 
-    def _set_url(self, year, month):
-        return self._url + f"&mois={month}&annee={year}"
+    def _set_url(self, todo):
+        
+        year, month = todo
+        url = self._url + f"&mois={month}&annee={year}"
+
+        month = "0" + str(month) if month < 10 else str(month)
+        print(f"{self.SCRAPPER} - {self._city} - {month}/{year} - {url}")
+        
+        return url
 
     @classmethod
     def _scrap_columns_names(cls, table):
@@ -59,7 +65,7 @@ class MeteocielScrapper(BaseScrapper):
         return [ td.text for tr in table.find("tr")[1:-1] for td in tr.find("td") ]
 
     @staticmethod
-    def _rework_data(values, col_names, year, month):
+    def _rework_data(values, col_names, todo):
         
         # (1) On définit les dimensions du tableau puis on le créé.
         # (2) Si une colonne to_delete exite, on la supprime.
@@ -73,6 +79,9 @@ class MeteocielScrapper(BaseScrapper):
         # (6) On réaffecte les nouvelles dates, puis on trie le dataframe selon la date.
 
         # (1)
+        year, month = todo
+        month = "0" + str(month) if month < 10 else str(month)
+        
         n_rows = len(values) // len(col_names)
         n_cols = len(col_names)
         df = pd.DataFrame(np.array(values).reshape(n_rows, n_cols), columns=col_names)
@@ -97,7 +106,7 @@ class MeteocielScrapper(BaseScrapper):
         
         return df
 
-class MeteocielDailyScrapper:
+class MeteocielDailyScrapper(DailyScrapper):
 
     UNITS = {
         "visi": "km",
@@ -108,88 +117,43 @@ class MeteocielDailyScrapper:
         "precip": "mm",
     }
 
-    ASSOCIATIONS = {
-        "1" : {"num":  0, "days": 31},
-        "2" : {"num":  1, "days": 28},
-        "3" : {"num":  2, "days": 31},
-        "4" : {"num":  3, "days": 30},
-        "5" : {"num":  4, "days": 31},
-        "6" : {"num":  5, "days": 30},
-        "7" : {"num":  6, "days": 31},
-        "8" : {"num":  7, "days": 31},
-        "9" : {"num":  8, "days": 30},
-        "11": {"num":  9, "days": 30},
-        "10": {"num": 10, "days": 31},
-        "12": {"num": 11, "days": 31},
+    NUMEROTATIONS = {
+        "1" :  0,
+        "2" :  1,
+        "3" :  2,
+        "4" :  3,
+        "5" :  4,
+        "6" :  5,
+        "7" :  6,
+        "8" :  7,
+        "9" :  8,
+        "11":  9,
+        "10": 10,
+        "12": 11,
     }
 
     CRITERIA = ("bgcolor", "#EBFAF7")
     SCRAPPER = "meteociel_daily"
     BASE_URL = " https://www.meteociel.com/temps-reel/obs_villes.php?"
 
-    _instance = None
-
-    def __init__(self):
-        raise RuntimeError(f"use {self.__class__.__name__}.instance() instead")
-
-    @classmethod
-    def instance(cls):
-        cls._instance = cls._instance if cls._instance is not None else cls.__new__(cls)
-        return cls._instance
-
     def from_config(self, config):
-
-        self.errors = {}
+        
+        super().from_config(config)
         self._url = self.BASE_URL + f"code{config['code_num']}={config['code']}"
-        self._city = config["city"]
-        
-        try:
-            self._waiting = config["waiting"]
-        except KeyError:
-            self._waiting = 10
-        
-        self._todos = (
-            (year, month, day)
-            for year in range(config["year"][0], config["year"][-1] + 1)
-            for month in range(config["month"][0], config["month"][-1] + 1)
-            for day in range(config["day"][0], config["day"][-1] + 1)
-        )
 
         return self
 
-    def _get_html_page(self, url):
-        
-        html_page = None
-        i = 0
-        with HTMLSession() as session:
-        
-            while(html_page is None and i < 3):
-                i += 1
-                if(i > 1):
-                    print("\tretrying...")
-                try:
-                    html_page = session.get(url) # long
-                    html_page.html.render(sleep=self._waiting, keep_page=True, scrolldown=1)
-                except Exception:
-                    html_page = None
+    def _set_url(self, todo):
 
-        return html_page
-    
-    @classmethod
-    def _find_table_in_html(cls, html_page):
-        
-        attr, val = cls.CRITERIA
-        
-        try:
-            table = [
-                tab for tab in html_page.html.find("table")
-                if attr in tab.attrs and tab.attrs[attr] == val
-            ][0]
-        except Exception:
-            table = None
-            return table
+        year, month, day = todo
+        url = self._url + f"&jour2={day}&mois2={self.NUMEROTATIONS[str(month)]}&annee2={year}"
 
-        return table
+        month = "0" + str(month) if month < 10 else str(month)
+        day = "0" + str(day) if day < 10 else str(day)
+
+        print(f"{self.SCRAPPER} - {self._city} - {day}/{month}/{year} - {url}")
+        
+        return url
 
     @classmethod
     def _scrap_columns_names(cls, table):
@@ -212,7 +176,11 @@ class MeteocielDailyScrapper:
         return [ td.text for tr in table.find("tr")[1:] for td in tr.find("td") ]
 
     @staticmethod
-    def _rework_data(values, col_names, year, month, day):
+    def _rework_data(values, col_names, todo):
+
+        year, month, day = todo
+        month = "0" + str(month) if month < 10 else str(month)
+        day = "0" + str(day) if day < 10 else str(day)
         
         n_rows = 24
         n_cols = len(col_names)
@@ -238,9 +206,14 @@ class MeteocielDailyScrapper:
         
         df = df[not_numeric + numerics]
         
-        separated = np.array(
-            [x.split("(") for x in vent_rafale["vent (rafales)_km/h"].values]
-        )
+        separated = [x.split("(") for x in vent_rafale["vent (rafales)_km/h"].values]
+        
+        # si 1 seule valeur est présente dans la colonne, on en rajoute une vide
+        for x in [separated.index(x) for x in separated if len(x) != 2]:
+            separated[x].append("")
+        
+        separated = np.array(separated)
+        print(separated)
         separated = f_num_extract(separated)
         separated = pd.DataFrame(separated, columns=["vent", "rafale"])
         separated["heure"] = vent_rafale["heure"]
@@ -250,67 +223,3 @@ class MeteocielDailyScrapper:
         df = df.sort_values(by="date")
         
         return df
-    
-    def _scrap_data(self):
-                
-        for todo in self._todos:
-            
-            year, month, day = todo
-            # Pour éviter de chercher les data du 31 février, entre autre ...
-            if day > self.ASSOCIATIONS[str(month)]["days"]:
-                continue
-
-            month = "0" + str(month) if month < 10 else str(month)
-            day = "0" + str(day) if day < 10 else str(day)
-            
-            url = self._url + f"&jour2={int(day)}&mois2={self.ASSOCIATIONS[str(int(month))]['num']}&annee2={year}"
-            print(f"\n{self.SCRAPPER} - {self._city} - {day}/{month}/{year} - {url}")
-            
-            html_page = self._get_html_page(url)
-            if html_page is None:
-                error = "error while loading html page"
-                self.errors[f"{self._city}_{year}_{month}_{day}"] = {"url": url, "error": error}
-                print(f"\t{error}")
-                continue
-            
-            table = self._find_table_in_html(html_page)
-            if table is None:
-                error = "no data table found"
-                self.errors[f"{self._city}_{year}_{month}_{day}"] = {"url": url, "error": error}
-                print(f"\t{error}")
-                continue
-            
-            try:
-                col_names = self._scrap_columns_names(table)
-                values = self._scrap_columns_values(table)
-            except Exception:
-                error = "error while scrapping data"
-                self.errors[f"{self._city}_{year}_{month}_{day}"] = {"url": url, "error": error}
-                print(f"\t{error}")
-                continue
-            
-            try:
-                df = self._rework_data(values, col_names, year, month, day)
-            except Exception:
-                error = "error while reworking data"
-                self.errors[f"{self._city}_{year}_{month}"] = {"url": url, "error": error}
-                print(f"\t{error}")
-                continue
-
-            yield df
-
-    def get_data(self):
-        
-        try:
-            data = next(self._scrap_data())
-
-            for df in self._scrap_data():
-                data = pd.concat([data, df])
-        
-        except StopIteration:
-            data = pd.DataFrame()
-        
-        return data
-
-    def __repr__(self):
-        return f"<{self.__class__.__name__}> ville:{self._city}, url:{self._url}"

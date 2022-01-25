@@ -1,27 +1,27 @@
 import numpy as np
 import pandas as pd
-from app.scrappers.abcs import BaseScrapper
+from app.scrappers.abcs import MonthlyScrapper
 
-class OgimetScrapper(BaseScrapper):
+class OgimetScrapper(MonthlyScrapper):
     
     ''' scrapper pour le site ogimet'''
     # La numérotation des mois sur ogimet est décalée.
     # Ce dictionnaire fait le lien entre la numérotation
     # usuelle (clés) et celle de ogimet (num). On définit aussi le nombre
     # de jours et donc de lignes attendues dans le dataframe.
-    ASSOCIATIONS = {
-        "01": {"num":  2, "days": 31},
-        "02": {"num":  3, "days": 28},
-        "03": {"num":  4, "days": 31},
-        "04": {"num":  5, "days": 30},
-        "05": {"num":  6, "days": 31},
-        "06": {"num":  7, "days": 30},
-        "07": {"num":  8, "days": 31},
-        "08": {"num":  9, "days": 31},
-        "09": {"num": 10, "days": 30},
-        "11": {"num": 12, "days": 30},
-        "10": {"num": 11, "days": 31},
-        "12": {"num":  1, "days": 31},
+    NUMEROTATIONS = {
+        "1" :  2,
+        "2" :  3,
+        "3" :  4,
+        "4" :  5,
+        "5" :  6,
+        "6" :  7,
+        "7" :  8,
+        "8" :  9,
+        "9" : 10,
+        "11": 12,
+        "10": 11,
+        "12":  1,
     }
     # Critère de sélection qui servira à récupérer le tableau voulu
     CRITERIA = ("bgcolor", "#d0d0d0")
@@ -35,8 +35,15 @@ class OgimetScrapper(BaseScrapper):
 
         return self
 
-    def _set_url(self, year, month):
-        return self._url + f"ano={year}&mes={self.ASSOCIATIONS[month]['num']}&day=0&hora=0&min=0&ndays={self.ASSOCIATIONS[month]['days']}"
+    def _set_url(self, todo):
+
+        year, month = todo
+        url = self._url + f"ano={year}&mes={self.NUMEROTATIONS[str(month)]}&day=0&hora=0&min=0&ndays={self.DAYS[str(month)]}"
+
+        month = "0" + str(month) if month < 10 else str(month)
+        print(f"\n{self.SCRAPPER} - {self._city} - {month}/{year} - {url}")
+        
+        return url
 
     @staticmethod
     def _scrap_columns_names(table):
@@ -130,7 +137,7 @@ class OgimetScrapper(BaseScrapper):
         
         # (1)
         done = []
-        todo = values.copy()
+        todo = values.copy()        
         
         while len(done) != n_filled :            
             # (2)
@@ -152,7 +159,7 @@ class OgimetScrapper(BaseScrapper):
         return done
 
     @classmethod
-    def _rework_data(cls, values, col_names, year, month):
+    def _rework_data(cls, values, col_names, todo):
         
         '''_rework_data : mise en forme du dataframe à partir des valeurs récoltées
             args: values (list), col_names (list), year (int), month (str)
@@ -171,10 +178,14 @@ class OgimetScrapper(BaseScrapper):
         # colonnes qui n'ont pas daily_weather_summary dans leur nom.
         
         # (1)
+        year, month = todo
+
         n_cols = len(col_names)
-        n_rows = cls.ASSOCIATIONS[month]["days"]
+        n_rows = cls.DAYS[str(month)]
         n_filled = n_rows * n_cols
         n_values = len(values)
+        
+        month = "0" + str(month) if month < 10 else str(month)
         
         if n_values != n_filled:
             values = cls._fill_missing_values(values, n_cols, n_filled, month)

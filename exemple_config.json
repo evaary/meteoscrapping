@@ -16,5 +16,26 @@
 
     "meteociel_daily":[
         { "code_num":"2", "code": "7249", "city":"orleans", "year":[2020], "month":[2], "day":[27,31] }
+    ],
+
+
+
+
+
+
+    "ogimet_":[
+        { "ind":"16138", "city":"Ferrara", "year":[2020], "month":[1] }
+    ],
+
+    "wunderground_":[
+        { "country_code":"it", "region": "LIBD", "city":"matera", "year":[2021], "month":[4] }
+    ],
+
+    "meteociel_":[
+        { "code_num":"2", "code": "7249", "city":"orleans", "year":[2019], "month":[3] }
+    ],
+
+    "meteociel_daily_":[
+        { "code_num":"2", "code": "7249", "city":"orleans", "year":[2018], "month":[2], "day":[8] }
     ]
 }

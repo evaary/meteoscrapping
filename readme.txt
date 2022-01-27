@@ -11,18 +11,9 @@ seront apportées.
 
 Pour lancer le programme:
 
-    créer un éxecutable
-        - cloner le projet meteoscrapping avec git
-        - dans le répertoire meteoscrapping, créer un environnement virtuel et l'activer:
-            python3 -m venv env
-            env\Scripts\activate
-        - installer les librairies: pip install -r requirements.txt
-        - lancer auto-py-to-exe depuis la console: auto-py-to-exe
-            dans script location, sélectionner meteoscrapping.py
-            dans one file, cliquer sur one file
-            dans additionnal files, cliquer sur add folder, sélectionner le dossier app
-            cliquer sur convert, tout en bas de la fenêtre.
-            Un répertoire "output" avec l'exécutable apparait à la fin.
+    télécharger l'exécutable
+        - fichier zip : https://drive.google.com/file/d/1nizRr_Yzv-Rc5IabFTKEWip8etFVAnNN/view?usp=sharing
+        - dézipper
     
     créer un fichier "config.json" à côté l'éxecutable
         - un modèle de fichier config est donné ci-après ou dans le fichier exemple_config.json (à renommer en config.json)

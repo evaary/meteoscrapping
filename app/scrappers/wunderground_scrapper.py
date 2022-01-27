@@ -29,7 +29,7 @@ class WundergroundScrapper(MonthlyScrapper):
         url = self._url + f"/{year}-{month}"
         
         month = "0" + str(month) if month < 10 else str(month)
-        print(f"\n{self.SCRAPPER} - {self._city} - {month}/{year} - {url}")
+        print(f"{self.SCRAPPER} - {self._city} - {month}/{year} - {url}")
         
         return url
 

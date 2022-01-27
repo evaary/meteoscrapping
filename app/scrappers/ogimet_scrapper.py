@@ -38,7 +38,7 @@ class OgimetScrapper(MonthlyScrapper):
         url = self._url + f"ano={year}&mes={self.NUMEROTATIONS[str(month)]}&day=0&hora=0&min=0&ndays={self.DAYS[str(month)]}"
 
         month = "0" + str(month) if month < 10 else str(month)
-        print(f"\n{self.SCRAPPER} - {self._city} - {month}/{year} - {url}")
+        print(f"{self.SCRAPPER} - {self._city} - {month}/{year} - {url}")
         
         return url
 

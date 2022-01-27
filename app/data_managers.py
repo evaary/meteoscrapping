@@ -8,7 +8,7 @@ def create_dirs(data_saver):
     def wrapper_function(*args, **kwargs):
 
         try:
-            dirs, _ = os.path.split(kwargs.get("path"))
+            dirs, _ = os.path.split(kwargs["path"])
         except KeyError:
             dirs, _ = os.path.split(args[1])
         

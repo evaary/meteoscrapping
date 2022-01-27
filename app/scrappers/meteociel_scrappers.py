@@ -14,7 +14,7 @@ class MeteocielScrapper(MonthlyScrapper):
 
     def from_config(self, config):
         
-        super().from_config(config)   
+        super().from_config(config)
         self._url = self.BASE_URL + f"code{config['code_num']}={config['code']}"
 
         return self

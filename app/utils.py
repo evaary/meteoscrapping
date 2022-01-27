@@ -24,7 +24,7 @@ class ConfigFilesChecker(Singleton):
         reference = cls.ALLOWED_SCRAPPERS.union({"waiting"})
         # On vérifie que les clés du dict sont correctes.
         if not set(config.keys()).issubset(reference):
-            return False, f"les champ principaux doivent être {reference}"        
+            return False, f"les champ principaux doivent être {reference}"
 
         return True, ""
 
@@ -86,7 +86,7 @@ class ConfigFilesChecker(Singleton):
 
         return True, ""
     
-    @classmethod      
+    @classmethod
     def check(cls, config):
 
         for func in [cls._check_scrapper_type, cls._check_keys, cls._check_values]:
@@ -126,7 +126,7 @@ class Runner:
             print("no data")
             return
         
-        to_csv(data, path)    
+        to_csv(data, path)
     
     @classmethod
     def _save_errors(cls, errors, path):
@@ -149,7 +149,7 @@ class Runner:
 
         if not is_correct:
             print(error)
-            return        
+            return
         
         for scrapper_type in {x for x in configs.keys() if x != "waiting"}:
             

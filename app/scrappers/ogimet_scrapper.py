@@ -124,9 +124,9 @@ class OgimetScrapper(MonthlyScrapper):
         
         # (1)
         done = []
-        todo = values.copy()        
+        todo = values.copy()
         
-        while len(done) != n_filled :            
+        while len(done) != n_filled :
             # (2)
             row = todo[:n_cols]
             # (3)

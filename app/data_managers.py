@@ -1,14 +1,16 @@
 import json
 import os
 
+# version 27/01/2022
+
 def create_dirs(data_saver):
     '''Functions to automatically create dirs, if needed, before saving files in.'''
     def wrapper_function(*args, **kwargs):
 
         try:
-            dirs, filename = os.path.split(kwargs.get("path"))
-        except:
-            dirs, filename = os.path.split(args[1])
+            dirs, _ = os.path.split(kwargs.get("path"))
+        except KeyError:
+            dirs, _ = os.path.split(args[1])
         
         try:
             os.makedirs(dirs)

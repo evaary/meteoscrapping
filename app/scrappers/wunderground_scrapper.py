@@ -3,8 +3,6 @@ import pandas as pd
 from app.scrappers.abcs import MonthlyScrapper
 
 class WundergroundScrapper(MonthlyScrapper):
-    
-    ''' scrapper pour le site wunderground'''
 
     UNITS_CONVERSION = {
         "(°_f)": { "new_unit": "°C", "func": (lambda x: (x-32)*5/9 )},
@@ -13,7 +11,7 @@ class WundergroundScrapper(MonthlyScrapper):
         "(hg)": { "new_unit": "(hPa)",  "func": (lambda x: x*33.86388) }
     }
 
-    # Critère de sélection qui servira à récupérer le tableau voulu
+    # Critère de sélection qui sert à retrouver le tableau de donner dans la page html
     CRITERIA = ("aria-labelledby", "History days")
     SCRAPPER = "wunderground"
     BASE_URL = "https://www.wunderground.com/history/monthly/"
@@ -37,24 +35,11 @@ class WundergroundScrapper(MonthlyScrapper):
 
     @staticmethod
     def _scrap_columns_names(table):
-        
-        '''
-        _scrap_columns_names: récupère les valeurs de chaque cellule td de la partie
-        thead du tableau html.
-            args: table (requests_html.Element)
-            return: (list)
-        '''
         return [td.text for td in table.find("thead")[0].find("td")]
 
     @staticmethod
     def _scrap_columns_values(table):
         
-        '''
-        _scrap_columns_values: récupère les valeurs de chaque cellule td de la partie
-        tbody du tableau html.
-            args: table (requests_html.Element)
-            return: col_names (list)
-        '''
         # La structure html du tableau est tordue, ce qui conduit à des doublons dans values.
         # Daily Observations compte 7 colonnes principales et 17 sous-colonnes.
         # Elle est donc de dimension (lignes, sous-colonnes).
@@ -70,32 +55,29 @@ class WundergroundScrapper(MonthlyScrapper):
 
     @classmethod
     def _rework_data(cls, values, main_names, todo):
-        '''_rework_data : création du dataframe final
-            args: values (list), main_names (list), year (int), month (str)
-            return : df (pandas.DataFrame)
-        '''
+        
         # (1) values est une liste de str. Chaque str contient toutes les données d'1 colonne principale
-        # séparées par des \n ("x\nx\nx\nx..."). On convertit ces str en liste de données [x,x,x, ...].
-        # values devient une liste de listes.
-        # On définit aussi le nombre de ligne comme étant égal à la longueur de la 1ère liste de values,
-        # qui correspond à la colonne Time.
+        #     séparées par des \n ("x\nx\nx\nx..."). On convertit ces str en liste de données [x,x,x, ...].
+        #     values devient une liste de listes.
+        #     On définit aussi le nombre de ligne comme étant égal à la longueur de la 1ère liste de values,
+        #     qui correspond à la colonne Time.
         # (2) On initialise la matrice qui constituera le dataframe final avec la 1ère liste (Time) transformée en vecteur colonne.
         # (3) Le dataframe aura besoin de noms pour ses colonnes. Le nom final est composé d'un nom
-        # principal et d'un complément, sauf pour les colonnes Time et Précipitations.
-        # Les noms principaux sont contenus dans main_names, les compléments correspondent aux 1 ou 3
-        # premières valeurs des listes dans values. Pour chaque liste, on détermine le nombre de colonnes
-        # qu'elle contient, et on récupère les compléments (si elle compte pour 3 colonnes, on prend les 3
-        # premières valeurs). On transforme la liste courante en vecteur colonne ou en matrice à 3 colonnes,
-        # puis on accolle ces colonnes au dataframe principal.
+        #     principal et d'un complément, sauf pour les colonnes Time et Précipitations.
+        #     Les noms principaux sont contenus dans main_names, les compléments correspondent aux 1 ou 3
+        #     premières valeurs des listes dans values. Pour chaque liste, on détermine le nombre de colonnes
+        #     qu'elle contient, et on récupère les compléments (si elle compte pour 3 colonnes, on prend les 3
+        #     premières valeurs). On transforme la liste courante en vecteur colonne ou en matrice à 3 colonnes,
+        #     puis on accolle ces colonnes au dataframe principal.
         # (4) On a récupéré tous les compléments et tous les nomes principaux. On créer tous les couples
-        # nom prinicpal - complément qu'il faut pour obtenir les noms des colonnes du dataframe.
-        # Le nom de la colonne des dates est actuellement Time. On le remplace par date.
+        #     nom prinicpal - complément qu'il faut pour obtenir les noms des colonnes du dataframe.
+        #     Le nom de la colonne des dates est actuellement Time. On le remplace par date.
         # (5) On créer le dataframe final à partir de la matrice et des noms de colonnes. La 1ère ligne,
-        # contenant les compléments, est supprimée.
+        #     contenant les compléments, est supprimée.
         # (6) La colonne date ne contient que les numéros du jour du mois (1 à 31, ou moins). On remplace
-        # par la date au format AAAA-MM-JJ et on trie.
+        #     par la date au format AAAA-MM-JJ et on trie.
         # (7) Jusqu'ici les valeur du dataframe sont au format str. On les convertit en numérique.
-        # (8) On convertit vers les unités S.I. .
+        # (8) On convertit vers les unités classiques .
         
         # (1)
         values = [string.split("\n") for string in values]

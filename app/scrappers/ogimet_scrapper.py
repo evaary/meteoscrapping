@@ -4,11 +4,8 @@ from app.scrappers.abcs import MonthlyScrapper
 
 class OgimetScrapper(MonthlyScrapper):
     
-    ''' scrapper pour le site ogimet'''
     # La numérotation des mois sur ogimet est décalée.
-    # Ce dictionnaire fait le lien entre la numérotation
-    # usuelle (clés) et celle de ogimet (num). On définit aussi le nombre
-    # de jours et donc de lignes attendues dans le dataframe.
+    # Ce dictionnaire associe la numérotation usuelle (clés) et celle d'ogimet (valeurs).
     NUMEROTATIONS = {
         "1" :  2,
         "2" :  3,
@@ -23,7 +20,7 @@ class OgimetScrapper(MonthlyScrapper):
         "10": 11,
         "12":  1,
     }
-    # Critère de sélection qui servira à récupérer le tableau voulu
+    # Critère de sélection qui sert à retrouver le tableau de donner dans la page html
     CRITERIA = ("bgcolor", "#d0d0d0")
     SCRAPPER = "ogimet"
     BASE_URL = f"http://www.ogimet.com/cgi-bin/gsynres?lang=en&"
@@ -48,23 +45,19 @@ class OgimetScrapper(MonthlyScrapper):
     @staticmethod
     def _scrap_columns_names(table):
         
-        '''_scrap_columns_names : récupère le nom des colonnes du futur dataframe
-            args: table (requests_html.Element)
-            return: col_names (list)
-        '''
         # (1) On récupère les 2 tr du thead de la table de données sur ogimet dans trs.
-        # Le 1er contient les noms principaux des colonnes, le 2ème 6 compléments.
-        # Les 3 premiers compléments sont pour la température, les 3 suivants pour le vent.
+        #     Le 1er contient les noms principaux des colonnes, le 2ème 6 compléments.
+        #     Les 3 premiers compléments sont pour la température, les 3 suivants pour le vent.
         # (2) On initialise une liste de liste, de la même longueur que la liste des noms
-        # principaux. Ces listes contiendront les subnames associés à chaque main name.
-        # Pour température et vent, on a max 3 subnames chacun. Les autres listes sont vides.
-        # On remplit les listes avec les valeurs de subnames associés.
+        #     principaux. Ces listes contiendront les subnames associés à chaque main name.
+        #     Pour température et vent, on a max 3 subnames chacun. Les autres listes sont vides.
+        #     On remplit les listes avec les valeurs de subnames associés.
         # (3) On établit la liste des noms de colonnes en associant les noms prinicpaux
-        # et leurs compléments. On remplace les sauts de lignes et les espaces par des _ .
-        # On passe en minuscules avec lower et on supprime les espaces avec strip.
-        # On reforme l'unité de température
+        #     et leurs compléments. On remplace les sauts de lignes et les espaces par des _ .
+        #     On passe en minuscules avec lower et on supprime les espaces avec strip.
+        #     On reforme l'unité de température
         # (4) la colonne daily_weather_summary compte pour 8, on n'a qu'1 nom sur les 8.
-        # On en rajoute 7.
+        #     On en rajoute 7.
         
         # (1)
         trs = table.find("thead")[0].find("tr")
@@ -105,12 +98,6 @@ class OgimetScrapper(MonthlyScrapper):
 
     @staticmethod
     def _scrap_columns_values(table):
-        
-        '''
-        _scrap_columns_values: récupère les valeurs de chaque cellule td de la table html.
-            args: table (request-html.Element)
-            return: (list)
-        '''
         return [td.text for td in table.find("tbody")[0].find("td")]
 
     @staticmethod
@@ -126,14 +113,14 @@ class OgimetScrapper(MonthlyScrapper):
             return: done (list)
         '''
         # (1) done contient les valeurs traitées, todo les valeurs à traiter.
-        # (2) Tant que done n'est pas complet, on sélectionne soit l'équivalent
-        # d'1 ligne dans todo, soit todo en entier s'il reste moins de n_cols valeurs.
+        # (2) Tant que done n'est pas complet, on sélectionne l'équivalent
+        #     d'1 ligne dans todo.
         # (3) On compte le nombre de dates présentes dans la ligne. S'il y en a plus d'1,
-        # la ligne est en fait un mélange de 2 lignes. On ne récupère que les valeurs
-        # allant de la 1ère date incluse à la 2ème exclue.
+        #     la ligne est en fait un mélange de 2 lignes. On ne récupère que les valeurs
+        #     allant de la 1ère date incluse à la 2ème exclue.
         # (4) Si besoin, on complète la ligne jusqu'à avoir n_cols valeurs dedans.
         # (5) On ajoute la ligne désormais complète aux valeurs traitées, on la retire des
-        # valeurs à traiter.
+        #     valeurs à traiter.
         
         # (1)
         done = []
@@ -161,28 +148,24 @@ class OgimetScrapper(MonthlyScrapper):
     @classmethod
     def _rework_data(cls, values, col_names, todo):
         
-        '''_rework_data : mise en forme du dataframe à partir des valeurs récoltées
-            args: values (list), col_names (list), year (int), month (str)
-            return : df (pandas.DataFrame)
-        '''
         # (1) Dimensions du futur tableau de données et nombre de valeurs collectées. S'il manque des
-        # données dans la liste des valeurs récupérées, on la complète pour avoir 1 valeur par cellule
-        # dans le futur dataframe.
+        #     données dans la liste des valeurs récupérées, on la complète pour avoir 1 valeur par cellule
+        #     dans le futur dataframe.
         # (2) La liste des valeurs récupérées est de dimension 1,x. On la convertit en matrice de 
-        # dimensions n_rows, n_cols puis en dataframe.
+        #     dimensions n_rows, n_cols puis en dataframe.
         # (3) La colonne date est au format MM/JJ, on la convertit au format AAAA-MM-JJ et on trie.
         # (4) Les valeurs sont au format str, on les convertit en numérique colonne par colonne.
         # (5) La colonne wind_(km/h)_dir contient des str, on remplace les "---" par "" pour les
-        # valeurs manquantes.
+        #     valeurs manquantes.
         # (6) On supprime les colonnes daily_weather_summary si elles existent en conservant les
-        # colonnes qui n'ont pas daily_weather_summary dans leur nom.
+        #     colonnes qui n'ont pas daily_weather_summary dans leur nom.
         
         # (1)
         year, month = todo
 
         n_cols = len(col_names)
-        n_rows = cls.DAYS[str(month)]
-        n_filled = n_rows * n_cols
+        n_rows = cls.DAYS[str(month)] # obligatoire pour contrôler le nombre de valeurs récupérées
+        n_filled = n_rows * n_cols    # nombre de valeurs attendu
         n_values = len(values)
         
         month = "0" + str(month) if month < 10 else str(month)

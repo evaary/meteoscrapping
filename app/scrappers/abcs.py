@@ -17,6 +17,14 @@ class Singleton:
 # entorse aux règles de l'héritage
 class MeteoScrapper(Singleton, ABC):
 
+    '''
+    Scrapper de base.
+    La méthode _scrap_data permet d'enchainer les actions à réaliser pour récupérer
+    les tableaux de données.
+    '''
+
+    # nombre de jours dans chaque mois
+    # wunderground et météociel récupèrent le 29ème jour de février s'il existe 
     DAYS = {
         "1" : 31,
         "2" : 28,
@@ -32,8 +40,8 @@ class MeteoScrapper(Singleton, ABC):
         "12": 31,
     }
 
-    # initialisation
     def from_config(self, config):
+        '''mise à jour des variables d'instance'''
 
         self.errors = {}
         self._city = config["city"]
@@ -51,19 +59,19 @@ class MeteoScrapper(Singleton, ABC):
 
     @abstractmethod
     def _set_url(self, year, month):
-        '''crétion de l'url'''
+        '''return l'url complète au format str'''
 
     @abstractmethod
     def _scrap_columns_names(table):
-        '''fonction qui récupère les noms des colonnes du tableau de données'''
+        '''return la liste des noms des colonnes du tableau de données (list de str)'''
     
     @abstractmethod
     def _scrap_columns_values(table):
-        '''fonction qui récupère les valeurs du tableau de données'''
+        '''return la liste des valeurs du tableau de données (list de str)'''
 
     @abstractmethod
     def _rework_data(self):
-        '''fonction qui met en forme le tableau de données'''
+        '''mise en forme du tableau de données, return un dataframe pandas'''
 
     ### METHODES CONCRETES ###
     def _register_error(self, key, url, message):
@@ -106,12 +114,12 @@ class MeteoScrapper(Singleton, ABC):
             return: table (requests-html.Element ou None, voir doc requests-html python)
         '''
         # (1) Le critère permet d'identifier le tableau que l'on cherche dans la page html.
-        # Il se compose d'un attribut html et de sa valeur.
+        #     Il se compose d'un attribut html et de sa valeur.
         # (2) On cherche une table html correspondant au critère parmis toutes celles de la page.
-        # On récupère la 1ère trouvée. Si on ne trouve pas de table, on la déclare inexistante.  
+        #     On récupère la 1ère trouvée. Si on ne trouve pas de table, on la déclare inexistante.  
         # (3) On vérifie que la table n'indique pas l'absence de données (spécifique à ogimet).
-        # Voir http://www.ogimet.com/cgi-bin/gsynres?lang=en&ind=08180&ano=2016&mes=4&day=0&hora=0&min=0&ndays=31
-        # Si elle l'est, on déclare la table inexistante. Sinon on ne fait rien.
+        #     Voir http://www.ogimet.com/cgi-bin/gsynres?lang=en&ind=08180&ano=2016&mes=4&day=0&hora=0&min=0&ndays=31
+        #     Si elle l'est, on déclare la table inexistante.
         
         # (1)
         attr, val = cls.CRITERIA
@@ -135,19 +143,15 @@ class MeteoScrapper(Singleton, ABC):
 
     def _scrap_data(self):
         
-        '''_scrap_data : générateur des dataframes à enregistrer.
-            return: table (requests-html.Element, voir doc requests-html python) ou None
-        '''
+        '''_scrap_data : générateur des dataframes à enregistrer.'''
         # (0) Pour éviter de chercher les data du 31 février, entre autre, pour les daily_scrapper
-        # (1) On récupère l'année et le mois courant à partir du tuple todo.
-        # On affiche dans le terminal le job en cours. On convertit le mois (int) en string.
-        # (2) On reconstitue l'url et on charge la page html correspondante. S'il y a une erreur,
-        # on le signale et on passe au tuple suivant.
-        # (3) On récupère la table de données html. Si elle n'existe pas, on le signal
-        # et on passe au tuple suivant.
+        # (1) On créé une clé de dictionnaire à partir du todo.
+        # (2) On reconstitue l'url et on charge la page html correspondante.
+        # (3) On récupère la table de données html.
         # (4) On récupère le noms des colonnes et les valeurs de la table de données html.
         # (5) On met les données sous forme de dataframe.
-        # Si on ne peut pas, on le signale et on passe à la table suivante.
+        #
+        # A chaque étape, si un problème est rencontré, on le signale et on passe au todo suivant.
         
         for todo in self._todos:
             # (0)
@@ -203,11 +207,9 @@ class MeteoScrapper(Singleton, ABC):
 
     ### DUNDER METHODS ###
     def __repr__(self):
-        return f"<{self.__class__.__name__}> ville:{self._city}, url:{self._url}"
+        return f"<{self.__class__.__name__} ville:{self._city}, url:{self._url}>"
 
 class MonthlyScrapper(MeteoScrapper):
-
-    '''Scrapper de base qui récupère les données brutes d'une table html.'''
 
     def from_config(self, config):
         
@@ -253,7 +255,7 @@ class DailyScrapper(MeteoScrapper):
 
     @classmethod
     def _check_days(cls, todo):
-
+        '''return false si on veut traiter un jour qui n'existe pas, comme le 31 février'''
         _, month, day = todo
 
         if day > cls.DAYS[str(month)]:

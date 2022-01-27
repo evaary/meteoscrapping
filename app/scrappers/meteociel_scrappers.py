@@ -5,9 +5,9 @@ import re
 from app.scrappers.abcs import MonthlyScrapper, DailyScrapper
 
 class MeteocielScrapper(MonthlyScrapper):
-
+    # Ecrit en dur, dynamiser ?
     UNITS = {"temperature": "°C", "precipitations": "mm", "ensoleillement": "h"}
-
+    # Critère de sélection qui sert à retrouver le tableau de donner dans la page html
     CRITERIA = ("cellpadding", "2")
     SCRAPPER = "meteociel"
     BASE_URL = "https://www.meteociel.com/climatologie/obs_villes.php?"
@@ -32,16 +32,10 @@ class MeteocielScrapper(MonthlyScrapper):
     @classmethod
     def _scrap_columns_names(cls, table):
         
-        '''
-        _scrap_columns_names: récupère les valeurs de chaque cellule td de la 1ère tr
-        du tableau html.
-            args: table (requests_html.Element)
-            return: (list)
-        '''
         # (2) On récupère les noms des colonnes contenus dans la 1ère ligne du tableau.
         # (3) Certains caractères à accents passent mal, on les remplace, et on enlève les . .
         # (4) On remplace les espaces par des _, on renomme la colonne jour en date.
-        # (5) La dernière colonne contient des images etn'a pas de noms. On la supprimera,
+        # (5) La dernière colonne contient des images et n'a pas de noms. On la supprimera,
         #     on la nomme to_delete.
         # (6) On ajoute au nom de la colonne son unité.
         
@@ -60,7 +54,7 @@ class MeteocielScrapper(MonthlyScrapper):
 
     @staticmethod
     def _scrap_columns_values(table):
-        # On récupère toutes les valeurs des cellules de toutes les lignes,
+        # On récupère les valeurs des cellules de toutes les lignes,
         # sauf la 1ère (noms des colonnes) et la denrière (cumul mensuel).
         return [ td.text for tr in table.find("tr")[1:-1] for td in tr.find("td") ]
 
@@ -68,7 +62,7 @@ class MeteocielScrapper(MonthlyScrapper):
     def _rework_data(values, col_names, todo):
         
         # (1) On définit les dimensions du tableau puis on le créé.
-        # (2) Si une colonne to_delete exite, on la supprime.
+        # (2) Si une colonne to_delete existe, on la supprime.
         # (3) Le tableau ne contient que des string composées d'une valeur et d'une unité.
         #     On définit une regex chargée de récupérer uniquement les float d'une string.
         #     La regexp est ensuite utilisée par une fonction lambda vectorisée. La fonction
@@ -76,7 +70,7 @@ class MeteocielScrapper(MonthlyScrapper):
         #     On définit aussi une fonction lambda vectorisée qui met la date en forme.
         # (4) On reconstruit les dates à partir des numéros des jours extraits de la colonne des dates.
         # (5) On extrait les valeurs des autres colonnes.
-        # (6) On réaffecte les nouvelles dates, puis on trie le dataframe selon la date.
+        # (6) On trie le dataframe selon la date.
 
         # (1)
         year, month = todo
@@ -92,16 +86,15 @@ class MeteocielScrapper(MonthlyScrapper):
             pass
         # (3)
         template = r'-?\d+\.?\d*'
-        f_num_extract = np.vectorize(lambda string : np.NaN if string in("---", "") else float(re.findall(template, string)[0]))
-        f_rework_dates = np.vectorize(lambda numero : f"{year}-{month}-0{int(numero)}" if numero < 10 else f"{year}-{month}-{int(numero)}")
+        f_num_extract = np.vectorize(lambda string : np.NaN if string in("---", "") else 0 if string in ("aucune", "traces") else float(re.findall(template, string)[0]))
+        f_rework_dates = np.vectorize(lambda day : f"{year}-{month}-0{int(day)}" if day < 10 else f"{year}-{month}-{int(day)}")
         # (4)
-        dates = f_num_extract(df["date"])
-        dates = f_rework_dates(dates)
+        df["date"] = f_num_extract(df["date"])
+        df["date"] = f_rework_dates(df["date"])
+        df["date"] = pd.to_datetime(df["date"])
         # (5)
         df.iloc[:, 1:] = f_num_extract(df.iloc[:, 1:])
         # (6)
-        df["date"] = dates
-        df["date"] = pd.to_datetime(df["date"])
         df = df.sort_values(by="date")
         
         return df
@@ -116,7 +109,8 @@ class MeteocielDailyScrapper(DailyScrapper):
         "pression": "hPa",
         "precip": "mm",
     }
-
+    # La numérotation des mois sur météociel est décalée.
+    # Ce dictionnaire associe la numérotation usuelle (clés) et celle de météociel (valeurs).
     NUMEROTATIONS = {
         "1" :  0,
         "2" :  1,
@@ -165,9 +159,12 @@ class MeteocielDailyScrapper(DailyScrapper):
         cols = [col.split("\n")[0] if "\n" in col else col for col in cols]
         
         cols = [ f"{col}_{cls.UNITS[col]}" if col not in ("heure", "temps", "neb", "humidex", "windchill") else col for col in cols ]
-
-        indexe = cols.index("windchill")
-        cols.insert(indexe + 1, "winddir")
+        
+        # La colonne vent est composée de 2 sous colonnes: direction et vitesse.
+        # Le tableau compte donc n colonnes mais n-1 noms de colonnes.
+        # On rajoute donc un nom pour la colonne de la direction du vent.
+        indexe = cols.index("vent (rafales)_km/h")
+        cols.insert(indexe, "winddir")
         
         return cols
     
@@ -188,24 +185,24 @@ class MeteocielDailyScrapper(DailyScrapper):
         df = pd.DataFrame(np.array(values).reshape(n_rows, n_cols), columns=col_names)
         # on met de coté cette colonne car il faut la séparer en 2
         vent_rafale = df[["heure", "vent (rafales)_km/h"]].copy(deep=True)
-        df = df.drop(["vent (rafales)_km/h", "winddir", "temps"], axis=1)
+        df = df[[col for col in df.columns if col not in ("vent (rafales)_km/h", "winddir", "temps")]]
 
         not_numeric = ["date", "heure", "neb"]
         numerics = [x for x in df.columns if x not in not_numeric]
         
         template = r'-?\d+\.?\d*'
-        f_num_extract = np.vectorize(lambda string : np.NaN if string in("---", "", "aucune", "traces") else float(re.findall(template, string)[0]))
+        f_num_extract = np.vectorize(lambda string : np.NaN if string in("---", "") else 0 if string in ("aucune", "traces") else float(re.findall(template, string)[0]))
         f_rework_dates = np.vectorize(lambda heure : f"{year}-{month}-{day} 0{int(heure)}:00:00" if heure < 10 else f"{year}-{month}-{day} {int(heure)}:00:00")
         
-        dates = f_num_extract(df["heure"])
-        dates = f_rework_dates(dates)
-        df["date"] = dates
+        df["date"] = f_num_extract(df["heure"])
+        df["date"] = f_rework_dates(df["date"])
         df["date"] = pd.to_datetime(df["date"])
         
         df[numerics] = f_num_extract(df[numerics])
         
-        df = df[not_numeric + numerics]
+        df = df[not_numeric + numerics] # juste pour l'ordre des colonne, avoir la date en 1er
         
+        # ajout des colonnes vent et rafales
         separated = [x.split("(") for x in vent_rafale["vent (rafales)_km/h"].values]
         
         # si 1 seule valeur est présente dans la colonne, on en rajoute une vide
@@ -213,7 +210,6 @@ class MeteocielDailyScrapper(DailyScrapper):
             separated[x].append("")
         
         separated = np.array(separated)
-        print(separated)
         separated = f_num_extract(separated)
         separated = pd.DataFrame(separated, columns=["vent", "rafale"])
         separated["heure"] = vent_rafale["heure"]

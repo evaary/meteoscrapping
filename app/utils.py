@@ -1,94 +1,95 @@
 from app.data_managers import from_json, to_csv, to_json
-from app.scrappers import WundergroundScrapper, OgimetScrapper
+from app.scrappers.meteociel_scrappers import MeteocielDailyScrapper, MeteocielScrapper
+from app.scrappers.wunderground_scrapper import WundergroundScrapper
+from app.scrappers.ogimet_scrapper import OgimetScrapper
+from app.scrappers.abcs import Singleton
 import os
 
-class ConfigFilesChecker:
+class ConfigFilesChecker(Singleton):
 
     '''Singleton contrôlant la validité d'un fichier de config.'''
-
-    _instance = None
     
-    ALLOWED_SCRAPPERS = ("wunderground", "ogimet")
+    ALLOWED_SCRAPPERS = {"wunderground", "ogimet", "meteociel", "meteociel_daily"}
     
     EXPECTED_KEYS = {
-        "wunderground": ["country_code", "city", "region", "waiting", "year", "month"],
-        "ogimet": ["ind", "city", "waiting", "year", "month"]
+        "wunderground": {"country_code", "city", "region", "year", "month"},
+        "ogimet": {"ind", "city", "year", "month"},
+        "meteociel": {"city", "year", "month", "code_num", "code"},
+        "meteociel_daily": {"city", "year", "month", "day", "code_num", "code"}
     }
-
-    def __init__(self):
-        raise RuntimeError("call ConfigFilesChecker.instance() instead")
-
-    @classmethod
-    def instance(cls):
-
-        cls._instance = cls._instance if cls._instance is not None else cls.__new__(cls)
-        
-        return cls._instance
 
     @classmethod
     def _check_scrapper_type(cls, config:dict) -> tuple:
 
-        # On vérifie que le type de scrapper est bien renseigné.
-        if "scrapper" not in config.keys() or config["scrapper"] not in cls.ALLOWED_SCRAPPERS:
-            return False, f"le champ 'scrapper' est absent du fichier de config ou n'est pas dans {cls.ALLOWED_SCRAPPERS}"
+        reference = cls.ALLOWED_SCRAPPERS.union({"waiting"})
+        # On vérifie que les clés du dict sont correctes.
+        if not set(config.keys()).issubset(reference):
+            return False, f"les champ principaux doivent être {reference}"
 
         return True, ""
 
     @classmethod
     def _check_keys(cls, config:dict) -> tuple:
         
-        # On contrôle que toutes les clés sont bien présentes dans le fichier.
-        test = [ key in config.keys() for key in cls.EXPECTED_KEYS[config["scrapper"]] ]
-
-        if not all(test) :
-            return False, f"les champs pour le scrapper {config['scrapper']} doivent contenir {cls.EXPECTED_KEYS[config['scrapper']]}"
-        
-        test = [ x in config[field].keys()
-            for x in ["from", "to"]
-            for field in ["year", "month"]
-        ]
-
-        # Pour year et month, on vérifie qu'ils contiennent bien leurs 2 clés
-        if not all(test):
-            return False, "les champs 'year' et 'month' doivent contenir contenir 'from' et 'to'"
+        # On contrôle que toutes les clés des configs correspondent à ce qu'on attend.
+        for x in config.keys():
+            
+            if x == "waiting":
+                continue
+            
+            test = [ set(dico.keys()) == cls.EXPECTED_KEYS[x] for dico in config[x] ]
+            
+            if not all(test):
+                return False, f"une des config {x} pose problème"
 
         return True, ""
 
-    @staticmethod
-    def _check_year_month(config):
+    @classmethod
+    def _check_values(cls, config):
 
-        # On vérifie que les valeurs dans year et month sont bien des entiers positifs
-        test = [
-            
-            (isinstance(y, int) and y > 0) and (isinstance(m, int) and m > 0 )
-            
-            for y,m in zip(
-                config["year"].values(),
-                config["month"].values()
-            )
-        ]
+        for scrapper in config.keys():
 
-        if not all(test):
-            return False, "les champs 'from' et 'to' de 'year' et 'month' doivent être des entiers positifs"
-
-        # On vérifie que les dates de départ et de fin sont dans le bon ordre
-        for timescale in ["month", "year"]:
+            if scrapper == "waiting":
+                continue
             
-            mini = config[timescale]["from"]
-            maxi = config[timescale]["to"]
+            dicos = config[scrapper]
 
-            if mini > maxi:
-                return False, f"{timescale} : 'from' doit être inférieur à 'to'"
+            for x in ("year", "month", "day"):
+                try:
+                    isList = all( [ isinstance(dico[x], list) and len(dico[x]) in (1,2) for dico in dicos] )
+                    if not isList:
+                        return False, "year et month doivent être des listes de 1 ou 2 entiers positifs ordonnés"  
+
+                    arePositiveInts = all( [ isinstance(y, int) and y > 0 for dico in dicos for y in dico[x] ] )
+                    if not arePositiveInts:
+                        return False, "year et month doivent être des listes de 1 ou 2 entiers positifs ordonnés"  
+
+                    areOrdered = all( [ dico[x][0] <= dico[x][-1] for dico in dicos ] )
+                    if not areOrdered:
+                        return False, "year et month doivent être des listes de 1 ou 2 entiers positifs ordonnés"
+                except KeyError:
+                    continue
+
+            if not all([dico["month"][0] in range(1,13) and dico["month"][-1] in range(1,13) for dico in dicos]):
+                return False, "month doit être une liste de 1 ou 2 entiers positifs ordonnés compris entre 1 et 12"
+
+            try:
+                if not all([dico["day"][0] in range(1,32) and dico["day"][-1] in range(1,32) for dico in dicos]):
+                    return False, "day doit être une liste de 1 ou 2 entiers positifs ordonnés compris entre 1 et 31"
+            except KeyError:
+                pass
+
+            todo = {field for field in cls.EXPECTED_KEYS[scrapper] if field not in ("year", "month", "day")}
             
-            if timescale == "month" and (mini < 1 or maxi > 12):
-                return False, "les champs 'from' et 'to' du mois doivent être compris entre 1 et 12"
+            if not all( [ isinstance(dico[field], str) for dico in dicos for field in todo ] ):
+                return False, "les champs autres que year, month et day doivent être des strings"
 
         return True, ""
     
-    @classmethod      
+    @classmethod
     def check(cls, config):
 
-        for func in [cls._check_scrapper_type, cls._check_keys, cls._check_year_month]:
+        for func in [cls._check_scrapper_type, cls._check_keys, cls._check_values]:
 
             is_correct, error = func(config)
             
@@ -103,14 +104,15 @@ class Runner:
 
     # Emplacements des répertoires d'intérêt.
     PATHS = {
-        "config": os.path.join(WORKDIR, "config"),
         "results": os.path.join(WORKDIR, "results"),
-        "errors": os.path.join(WORKDIR, "errors")
+        "errors":  os.path.join(WORKDIR, "errors")
     }
 
     SCRAPPERS = {
-        "ogimet": OgimetScrapper,
-        "wunderground": WundergroundScrapper
+        "ogimet": OgimetScrapper.instance(),
+        "wunderground": WundergroundScrapper.instance(),
+        "meteociel": MeteocielScrapper.instance(),
+        "meteociel_daily": MeteocielDailyScrapper.instance()
     }
 
     CHECKER = ConfigFilesChecker.instance()
@@ -118,67 +120,59 @@ class Runner:
     JOB_ID = 0
 
     @classmethod
-    def _get_config_files(cls):
-
-        # On établit la liste des fichiers de configuration à traiter.
-        # Ils doivent se trouver dans le répertoire config, commencer par config
-        # et avoir l'extension .json .
-        try:
-            config_files = [
-                os.path.join(cls.PATHS["config"], filename)
-                for filename in os.listdir(cls.PATHS["config"])
-                if filename.startswith("config") and filename.endswith(".json")
-            ]
-        except FileNotFoundError:
-            config_files = []
-        
-        return config_files
-
-    @classmethod
-    def _save_data(cls, data, config):
+    def _save_data(cls, data, path):
 
         if len(data) == 0:
             print("no data")
             return
         
-        path_res = os.path.join(cls.PATHS["results"], f"{config['city']}_{config['scrapper']}_{cls.JOB_ID}.csv")
-        to_csv(data, path_res)    
+        to_csv(data, path)
     
     @classmethod
-    def _save_errors(cls, errors, config):
+    def _save_errors(cls, errors, path):
         
         if len(errors) == 0:
             return
-
-        path_err = os.path.join(cls.PATHS["errors"], f"{config['city']}_{config['scrapper']}_{cls.JOB_ID}_errors.json")
-        to_json(errors, path_err)
+        
+        to_json(errors, path)
 
     @classmethod
     def run(cls):
         
-        config_files = cls._get_config_files()
-        
-        if len(config_files) == 0:
-            print(f"\n aucun répertoire 'config' trouvé dans {cls.WORKDIR} ou aucun fichier de config dans {cls.PATHS['config']} \n")
+        try:
+            configs = from_json(os.path.join(cls.WORKDIR, "config.json"))
+        except FileNotFoundError:
+            print("pas de fichier config.json")
             return
+        
+        is_correct, error = cls.CHECKER.check(configs)
 
-        for filename in config_files:
+        if not is_correct:
+            print(error)
+            return
+        
+        for scrapper_type in {x for x in configs.keys() if x != "waiting"}:
+            
+            todos = configs[scrapper_type]
+            scrapper = cls.SCRAPPERS[scrapper_type]
 
-            print("\n" + filename)
-            
-            cls.JOB_ID += 1
-            config = from_json(filename)
-            
-            is_correct, error = cls.CHECKER.check(config)
+            for config in todos:
 
-            if not is_correct:
-                print(error)
-                continue
-            
-            scrapper = cls.SCRAPPERS[config["scrapper"]](config)
-            data = scrapper.get_data()
-            
-            cls._save_data(data, config)
-            cls._save_errors(scrapper.errors, config)
+                cls.JOB_ID += 1
 
-            print("\n")
+                try:
+                    config["waiting"] = configs["waiting"]
+                except KeyError:
+                    pass
+
+                scrapper = scrapper.from_config(config)
+                
+                path_data = os.path.join(cls.PATHS["results"], f"{config['city']}_{scrapper_type}_{cls.JOB_ID}.csv")
+                path_errors = os.path.join(cls.PATHS["errors"], f"{config['city']}_{scrapper_type}_{cls.JOB_ID}_errors.json")
+
+                data = scrapper.get_data()
+
+                cls._save_data(data, path_data)
+                cls._save_errors(scrapper.errors, path_errors)
+
+                print("\n")

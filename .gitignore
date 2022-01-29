@@ -4,15 +4,9 @@ __pycache__/
 app/__pycache__
 
 results/
-config/
 errors/
+output/
+config/
+historique_exe/
 
-exemples/ogimet
-exemples/wunderground
-
-config_ogimet.json
-config_wunderground.json
-
-meteoscrapping.exe
-
-exemples/exemple_config.json
+config.json

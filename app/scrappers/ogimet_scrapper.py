@@ -7,18 +7,18 @@ class OgimetScrapper(MonthlyScrapper):
     # La numérotation des mois sur ogimet est décalée.
     # Ce dictionnaire associe la numérotation usuelle (clés) et celle d'ogimet (valeurs).
     NUMEROTATIONS = {
-        "1" :  2,
-        "2" :  3,
-        "3" :  4,
-        "4" :  5,
-        "5" :  6,
-        "6" :  7,
-        "7" :  8,
-        "8" :  9,
-        "9" : 10,
-        "11": 12,
-        "10": 11,
-        "12":  1,
+        1  :  2,
+        2  :  3,
+        3  :  4,
+        4  :  5,
+        5  :  6,
+        6  :  7,
+        7  :  8,
+        8  :  9,
+        9  : 10,
+        11 : 12,
+        10 : 11,
+        12 :  1,
     }
     # Critère de sélection qui sert à retrouver le tableau de donner dans la page html
     CRITERIA = ("bgcolor", "#d0d0d0")
@@ -35,7 +35,7 @@ class OgimetScrapper(MonthlyScrapper):
     def _set_url(self, todo):
 
         year, month = todo
-        url = self._url + f"ano={year}&mes={self.NUMEROTATIONS[str(month)]}&day=0&hora=0&min=0&ndays={self.DAYS[str(month)]}"
+        url = self._url + f"ano={year}&mes={self.NUMEROTATIONS[month]}&day=0&hora=0&min=0&ndays={self.DAYS[month]}"
 
         month = "0" + str(month) if month < 10 else str(month)
         print(f"{self.SCRAPPER} - {self._city} - {month}/{year} - {url}")
@@ -164,8 +164,8 @@ class OgimetScrapper(MonthlyScrapper):
         year, month = todo
 
         n_cols = len(col_names)
-        n_rows = cls.DAYS[str(month)] # obligatoire pour contrôler le nombre de valeurs récupérées
-        n_filled = n_rows * n_cols    # nombre de valeurs attendu
+        n_rows = cls.DAYS[month]   # obligatoire pour contrôler le nombre de valeurs récupérées
+        n_filled = n_rows * n_cols # nombre de valeurs attendu
         n_values = len(values)
         
         month = "0" + str(month) if month < 10 else str(month)

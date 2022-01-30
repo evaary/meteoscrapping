@@ -26,18 +26,18 @@ class MeteoScrapper(Singleton, ABC):
     # nombre de jours dans chaque mois
     # wunderground et météociel récupèrent le 29ème jour de février s'il existe 
     DAYS = {
-        "1" : 31,
-        "2" : 28,
-        "3" : 31,
-        "4" : 30,
-        "5" : 31,
-        "6" : 30,
-        "7" : 31,
-        "8" : 31,
-        "9" : 30,
-        "11": 30,
-        "10": 31,
-        "12": 31,
+        1  : 31,
+        2  : 28,
+        3  : 31,
+        4  : 30,
+        5  : 31,
+        6  : 30,
+        7  : 31,
+        8  : 31,
+        9  : 30,
+        11 : 30,
+        10 : 31,
+        12 : 31,
     }
 
     def from_config(self, config):
@@ -258,7 +258,7 @@ class DailyScrapper(MeteoScrapper):
         '''return false si on veut traiter un jour qui n'existe pas, comme le 31 février'''
         _, month, day = todo
 
-        if day > cls.DAYS[str(month)]:
+        if day > cls.DAYS[month]:
             return False
 
         return True

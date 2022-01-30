@@ -8,6 +8,7 @@ exemples de tableaux récupérés:
 
 /!\ Une ConnectionResetError peut être levée aléatoirement, cela n'influe pas sur le bon fonctionnement du programme. Je ne sais pas d'où elle sort, des corrections
 seront apportées.
+/!\ La 1ère fois que le programme se lance, il téléchargera chromium, c'est normal.
 
 Pour lancer le programme:
 

@@ -112,18 +112,18 @@ class MeteocielDailyScrapper(DailyScrapper):
     # La numérotation des mois sur météociel est décalée.
     # Ce dictionnaire associe la numérotation usuelle (clés) et celle de météociel (valeurs).
     NUMEROTATIONS = {
-        "1" :  0,
-        "2" :  1,
-        "3" :  2,
-        "4" :  3,
-        "5" :  4,
-        "6" :  5,
-        "7" :  6,
-        "8" :  7,
-        "9" :  8,
-        "11":  9,
-        "10": 10,
-        "12": 11,
+        1  :  0,
+        2  :  1,
+        3  :  2,
+        4  :  3,
+        5  :  4,
+        6  :  5,
+        7  :  6,
+        8  :  7,
+        9  :  8,
+        11 :  9,
+        10 : 10,
+        12 : 11,
     }
 
     CRITERIA = ("bgcolor", "#EBFAF7")
@@ -140,7 +140,7 @@ class MeteocielDailyScrapper(DailyScrapper):
     def _set_url(self, todo):
 
         year, month, day = todo
-        url = self._url + f"&jour2={day}&mois2={self.NUMEROTATIONS[str(month)]}&annee2={year}"
+        url = self._url + f"&jour2={day}&mois2={self.NUMEROTATIONS[month]}&annee2={year}"
 
         month = "0" + str(month) if month < 10 else str(month)
         day = "0" + str(day) if day < 10 else str(day)

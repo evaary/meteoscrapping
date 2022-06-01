@@ -1,26 +1,21 @@
-from requests_html import HTMLSession
 from abc import ABC, abstractmethod
 import pandas as pd
+from app.scrappers.interfaces import ScrappingToolsInterface
 
-class Singleton:
-
-    _instance = None
-
-    def __init__(self):
-        raise RuntimeError(f"use {self.__class__.__name__}.instance() instead")
-
-    @classmethod
-    def instance(cls):
-        cls._instance = cls._instance if cls._instance is not None else cls.__new__(cls)
-        return cls._instance
-
-# entorse aux règles de l'héritage
-class MeteoScrapper(Singleton, ABC):
+class MeteoScrapper(ABC, ScrappingToolsInterface):
 
     '''
-    Scrapper de base.
-    La méthode _scrap_data permet d'enchainer les actions à réaliser pour récupérer
-    les tableaux de données.
+    Scrapper de base, qui doit être configuré à partir d'une configuration avec from_config.
+
+    Les méthodes instance, from_config et get_data sont destinées à être directement utilisées
+    par l'utilisateur. Les autres sont des méthodes internes au scrapper.
+
+    La méthode importante est scrap_data qui fixe l'enchainement des actions à réaliser pour 
+    récupérer les données et exploite toutes les autres méthodes.
+
+    scrap_data est déclenchée par l'appel à la méthode get_data par l'utilisateur.
+
+    Les autres méthodes sont des utilitaires permettant de réaliser des opérations simples.
     '''
 
     # nombre de jours dans chaque mois
@@ -40,11 +35,37 @@ class MeteoScrapper(Singleton, ABC):
         12 : 31,
     }
 
-    def from_config(self, config):
-        '''mise à jour des variables d'instance'''
+    # dictionnaire contenant les messages à afficher en cas d'erreur
+    ERROR_MESSAGES = {
+        "loading": "error while loading html page",
+        "searching": "no data table found",
+        "scrapping": "error while scrapping data",
+        "reworking": "error while reworking data"
+    }
+    
+    # pattern singleton ************************************************************************************** 
+    _instance = None
+
+    def __init__(self):
+        raise RuntimeError(f"use {self.__class__.__name__}.instance() instead")
+
+    @classmethod
+    def instance(cls):
+        cls._instance = cls.__new__(cls) if cls._instance is None else cls._instance
+        return cls._instance
+    
+    #  **************************************************************************************
+    def from_config(self, config: dict):
+        '''
+        Mise à jour des variables d'instance.
+        
+        @param config : un dictionnaire contenant la ville, la date, et autres infos propres à chaque scrapper
+            qui permettront de reconstruire l'url.
+        '''
 
         self.errors = {}
         self._city = config["city"]
+        
         try:
             self._waiting = config["waiting"]
         except KeyError:
@@ -52,98 +73,47 @@ class MeteoScrapper(Singleton, ABC):
 
         return self
     
-    ### METHODES ABSTRAITES ###
-    @abstractmethod
-    def _read_todo(self, todo):
-        '''récupération de la clé pour sauvegarder les erreurs dans le dictionnaire errors'''
-
-    @abstractmethod
-    def _set_url(self, year, month):
-        '''return l'url complète au format str'''
-
-    @abstractmethod
-    def _scrap_columns_names(table):
-        '''return la liste des noms des colonnes du tableau de données (list de str)'''
-    
-    @abstractmethod
-    def _scrap_columns_values(table):
-        '''return la liste des valeurs du tableau de données (list de str)'''
-
-    @abstractmethod
-    def _rework_data(self):
-        '''mise en forme du tableau de données, return un dataframe pandas'''
-
-    ### METHODES CONCRETES ###
-    def _register_error(self, key, url, message):
+    def _register_error(self, key: str, url: str, message: str) -> None:
+        '''
+        Garder une trace d'une erreur et la signaler.
+        
+        @param key : une str identifiant un job pour une ville à une date donnée
+        @param url : l'url du tableau de données à récupérer
+        @param message : le message à afficher
+        '''
         self.errors[key] = {"url": url, "error": message}
         print(f"\t{message}")
-
-    def _get_html_page(self, url):
-        
-        '''_get_html_page : charge la page internet où se trouvent les données à récupérer
-            args: url (string)
-            return: html_page (requests.Response ou None, voir doc requests python)
+    
+    @abstractmethod
+    def _get_key(self, todo: tuple) -> str:
         '''
-        # (1) Instanciation de l'objet qui récupèrera le code html. i est le nombre de tentatives de connexion.
-        # (2) On tente max 3 fois de charger la page à l'url donnée. Si le chargement réussit, on garde la page. 
-        #     Sinon, on la déclare inexistante.
-        #     waiting nécéssaire pour charger les données sur wunderground et ogimet.
-        # (1)
-        html_page = None
-        i = 0
-        with HTMLSession() as session:
-        # (2)
-            while(html_page is None and i < 3):
-                i += 1
-                if(i > 1):
-                    print("\tretrying...")
-                try:
-                    html_page = session.get(url) # long
-                    html_page.html.render(sleep=self._waiting, keep_page=True, scrolldown=1)
-                except Exception:
-                    html_page = None
-
-        return html_page
-
-    @classmethod
-    def _find_table_in_html(cls, html_page):
+        Génère une str contenant la ville et la date (format city_yyyy_mm_dd).
+        Elle sert de clé pour sauvegarder les erreurs dans le dictionnaire errors.
+        Cette fonction est implémentée dans les scrappers quotidiens ou mensuels.
         
-        '''_find_table_in_html : extrait la table html contenant les données à récupérer
-            args:
-                html_page (requests.Response)
-            return: table (requests-html.Element ou None, voir doc requests-html python)
+        @todo : un tuple contenant 2 à 3 int : l'année, le mois, le jour.
+            Le tuple est issu de from_config dans les scrappers mensuels / quotidiens.
+
+        @return : str au format city_yyyy_mm_dd.
         '''
-        # (1) Le critère permet d'identifier le tableau que l'on cherche dans la page html.
-        #     Il se compose d'un attribut html et de sa valeur.
-        # (2) On cherche une table html correspondant au critère parmis toutes celles de la page.
-        #     On récupère la 1ère trouvée. Si on ne trouve pas de table, on la déclare inexistante.  
-        # (3) On vérifie que la table n'indique pas l'absence de données (spécifique à ogimet).
-        #     Voir http://www.ogimet.com/cgi-bin/gsynres?lang=en&ind=08180&ano=2016&mes=4&day=0&hora=0&min=0&ndays=31
-        #     Si elle l'est, on déclare la table inexistante.
-        
-        # (1)
-        attr, val = cls.CRITERIA
-        # (2)
-        try:
-            table = [
-                tab for tab in html_page.html.find("table")
-                if attr in tab.attrs and tab.attrs[attr] == val
-            ][0]
-        except Exception:
-            table = None
-            return table
-        # (3)
-        try:
-            condition = "no valid" in table.find("thead")[0].find("th")[0].text.lower().strip()
-            table = None if condition else table
-        except IndexError:
-            pass
 
-        return table
+    @abstractmethod
+    def _set_url(self, todo: tuple) -> str:
+        '''
+        @todo : un tuple contenant 2 à 3 int : l'année, le mois, le jour
+            le tuple est issu de from_config dans les scrappers mensuels / quotidiens
 
-    def _scrap_data(self):
+        @return : str, l'url complète au format str du tableau de données à récupérer.
+        '''
+
+    @abstractmethod
+    def _rework_data(self) -> pd.DataFrame:
+        '''Mise en forme du tableau de données.'''
+    
+    # **************************************************************************************
+    def _scrap_data(self) -> pd.DataFrame:
         
-        '''_scrap_data : générateur des dataframes à enregistrer.'''
+        '''Générateur des dataframes à enregistrer.'''
         # (0) Pour éviter de chercher les data du 31 février, entre autre, pour les daily_scrapper
         # (1) On créé une clé de dictionnaire à partir du todo.
         # (2) On reconstitue l'url et on charge la page html correspondante.
@@ -161,38 +131,38 @@ class MeteoScrapper(Singleton, ABC):
             except AttributeError:
                 pass
             # (1)
-            key = self._read_todo(todo)
+            key = self._get_key(todo)
             # (2)
             url = self._set_url(todo)
             
-            html_page = self._get_html_page(url)
+            html_page = self._get_html_page(url, self._waiting)
             if html_page is None:
-                self._register_error(key, url, "error while loading html page")
+                self._register_error(key, url, self.ERROR_MESSAGES["loading"])
                 continue
             # (3)
-            table = self._find_table_in_html(html_page)
+            table = self._find_table_in_html(html_page, self.CRITERIA)
             if table is None:
-                self._register_error(key, url, "no data table found")
+                self._register_error(key, url, self.ERROR_MESSAGES["searching"])
                 continue
             # (4)
             try:
                 col_names = self._scrap_columns_names(table)
                 values = self._scrap_columns_values(table)
             except Exception:
-                self._register_error(key, url, "error while scrapping data")
+                self._register_error(key, url, self.ERROR_MESSAGES["scrapping"])
                 continue
             # (5)
             try:
                 df = self._rework_data(values, col_names, todo)
             except Exception:
-                self._register_error(key, url, "error while reworking data")
+                self._register_error(key, url, self.ERROR_MESSAGES["reworking"])
                 continue
 
             yield df
 
-    def get_data(self):
+    def get_data(self) -> pd.DataFrame:
         
-        '''get_data : réunit les dataframes en csv'''
+        '''Réunit les dataframes en csv'''
         
         try:
             data = next(self._scrap_data())
@@ -205,12 +175,17 @@ class MeteoScrapper(Singleton, ABC):
         
         return data
 
-    ### DUNDER METHODS ###
+    # dunder methods **************************************************************************************
     def __repr__(self):
         return f"<{self.__class__.__name__} ville:{self._city}, url:{self._url}>"
 
 class MonthlyScrapper(MeteoScrapper):
 
+    '''
+    Scrapper spécialisé dans la récupération de données mensuelles.
+    Complétion du from_config qui génère l'ensemble des couples année - mois à traiter,
+    et implémentation du read_todo qui fournit l'année et le mois dans la clé.
+    '''
     def from_config(self, config):
         
         super().from_config(config)
@@ -223,7 +198,7 @@ class MonthlyScrapper(MeteoScrapper):
 
         return self
 
-    def _read_todo(self, todo):
+    def _get_key(self, todo):
         
         year, month = todo
         month = "0" + str(month) if month < 10 else str(month)
@@ -231,6 +206,12 @@ class MonthlyScrapper(MeteoScrapper):
         return f"{self._city}_{year}_{month}"
 
 class DailyScrapper(MeteoScrapper):
+    '''
+    Scrapper spécialisé dans la récupération de données quotidiennes.
+    Complétion du from_config qui génère l'ensemble des trios année - mois - jour à traiter,
+    et implémentation du read_todo qui fournit l'année, le mois et le jour dans la clé.
+    Ajout d'une fonction permet également de passer les traitements de jours qui n'existent pas.
+    '''
 
     def from_config(self, config):
         
@@ -245,7 +226,7 @@ class DailyScrapper(MeteoScrapper):
 
         return self
 
-    def _read_todo(self, todo):
+    def _get_key(self, todo):
         
         year, month, day = todo
         month = "0" + str(month) if month < 10 else str(month)
@@ -254,11 +235,7 @@ class DailyScrapper(MeteoScrapper):
         return f"{self._city}_{year}_{month}_{day}"
 
     @classmethod
-    def _check_days(cls, todo):
+    def _check_days(cls, todo: tuple) -> str:
         '''return false si on veut traiter un jour qui n'existe pas, comme le 31 février'''
         _, month, day = todo
-
-        if day > cls.DAYS[month]:
-            return False
-
-        return True
+        return False if day > cls.DAYS[month] else True

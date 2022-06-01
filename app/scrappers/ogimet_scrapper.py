@@ -3,6 +3,16 @@ import pandas as pd
 from app.scrappers.abcs import MonthlyScrapper
 
 class OgimetScrapper(MonthlyScrapper):
+
+    '''
+    Les méthodes from_config, set_url et rework_data complètent ou sont
+    l'implémententation des méthodes de l'abc MeteoScrapper.
+
+    Les méthodes scrap_columns_names et scrap_columns_values sont l'implémentation
+    des méthodes de l'interface ScrappingToolsInterface.
+
+    fill_missing_values est une méthode spécifique à cette classe.
+    '''
     
     # La numérotation des mois sur ogimet est décalée.
     # Ce dictionnaire associe la numérotation usuelle (clés) et celle d'ogimet (valeurs).
@@ -103,14 +113,23 @@ class OgimetScrapper(MonthlyScrapper):
     @staticmethod
     def _fill_missing_values(values, n_cols, n_filled, month):
         
-        '''_fill_missing_values : Ogimet gère mal les trous dans les données.
+        '''
+        Ogimet gère mal les trous dans les données.
         Si certaines valeurs manquent en début ou milieu de ligne,
         elle sont comblées par "---", et tout va bien, on a des valeurs quand même.
+
         Si les valeurs manquantes sont à la fin, la ligne s'arrête prématurément.
-        Elle compte moins de valeurs que de colonnes, on ne peut pas reconstruire le tableau.
+        Elle compte moins de valeurs qu'attendu', on ne peut pas reconstruire le tableau.
+        
         Cette fonction comble les manques dans les lignes en ajoutant des "" à la fin.
-            args: values (list), n_rows (int), n_cols (int), n_filled (int), month (string)
-            return: done (list)
+        
+        @param values : list de str, la liste réelle des valeurs récupérées dans le tableau <= n_filled.
+        @param n_cols : int, nombre de colonnes du tableau. 
+        @param n_filled : int, nombre de valeurs théoriques si le tableau était complet.
+        @param month : str, le numéro du mois au format mm
+        
+        @return done : list de str, la liste des valeurs du tableau complétée pour renter dans
+            les dimensions.
         '''
         # (1) done contient les valeurs traitées, todo les valeurs à traiter.
         # (2) Tant que done n'est pas complet, on sélectionne l'équivalent
@@ -119,8 +138,8 @@ class OgimetScrapper(MonthlyScrapper):
         #     la ligne est en fait un mélange de 2 lignes. On ne récupère que les valeurs
         #     allant de la 1ère date incluse à la 2ème exclue.
         # (4) Si besoin, on complète la ligne jusqu'à avoir n_cols valeurs dedans.
-        # (5) On ajoute la ligne désormais complète aux valeurs traitées, on la retire des
-        #     valeurs à traiter.
+        # (5) On ajoute la ligne désormais complète aux valeurs traitées, on retire des
+        #     valeurs à traiter les valeurs qu'on a retenu, si la ligne était un mélange.
         
         # (1)
         done = []

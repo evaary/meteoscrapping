@@ -5,7 +5,15 @@ import re
 from app.scrappers.abcs import MonthlyScrapper, DailyScrapper
 
 class MeteocielScrapper(MonthlyScrapper):
-    # Ecrit en dur, dynamiser ?
+    
+    '''
+    Les méthodes from_config, set_url et rework_data complètent ou sont
+    l' implémententation des méthodes de l'abc MeteoScrapper.
+
+    Les méthodes scrap_columns_names et scrap_columns_values sont l'implémentation
+    des méthodes de l'interface ScrappingToolsInterface.
+    '''
+
     UNITS = {"temperature": "°C", "precipitations": "mm", "ensoleillement": "h"}
     # Critère de sélection qui sert à retrouver le tableau de donner dans la page html
     CRITERIA = ("cellpadding", "2")
@@ -32,22 +40,22 @@ class MeteocielScrapper(MonthlyScrapper):
     @classmethod
     def _scrap_columns_names(cls, table):
         
-        # (2) On récupère les noms des colonnes contenus dans la 1ère ligne du tableau.
-        # (3) Certains caractères à accents passent mal, on les remplace, et on enlève les . .
-        # (4) On remplace les espaces par des _, on renomme la colonne jour en date.
-        # (5) La dernière colonne contient des images et n'a pas de noms. On la supprimera,
+        # (1) On récupère les noms des colonnes contenus dans la 1ère ligne du tableau.
+        # (2) Certains caractères à accents passent mal, on les remplace, et on enlève les . .
+        # (3) On remplace les espaces par des _, on renomme la colonne jour en date.
+        # (4) La dernière colonne contient des images et n'a pas de noms. On la supprimera,
         #     on la nomme to_delete.
-        # (6) On ajoute au nom de la colonne son unité.
+        # (5) On ajoute au nom de la colonne son unité.
         
-        # (2)
+        # (1)
         cols = [td.text.lower() for td in table.find("tr")[0].find("td")]
-        # (3)
+        # (2)
         cols = [col.replace("ã©", "e").replace(".", "") for col in cols]
-        # (4)
+        # (3)
         cols = ["date" if col == "jour" else "_".join(col.split(" ")) for col in cols]
-        # (5)
+        # (4)
         cols = ["to_delete" if col == "" else col for col in cols]
-        # (6)
+        # (5)
         cols = [ f"{col}_{cls.UNITS[col.split('_')[0]]}" if col not in ("date", "to_delete") else col for col in cols ]
 
         return cols
@@ -100,6 +108,14 @@ class MeteocielScrapper(MonthlyScrapper):
         return df
 
 class MeteocielDailyScrapper(DailyScrapper):
+
+    '''
+    Les méthodes from_config, set_url et rework_data complètent ou sont
+    l' implémententation des méthodes de l'abc MeteoScrapper.
+
+    Les méthodes scrap_columns_names et scrap_columns_values sont l'implémentation
+    des méthodes de l'interface ScrappingToolsInterface.
+    '''
 
     UNITS = {
         "visi": "km",

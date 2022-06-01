@@ -2,7 +2,7 @@ import unittest
 import copy
 import pandas as pd
 import numpy as np
-from app.utils import ConfigFilesChecker
+from app.config_file_checker import ConfigFilesChecker
 from app.scrappers.wunderground_scrapper import WundergroundScrapper
 
 # version correcte des config
@@ -125,7 +125,7 @@ class ConfigCheckerTester(unittest.TestCase):
         '''test lorsque le mois n'est pas entre 1 et 12'''
 
         todo = copy.deepcopy(self.CONFIG)
-        todo["ogimet"][1]["month"] = [1,17]
+        todo["ogimet"][0]["month"] = [1,17]
         
         is_correct, error = self.CHECKER.check(todo)                    
         self.assertIn("compris", error)
@@ -151,8 +151,10 @@ class ConfigCheckerTester(unittest.TestCase):
 class WundergroundScrapperTester(unittest.TestCase):
 
     SCRAPPER = WundergroundScrapper.instance().from_config(CONFIG["wunderground"][0])
+    # valeurs de référence pour janvier 2021
     URL_REF = "https://www.wunderground.com/history/monthly/it/matera/LIBD/date/2021-1"
     TODO = (2021, 1)
+    # liste des colonnes qui n'ont pas besoin d'être converties dans une nouvelle unité
     NOT_CONVERTED = ["humidity_(%)_max", "humidity_(%)_avg", "humidity_(%)_min"]
 
     RESULTATS = pd.DataFrame(
@@ -202,7 +204,7 @@ class WundergroundScrapperTester(unittest.TestCase):
         cls.RESULTATS["date"] = pd.to_datetime(cls.RESULTATS["date"])
         cls.RESULTATS = cls.RESULTATS.set_index("date")
 
-    def test_url_ok(self):
+    def test_url(self):
 
         test = self.SCRAPPER._set_url(self.TODO)
         self.assertEqual(self.URL_REF, test)

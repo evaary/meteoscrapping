@@ -4,11 +4,21 @@ from app.scrappers.abcs import MonthlyScrapper
 
 class WundergroundScrapper(MonthlyScrapper):
 
+    '''
+    Les méthodes from_config, set_url et rework_data complètent ou sont
+    l'implémententation des méthodes de l'abc MeteoScrapper.
+
+    Les méthodes scrap_columns_names et scrap_columns_values sont l'implémentation
+    des méthodes de l'interface ScrappingToolsInterface.
+    '''
+
     UNITS_CONVERSION = {
-        "(°_f)": { "new_unit": "°C", "func": (lambda x: (x-32)*5/9 )},
-        "(mph)": { "new_unit": "(km/h)", "func": (lambda x: x*1.609344) },
-        "(in)": { "new_unit": "(mm)", "func": (lambda x: x*25.4) },
-        "(hg)": { "new_unit": "(hPa)",  "func": (lambda x: x*33.86388) }
+        "temperature": { "new_name": "temperature_°C", "func": (lambda x: (x-32)*5/9 )},
+        "dew" : { "new_name": "dew_point_°C", "func": (lambda x: (x-32)*5/9 )},
+        "wind": { "new_name": "wind_speed_(km/h)", "func": (lambda x: x*1.609344) },
+        "precipitation": { "new_name": "precipitation_(mm)", "func": (lambda x: x*25.4) },
+        "pressure": { "new_name": "pressure_(hPa)",  "func": (lambda x: x*33.86388) },
+        "humidity": { "new_name": "humidity_(%)",  "func": (lambda x: x) },
     }
 
     # Critère de sélection qui sert à retrouver le tableau de donner dans la page html
@@ -44,7 +54,7 @@ class WundergroundScrapper(MonthlyScrapper):
         # Daily Observations compte 7 colonnes principales et 17 sous-colonnes.
         # Elle est donc de dimension (lignes, sous-colonnes).
         # values devrait être de longueur lignes * sous-colonnes.
-        # Elle est en réalité de longueur lignes * sous-colonnes + 7.
+        # Elle est en réalité de longueur lignes * sous-colonnes + 7. Il y a 7 valeurs additionnelles.
         # Pour janvier 2020 à bergamo, la 1ère des 7 valeurs additionnelles sera "Jan\n1\n2...",
         # la 2ème valeur sera "Max\nAvg\nMin\n52\n39.9\n32\n...",
         # la nième valeur contient les données de la nième colonne principale,
@@ -69,10 +79,13 @@ class WundergroundScrapper(MonthlyScrapper):
         #     qu'elle contient, et on récupère les compléments (si elle compte pour 3 colonnes, on prend les 3
         #     premières valeurs). On transforme la liste courante en vecteur colonne ou en matrice à 3 colonnes,
         #     puis on accolle ces colonnes au dataframe principal.
-        # (4) On a récupéré tous les compléments et tous les nomes principaux. On créer tous les couples
-        #     nom prinicpal - complément qu'il faut pour obtenir les noms des colonnes du dataframe.
-        #     Le nom de la colonne des dates est actuellement Time. On le remplace par date.
-        # (5) On créer le dataframe final à partir de la matrice et des noms de colonnes. La 1ère ligne,
+        # (4) Les main_names ne vont pas, les unités précisées ne vont pas, il y a des majuscules et des espaces.
+        #     On veut tout en minsucule, avec des _ et dans les bonnes unités.
+        #     On remplace les main_names par leurs nouvelles valeurs : si la clé du dict UNITS_CONVERSION est présente
+        #     dans le main_name, on remplace et on passe au main_name suivant.
+        #     Ensuite, on associe les main_names avec leurs sub_names.
+        #     Enfin, le nom de la colonne des dates est actuellement Time. On le remplace par date.
+        # (5) On créé le dataframe final à partir de la matrice et des noms de colonnes. La 1ère ligne,
         #     contenant les compléments, est supprimée.
         # (6) La colonne date ne contient que les numéros du jour du mois (1 à 31, ou moins). On remplace
         #     par la date au format AAAA-MM-JJ et on trie.
@@ -98,8 +111,18 @@ class WundergroundScrapper(MonthlyScrapper):
             df = np.hstack((df, new_columns))
         
         # (4)
+        for index, main_name in enumerate(main_names):
+
+            for key in cls.UNITS_CONVERSION.keys():
+
+                is_key_in_name = key in main_name.lower().strip()
+
+                if is_key_in_name:
+                    main_names[index] = cls.UNITS_CONVERSION[key]["new_name"]
+                    break
+
         col_names = [
-            "_".join( [ main.strip(), sub.strip() ] ).lower().replace(" ", "_")
+            "_".join( [ main, sub.strip().lower() ] ) if sub else main
 
             for main, subs in zip(main_names, sub_names)
             for sub in subs
@@ -113,10 +136,7 @@ class WundergroundScrapper(MonthlyScrapper):
         year, month = todo
         month = "0" + str(month) if month < 10 else str(month)
         df["date"] = [
-            
-            f"{year}/{month}/0{day}" if int(day) < 10 else f"{year}/{month}/{day}" 
-            
-            for day in df.date
+            f"{year}/{month}/0{day}" if int(day) < 10 else f"{year}/{month}/{day}" for day in df.date
         ]
         df["date"] = pd.to_datetime(df["date"])
         df = df.sort_values(by="date")
@@ -124,14 +144,10 @@ class WundergroundScrapper(MonthlyScrapper):
         for col in df.columns[1:]:
             df[col] = pd.to_numeric(df[col])
         # (8)
-        for old_unit, dico in cls.UNITS_CONVERSION.items():
+        for variable, dico in cls.UNITS_CONVERSION.items():
             
-            cols_to_convert = [col for col in df.columns if old_unit in col]
+            cols_to_convert = [col for col in df.columns if variable in col]
             
             df[cols_to_convert] = np.round(dico["func"](df[cols_to_convert]), 1)
-            
-            df = df.rename(columns={
-                col: col.replace(old_unit, dico["new_unit"]) for col in cols_to_convert
-            })
             
         return df

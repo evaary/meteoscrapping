@@ -2,155 +2,175 @@ import unittest
 import copy
 import pandas as pd
 import numpy as np
-from app.config_file_checker import ConfigFilesChecker
+from app.ConfigFileChecker import ConfigFilesChecker
 from app.scrappers.wunderground_scrapper import WundergroundScrapper
 
-# version correcte des config
-CONFIG = {
-    "waiting": 10,
+# class ConfigCheckerTester(unittest.TestCase):
 
-    "ogimet":[
-        { "ind":"16138", "city":"Ferrara", "year":[2021], "month":[2] }
-    ],
+#     CHECKER = ConfigFilesChecker.instance()
 
-    "wunderground":[
-        { "country_code":"it", "region": "LIBD", "city":"matera", "year":[2021], "month":[1] }
-    ],
+#     CONFIG = {
+#         "waiting": 3,
 
-    "meteociel":[
-        { "code_num":"2", "code": "7249", "city":"orleans", "year":[2020], "month":[2] }
-    ],
+#         "ogimet":[
+#             { "ind":"16138", "city":"Ferrara", "year":[2021], "month":[2] }
+#         ],
 
-    "meteociel_daily":[
-        { "code_num":"2", "code": "7249", "city":"orleans", "year":[2020], "month":[2], "day":[27,31] }
-    ]
-}
+#         "wunderground":[
+#             { "country_code":"it", "region": "LIBD", "city":"matera", "year":[2021], "month":[1] }
+#         ],
 
-class ConfigCheckerTester(unittest.TestCase):
+#         "meteociel":[
+#             { "code_num":"2", "code": "7249", "city":"orleans", "year":[2020], "month":[2] }
+#         ],
 
-    CHECKER = ConfigFilesChecker.instance()
-    CONFIG = CONFIG
+#         "meteociel_daily":[
+#             { "code_num":"2", "code": "7249", "city":"orleans", "year":[2020], "month":[2], "day":[27,31] }
+#         ]
+#     }
 
-    def test_wrong_scrapper(self):
+#     def test_missing_main_fields(self):
         
-        '''test lorsqu'un scrapper inconnu est présent'''
+#         '''test lorsqu'un champs principal est manquant'''
         
-        todo = copy.deepcopy(self.CONFIG)
-        todo["bouh"] = ["test"]
+#         todo = copy.deepcopy(self.CONFIG)
+#         del todo["waiting"]
             
-        is_correct, error = self.CHECKER.check(todo)
-        # on cherche un terme spécifique à l'erreur attendue dans l'erreur retournée
-        self.assertIn("principaux", error)
-        self.assertFalse(is_correct)
+#         self.CHECKER._check_main_fields(todo)
+#         # on cherche un terme spécifique à l'erreur attendue dans l'erreur retournée
+#         self.assertIn("principaux", self.CHECKER.error)
+#         self.assertFalse(self.CHECKER.is_legal)
+
+#     def test_unknown_main_fields(self):
         
-    def test_wrong_fields_ogimet(self):
+#         '''test lorsqu'un champs principal inconnu est présent'''
         
-        '''test lorsque les clés d'un dict ne correspondent pas à celles attendues'''
-        
-        todo = copy.deepcopy(self.CONFIG)
-        del todo["ogimet"][0]["ind"]
+#         todo = copy.deepcopy(self.CONFIG)
+#         todo["bouh"] = ["test"]
             
-        is_correct, error = self.CHECKER.check(todo)
-        self.assertIn("ogimet", error)
-        self.assertFalse(is_correct)
+#         self.CHECKER._check_main_fields(todo)
+#         self.assertIn("principaux", self.CHECKER.error)
+#         self.assertFalse(self.CHECKER.is_legal)
+        
+#     def test_wrong_fields_ogimet(self):
+        
+#         '''test lorsque les clés d'un dict ne correspondent pas à celles attendues'''
+        
+#         todo = copy.deepcopy(self.CONFIG)
+#         del todo["ogimet"][0]["ind"]
 
-    def test_wrong_fields_wunderground(self):
+#         self.CHECKER._check_keys(todo)
+#         self.assertIn("ogimet", self.CHECKER.error)
+#         self.assertFalse(self.CHECKER.is_legal)
+
+#     def test_wrong_fields_wunderground(self):
         
-        '''test lorsque les clés d'un dict ne correspondent pas à celles attendues'''
+#         '''test lorsque les clés d'un dict ne correspondent pas à celles attendues'''
         
-        todo = copy.deepcopy(self.CONFIG)
-        todo["wunderground"][0]["bouh"] = 5
+#         todo = copy.deepcopy(self.CONFIG)
+#         todo["wunderground"][0]["bouh"] = 5
+
+#         self.CHECKER._check_keys(todo)
+#         self.assertIn("wunderground", self.CHECKER.error)
+#         self.assertFalse(self.CHECKER.is_legal)
+
+#     def test_wrong_fields_meteociel(self):
+        
+#         '''test lorsque les clés d'un dict ne correspondent pas à celles attendues'''
+        
+#         todo = copy.deepcopy(self.CONFIG)
+#         todo["meteociel"][0]["bouh"] = 5
+
+#         self.CHECKER._check_keys(todo)
+#         self.assertIn("meteociel", self.CHECKER.error)
+#         self.assertFalse(self.CHECKER.is_legal)
+
+#     def test_year_month_not_list(self):
+        
+#         '''test lorsque les year et month ne sont pas des listes de 2 entiers positifs'''
+        
+#         todo = copy.deepcopy(self.CONFIG)
+#         todo["ogimet"][0]["year"] = "bouh"
+
+#         self.CHECKER._check_values(todo)
+#         self.assertIn("listes", self.CHECKER.error)
+#         self.assertFalse(self.CHECKER.is_legal)
+
+#     def test_year_month_not_len_1_or_2(self):
+        
+#         '''test lorsque les year et month ne sont pas des listes de max 2 entiers positifs'''
+        
+#         todo = copy.deepcopy(self.CONFIG)
+#         todo["meteociel"][0]["month"] = [1,2,3]
+
+#         self.CHECKER._check_values(todo)
+#         self.assertIn("2", self.CHECKER.error)
+#         self.assertFalse(self.CHECKER.is_legal)
+
+#     def test_year_month_not_ints(self):
+        
+#         '''test lorsque les year et month ne sont pas des listes de 2 entiers positifs'''
+        
+#         todo = copy.deepcopy(self.CONFIG)
+#         todo["wunderground"][0]["year"] = [1.1, "bouh"]
+
+#         self.CHECKER._check_values(todo)
+#         self.assertIn("entiers", self.CHECKER.error)
+#         self.assertFalse(self.CHECKER.is_legal)
+
+#     def test_year_month_not_ordered(self):
+        
+#         '''test lorsque les year et month ne sont pas des listes ordonnées'''
+        
+#         todo = copy.deepcopy(self.CONFIG)
+#         todo["meteociel_daily"][0]["day"] = [2,1]
+
+#         self.CHECKER._check_values(todo)
+#         self.assertIn("ordonnés", self.CHECKER.error)
+#         self.assertFalse(self.CHECKER.is_legal)
+
+#     def test_outbound_month(self):
+
+#         '''test lorsque le mois n'est pas entre 1 et 12'''
+
+#         todo = copy.deepcopy(self.CONFIG)
+#         todo["ogimet"][0]["month"] = [1,17]
+        
+#         self.CHECKER._check_values(todo)
+#         self.assertIn("compris", self.CHECKER.error)
+#         self.assertFalse(self.CHECKER.is_legal)
+
+#     def test_not_str_value(self):
+
+#         '''si une des clés hors year / month d'une config n'a pas pour valeur une string'''
+        
+#         todo = copy.deepcopy(self.CONFIG)
+#         todo["meteociel"][0]["city"] = 12
+
+#         self.CHECKER._check_values(todo)
+#         self.assertIn("autres que", self.CHECKER.error)
+#         self.assertFalse(self.CHECKER.is_legal)
+
+#     def test_wrong_waiting_value(self):
+        
+#         '''test lorsque wainting est une str'''
+        
+#         todo = copy.deepcopy(self.CONFIG)
+#         todo["waiting"] = "test"
             
-        is_correct, error = self.CHECKER.check(todo)
-        self.assertIn("wunderground", error)
-        self.assertFalse(is_correct)
-
-    def test_wrong_fields_meteociel(self):
-        
-        '''test lorsque les clés d'un dict ne correspondent pas à celles attendues'''
-        
-        todo = copy.deepcopy(self.CONFIG)
-        todo["meteociel"][0]["bouh"] = 5
-            
-        is_correct, error = self.CHECKER.check(todo)
-        self.assertIn("meteociel", error)
-        self.assertFalse(is_correct)
-
-    def test_year_month_not_list(self):
-        
-        '''test lorsque les year et month ne sont pas des listes de 2 entiers positifs'''
-        
-        todo = copy.deepcopy(self.CONFIG)
-        todo["ogimet"][0]["year"] = "bouh"
-
-        is_correct, error = self.CHECKER.check(todo)
-        self.assertIn("listes", error)
-        self.assertFalse(is_correct)
-
-    def test_year_month_not_len_1_or_2(self):
-        
-        '''test lorsque les year et month ne sont pas des listes de max 2 entiers positifs'''
-        
-        todo = copy.deepcopy(self.CONFIG)
-        todo["meteociel"][0]["month"] = [1,2,3]
-
-        is_correct, error = self.CHECKER.check(todo)
-        self.assertIn("2", error)
-        self.assertFalse(is_correct)
-
-    def test_year_month_not_ints(self):
-        
-        '''test lorsque les year et month ne sont pas des listes de 2 entiers positifs'''
-        
-        todo = copy.deepcopy(self.CONFIG)
-        todo["wunderground"][0]["year"] = [1.1, "bouh"]
-
-        is_correct, error = self.CHECKER.check(todo)
-        self.assertIn("entiers", error)
-        self.assertFalse(is_correct)
-
-    def test_year_month_not_ordered(self):
-        
-        '''test lorsque les year et month ne sont pas des listes ordonnées'''
-        
-        todo = copy.deepcopy(self.CONFIG)
-        todo["meteociel_daily"][0]["day"] = [2,1]
-
-        is_correct, error = self.CHECKER.check(todo)
-        self.assertIn("ordonnés", error)
-        self.assertFalse(is_correct)
-
-    def test_outbound_month(self):
-
-        '''test lorsque le mois n'est pas entre 1 et 12'''
-
-        todo = copy.deepcopy(self.CONFIG)
-        todo["ogimet"][0]["month"] = [1,17]
-        
-        is_correct, error = self.CHECKER.check(todo)                    
-        self.assertIn("compris", error)
-        self.assertFalse(is_correct)
-
-    def test_not_str_value(self):
-
-        '''si une des clés hors year / month d'une config n'a pas pour valeur une string'''
-        
-        todo = copy.deepcopy(self.CONFIG)
-        todo["meteociel"][0]["city"] = 12
-
-        is_correct, error = self.CHECKER.check(todo)                    
-        self.assertIn("autres que", error)
-        self.assertFalse(is_correct)
-
-    def test_correct_config(self):
-
-        is_correct, error = self.CHECKER.check(self.CONFIG)
-        self.assertTrue(is_correct)
-        self.assertEqual(error, "")
+#         self.CHECKER._check_values(todo)
+#         self.assertIn("waiting", self.CHECKER.error)
+#         self.assertFalse(self.CHECKER.is_legal)
+    
+#     def test_correct_config(self):
+#         self.CHECKER.run(self.CONFIG)
+#         self.assertTrue(self.CHECKER.is_legal)
 
 class WundergroundScrapperTester(unittest.TestCase):
 
-    SCRAPPER = WundergroundScrapper.instance().from_config(CONFIG["wunderground"][0])
+    SCRAPPER = WundergroundScrapper.instance().from_config(
+        { "country_code":"it", "region": "LIBD", "city":"matera", "year":[2021], "month":[1], "waiting": 3}
+    )
     # valeurs de référence pour janvier 2021
     URL_REF = "https://www.wunderground.com/history/monthly/it/matera/LIBD/date/2021-1"
     TODO = (2021, 1)
@@ -190,7 +210,8 @@ class WundergroundScrapperTester(unittest.TestCase):
          ["2021-01-30", 17, 12.5, 6 , 9 , 6.3 , 5 , 93 , 67.8, 45, 28, 10.5, 2, 1002.0, 999.8 ,	997.0 , 0.00],
          ["2021-01-31", 14, 11.3, 7 , 11, 7.5 , 4 , 94 , 78.4, 54, 28, 13.0, 2, 998.0 ,	992.8 ,	990.0 , 0.00]],
 
-        columns=["date","temperature_°C_max","temperature_°C_avg","temperature_°C_min",
+        columns=[
+            "date","temperature_°C_max","temperature_°C_avg","temperature_°C_min",
             "dew_point_°C_max","dew_point_°C_avg","dew_point_°C_min",
             "humidity_(%)_max","humidity_(%)_avg","humidity_(%)_min",
             "wind_speed_(km/h)_max","wind_speed_(km/h)_avg","wind_speed_(km/h)_min",
@@ -204,13 +225,11 @@ class WundergroundScrapperTester(unittest.TestCase):
         cls.RESULTATS["date"] = pd.to_datetime(cls.RESULTATS["date"])
         cls.RESULTATS = cls.RESULTATS.set_index("date")
 
-    def test_url(self):
-
-        test = self.SCRAPPER._set_url(self.TODO)
-        self.assertEqual(self.URL_REF, test)
+    # def test_url(self):
+    #     test = self.SCRAPPER._set_url(self.TODO)
+    #     self.assertEqual(self.URL_REF, test)
 
     def test_data(self):
-
         data = next(self.SCRAPPER._scrap_data()).set_index("date")
         self.assertTrue(data[self.NOT_CONVERTED].equals(self.RESULTATS[self.NOT_CONVERTED]))
 
@@ -218,13 +237,13 @@ class WundergroundScrapperTester(unittest.TestCase):
         difference = np.round(data[converted] - self.RESULTATS[converted], 0)
         self.assertEqual(difference.max(numeric_only=True).max(), 2)
 
-class OgimetScrapperTester(unittest.TestCase):
-    pass
+# class OgimetScrapperTester(unittest.TestCase):
+#     pass
 
-class MeteocielScrapperTester(unittest.TestCase):
-    pass
+# class MeteocielScrapperTester(unittest.TestCase):
+#     pass
 
-class MeteocielDailyScrapperTester(unittest.TestCase):
+# class MeteocielDailyScrapperTester(unittest.TestCase):
     pass
 
 if __name__ == "__main__":

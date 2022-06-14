@@ -1,14 +1,13 @@
 Un programme de webscrapping pour récupérer des données météorologiques depuis 3 sites : ogimet, wunderground et meteociel.
+/!\ La 1ère fois que le programme se lance, il téléchargera chromium, c'est normal.
+/!\ Une ConnectionResetError peut être levée aléatoirement, cela n'influe pas sur le bon fonctionnement du programme. Je ne sais pas d'où elle sort, des corrections
+seront apportées.
 
 exemples de tableaux récupérés:
     1 - http://www.ogimet.com/cgi-bin/gsynres?lang=en&ind=08180&ano=2017&mes=8&day=0&hora=0&min=0&ndays=31
     2 - https://www.wunderground.com/history/monthly/it/bergamo/LIME/date/2020-3
     3 - https://www.meteociel.com/climatologie/obs_villes.php?code2=7249&mois=1&annee=2021
     4 - https://www.meteociel.com/temps-reel/obs_villes.php?code2=7249&jour2=1&mois2=0&annee2=2020
-
-/!\ Une ConnectionResetError peut être levée aléatoirement, cela n'influe pas sur le bon fonctionnement du programme. Je ne sais pas d'où elle sort, des corrections
-seront apportées.
-/!\ La 1ère fois que le programme se lance, il téléchargera chromium, c'est normal.
 
 Pour lancer le programme:
 
@@ -52,8 +51,8 @@ structure du fichier config.json
     ]
 }
 
-Le champ waiting est optionnel, il sert à patienter suffisamment longtemps pour que les données soient disponibles sur la page.
-Si un problème de chargement de la page html survient, essayez d'augmenter le waiting. Par défaut il vaut 10.
+Le champ waiting sert à patienter suffisamment longtemps pour que les données soient disponibles sur la page.
+Si un problème de chargement de la page html survient, essayez d'augmenter le waiting. Par défaut il vaut 3.
 
 Chaque élément dans les listes ogimet, wounderground ... correspond aux paramètres pour 1 job.
 

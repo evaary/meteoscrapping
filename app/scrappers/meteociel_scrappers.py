@@ -36,9 +36,8 @@ class MeteocielScrapper(MonthlyScrapper):
         print(f"{self.SCRAPPER} - {self._city} - {month}/{year} - {url}")
         
         return url
-
-    @classmethod
-    def _scrap_columns_names(cls, table):
+    
+    def _scrap_columns_names(self, table):
         
         # (1) On récupère les noms des colonnes contenus dans la 1ère ligne du tableau.
         # (2) Certains caractères à accents passent mal, on les remplace, et on enlève les . .
@@ -56,7 +55,7 @@ class MeteocielScrapper(MonthlyScrapper):
         # (4)
         cols = ["to_delete" if col == "" else col for col in cols]
         # (5)
-        cols = [ f"{col}_{cls.UNITS[col.split('_')[0]]}" if col not in ("date", "to_delete") else col for col in cols ]
+        cols = [ f"{col}_{self.UNITS[col.split('_')[0]]}" if col not in ("date", "to_delete") else col for col in cols ]
 
         return cols
 
@@ -165,8 +164,7 @@ class MeteocielDailyScrapper(DailyScrapper):
         
         return url
 
-    @classmethod
-    def _scrap_columns_names(cls, table):
+    def _scrap_columns_names(self, table):
         
         cols = [td.text.lower() for td in table.find("tr")[0].find("td")]
         
@@ -174,7 +172,7 @@ class MeteocielDailyScrapper(DailyScrapper):
         
         cols = [col.split("\n")[0] if "\n" in col else col for col in cols]
         
-        cols = [ f"{col}_{cls.UNITS[col]}" if col not in ("heure", "temps", "neb", "humidex", "windchill") else col for col in cols ]
+        cols = [ f"{col}_{self.UNITS[col]}" if col not in ("heure", "temps", "neb", "humidex", "windchill") else col for col in cols ]
         
         # La colonne vent est composée de 2 sous colonnes: direction et vitesse.
         # Le tableau compte donc n colonnes mais n-1 noms de colonnes.

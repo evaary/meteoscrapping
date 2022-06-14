@@ -5,17 +5,37 @@ from app.scrappers.interfaces import ScrappingToolsInterface
 class MeteoScrapper(ABC, ScrappingToolsInterface):
 
     '''
-    Scrapper de base, qui doit être configuré à partir d'une configuration avec from_config.
+    C'est quoi :
 
-    Les méthodes instance, from_config et get_data sont destinées à être directement utilisées
-    par l'utilisateur. Les autres sont des méthodes internes au scrapper.
+        Scrapper de base, construit sur le modèle du singleton.
 
-    La méthode importante est scrap_data qui fixe l'enchainement des actions à réaliser pour 
-    récupérer les données et exploite toutes les autres méthodes.
+        Les méthodes instance(), from_config() et run() sont destinées à être appelées
+        par l'utilisateur. Les autres méthodes sont des utilitaires permettant de 
+        réaliser des opérations simples.
 
-    scrap_data est déclenchée par l'appel à la méthode get_data par l'utilisateur.
+        La méthode importante est scrap_data() qui fixe l'enchainement des actions à réaliser pour 
+        récupérer les données et exploite toutes les autres méthodes. scrap_data() est déclenchée par 
+        l'appel à la méthode run() par l'utilisateur.
 
-    Les autres méthodes sont des utilitaires permettant de réaliser des opérations simples.
+        Cette classe implémente la ScrappingToolsInterface qui contient les méthodes permettant de
+        scrapper les pages html.
+
+        Les scrappers abstraits suivants implémentent get_key() et complètent from_config().
+
+    Comment ça marche :
+
+        Un scrapper doit être instancié avec la méthode instance().
+        Une fois le scraper instancié, la méthode from_config() permet de le configurer.
+        Une fois configuré, la méthode run() récupère les données.
+
+        Lors de l'étape de configuration, on créé toutes les combinaisons de (jours/)mois/années
+        à traiter. A partir des infos de la config et des dates créées, 
+        on reconstruit une par une les url contenant les données à récupérer.
+    
+        On charge ensuite la page html à l'url courante, on isole le tableau de données, on récupère
+        les data et les noms de colonnes, on met le tout en forme (conversions d'unités etc...),
+        on obtient 1 dataframe par url. On regroupe tous lmes dataframes en 1 seul qui est retourné.
+    
     '''
 
     # nombre de jours dans chaque mois
@@ -51,35 +71,34 @@ class MeteoScrapper(ABC, ScrappingToolsInterface):
 
     @classmethod
     def instance(cls):
-        cls._instance = cls.__new__(cls) if cls._instance is None else cls._instance
+
+        if cls._instance is not None:
+            return cls._instance
+        
+        cls._instance = cls.__new__(cls)
+        cls._instance.errors = {}
+        
         return cls._instance
     
-    #  **************************************************************************************
+    # utilitaires **************************************************************************************
     def from_config(self, config: dict):
         '''
         Mise à jour des variables d'instance.
         
-        @param config : un dictionnaire contenant la ville, la date, et autres infos propres à chaque scrapper
-            qui permettront de reconstruire l'url.
+        @param config : un dictionnaire contenant les infos qui permettront de reconstruire l'url.
         '''
 
-        self.errors = {}
+        self.errors.clear()
         self._city = config["city"]
-        
-        try:
-            self._waiting = config["waiting"]
-        except KeyError:
-            self._waiting = 10
-
-        return self
+        self._waiting = config["waiting"]
     
     def _register_error(self, key: str, url: str, message: str) -> None:
         '''
         Garder une trace d'une erreur et la signaler.
         
-        @param key : une str identifiant un job pour une ville à une date donnée
+        @param key : une str identifiant un job pour une ville à une date donnée, fournit par get_key()
         @param url : l'url du tableau de données à récupérer
-        @param message : le message à afficher
+        @param message : le message à afficher et à enregistrer
         '''
         self.errors[key] = {"url": url, "error": message}
         print(f"\t{message}")
@@ -110,7 +129,7 @@ class MeteoScrapper(ABC, ScrappingToolsInterface):
     def _rework_data(self) -> pd.DataFrame:
         '''Mise en forme du tableau de données.'''
     
-    # **************************************************************************************
+    # méthodes principales **************************************************************************************
     def _scrap_data(self) -> pd.DataFrame:
         
         '''Générateur des dataframes à enregistrer.'''
@@ -124,6 +143,7 @@ class MeteoScrapper(ABC, ScrappingToolsInterface):
         # A chaque étape, si un problème est rencontré, on le signale et on passe au todo suivant.
         
         for todo in self._todos:
+            print("start")
             # (0)
             try:
                 if not self._check_days(todo):
@@ -132,18 +152,21 @@ class MeteoScrapper(ABC, ScrappingToolsInterface):
                 pass
             # (1)
             key = self._get_key(todo)
+            print("key ok")
             # (2)
             url = self._set_url(todo)
-            
+            print("url ok")
             html_page = self._get_html_page(url, self._waiting)
             if html_page is None:
                 self._register_error(key, url, self.ERROR_MESSAGES["loading"])
                 continue
+            print("html ok")
             # (3)
             table = self._find_table_in_html(html_page, self.CRITERIA)
             if table is None:
                 self._register_error(key, url, self.ERROR_MESSAGES["searching"])
                 continue
+            print("table ok")
             # (4)
             try:
                 col_names = self._scrap_columns_names(table)
@@ -151,16 +174,17 @@ class MeteoScrapper(ABC, ScrappingToolsInterface):
             except Exception:
                 self._register_error(key, url, self.ERROR_MESSAGES["scrapping"])
                 continue
+            print("scrapping")
             # (5)
             try:
                 df = self._rework_data(values, col_names, todo)
             except Exception:
                 self._register_error(key, url, self.ERROR_MESSAGES["reworking"])
                 continue
-
+            print("rework ok")
             yield df
 
-    def get_data(self) -> pd.DataFrame:
+    def run(self) -> pd.DataFrame:
         
         '''Réunit les dataframes en csv'''
         
@@ -234,8 +258,7 @@ class DailyScrapper(MeteoScrapper):
         
         return f"{self._city}_{year}_{month}_{day}"
 
-    @classmethod
-    def _check_days(cls, todo: tuple) -> str:
+    def _check_days(self, todo: tuple) -> str:
         '''return false si on veut traiter un jour qui n'existe pas, comme le 31 février'''
         _, month, day = todo
-        return False if day > cls.DAYS[month] else True
+        return False if day > self.DAYS[month] else True

@@ -164,8 +164,7 @@ class OgimetScrapper(MonthlyScrapper):
 
         return done
 
-    @classmethod
-    def _rework_data(cls, values, col_names, todo):
+    def _rework_data(self, values, col_names, todo):
         
         # (1) Dimensions du futur tableau de données et nombre de valeurs collectées. S'il manque des
         #     données dans la liste des valeurs récupérées, on la complète pour avoir 1 valeur par cellule
@@ -183,14 +182,14 @@ class OgimetScrapper(MonthlyScrapper):
         year, month = todo
 
         n_cols = len(col_names)
-        n_rows = cls.DAYS[month]   # obligatoire pour contrôler le nombre de valeurs récupérées
+        n_rows = self.DAYS[month]   # obligatoire pour contrôler le nombre de valeurs récupérées
         n_filled = n_rows * n_cols # nombre de valeurs attendu
         n_values = len(values)
         
         month = "0" + str(month) if month < 10 else str(month)
         
         if n_values != n_filled:
-            values = cls._fill_missing_values(values, n_cols, n_filled, month)
+            values = self._fill_missing_values(values, n_cols, n_filled, month)
         # (2)
         values = np.array(values).reshape(-1, n_cols)
         df = pd.DataFrame(values, columns=col_names)

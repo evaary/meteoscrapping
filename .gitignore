@@ -7,6 +7,6 @@ results/
 errors/
 output/
 config/
-historique_exe/
+env/
 
 config.json

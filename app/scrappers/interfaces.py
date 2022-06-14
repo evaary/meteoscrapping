@@ -21,20 +21,25 @@ class ScrappingToolsInterface:
         '''
         # (1) Instanciation de l'objet qui récupèrera le code html. i est le nombre de tentatives de connexion.
         # (2) On tente max 3 fois de charger la page à l'url donnée. Si le chargement réussit, on garde la page. 
-        #     Sinon, on la déclare inexistante.
-
+        #     Sinon, on la déclare inexistante. A l'origine, cela sert à palier à des mauvaises connexions internet...
+        print("start")
         html_page = None
         i = 0
         with HTMLSession() as session:
         # (2)
             while(html_page is None and i < 3):
+                print("in while")
                 i += 1
                 if(i > 1):
                     print("\tretrying...")
                 try:
+                    print("récup")
                     html_page = session.get(url) # long
+                    print("récup 2")
                     html_page.html.render(sleep=waiting, keep_page=True, scrolldown=1)
+                    print("récup ok")
                 except Exception:
+                    print("erreur")
                     html_page = None
 
         return html_page

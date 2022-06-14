@@ -63,8 +63,7 @@ class WundergroundScrapper(MonthlyScrapper):
         
         return [ td.text for td in table.find("tbody")[0].find("td") if "\n" in td.text ]
 
-    @classmethod
-    def _rework_data(cls, values, main_names, todo):
+    def _rework_data(self, values, main_names, todo):
         
         # (1) values est une liste de str. Chaque str contient toutes les données d'1 colonne principale
         #     séparées par des \n ("x\nx\nx\nx..."). On convertit ces str en liste de données [x,x,x, ...].
@@ -113,12 +112,12 @@ class WundergroundScrapper(MonthlyScrapper):
         # (4)
         for index, main_name in enumerate(main_names):
 
-            for key in cls.UNITS_CONVERSION.keys():
+            for key in self.UNITS_CONVERSION.keys():
 
                 is_key_in_name = key in main_name.lower().strip()
 
                 if is_key_in_name:
-                    main_names[index] = cls.UNITS_CONVERSION[key]["new_name"]
+                    main_names[index] = self.UNITS_CONVERSION[key]["new_name"]
                     break
 
         col_names = [
@@ -144,7 +143,7 @@ class WundergroundScrapper(MonthlyScrapper):
         for col in df.columns[1:]:
             df[col] = pd.to_numeric(df[col])
         # (8)
-        for variable, dico in cls.UNITS_CONVERSION.items():
+        for variable, dico in self.UNITS_CONVERSION.items():
             
             cols_to_convert = [col for col in df.columns if variable in col]
             

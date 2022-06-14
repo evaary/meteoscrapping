@@ -4,7 +4,7 @@ from app.data_managers import from_json, to_csv, to_json
 from app.scrappers.meteociel_scrappers import MeteocielDailyScrapper, MeteocielScrapper
 from app.scrappers.wunderground_scrapper import WundergroundScrapper
 from app.scrappers.ogimet_scrapper import OgimetScrapper
-from app.config_file_checker import ConfigFilesChecker
+from app.ConfigFileChecker import ConfigFilesChecker
 
 class Runner:
 
@@ -28,23 +28,6 @@ class Runner:
     JOB_ID = 0
 
     @classmethod
-    def _save_data(cls, data, path):
-
-        if len(data) == 0:
-            print("no data")
-            return
-        
-        to_csv(data, path)
-    
-    @classmethod
-    def _save_errors(cls, errors, path):
-        
-        if len(errors) == 0:
-            return
-        
-        to_json(errors, path)
-
-    @classmethod
     def run(cls):
         
         try:
@@ -53,10 +36,10 @@ class Runner:
             print("pas de fichier config.json")
             return
         
-        is_correct, error = cls.CHECKER.check(configs)
+        cls.CHECKER.run(configs)
 
-        if not is_correct:
-            print(error)
+        if not cls.CHECKER.is_legal:
+            print(cls.CHECKER.error)
             return
         
         for scrapper_type in {x for x in configs.keys() if x != "waiting"}:
@@ -71,16 +54,20 @@ class Runner:
                 try:
                     config["waiting"] = configs["waiting"]
                 except KeyError:
-                    pass
+                    config["waiting"] = 3
 
                 scrapper = scrapper.from_config(config)
                 
                 path_data = os.path.join(cls.PATHS["results"], f"{config['city']}_{scrapper_type}_{cls.JOB_ID}.csv")
                 path_errors = os.path.join(cls.PATHS["errors"], f"{config['city']}_{scrapper_type}_{cls.JOB_ID}_errors.json")
 
-                data = scrapper.get_data()
+                data = scrapper.run()
+                errors = scrapper.errors
 
-                cls._save_data(data, path_data)
-                cls._save_errors(scrapper.errors, path_errors)
+                if data:
+                    to_csv(data, path_data)
+                
+                if errors:
+                    to_json(errors, path_errors)
 
                 print("\n")

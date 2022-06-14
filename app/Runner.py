@@ -64,7 +64,7 @@ class Runner:
                 data = scrapper.run()
                 errors = scrapper.errors
 
-                if data:
+                if not data.empty:
                     to_csv(data, path_data)
                 
                 if errors:

@@ -143,7 +143,6 @@ class MeteoScrapper(ABC, ScrappingToolsInterface):
         # A chaque étape, si un problème est rencontré, on le signale et on passe au todo suivant.
         
         for todo in self._todos:
-            print("start")
             # (0)
             try:
                 if not self._check_days(todo):
@@ -152,21 +151,17 @@ class MeteoScrapper(ABC, ScrappingToolsInterface):
                 pass
             # (1)
             key = self._get_key(todo)
-            print("key ok")
             # (2)
             url = self._set_url(todo)
-            print("url ok")
             html_page = self._get_html_page(url, self._waiting)
             if html_page is None:
                 self._register_error(key, url, self.ERROR_MESSAGES["loading"])
                 continue
-            print("html ok")
             # (3)
             table = self._find_table_in_html(html_page, self.CRITERIA)
             if table is None:
                 self._register_error(key, url, self.ERROR_MESSAGES["searching"])
                 continue
-            print("table ok")
             # (4)
             try:
                 col_names = self._scrap_columns_names(table)
@@ -174,14 +169,12 @@ class MeteoScrapper(ABC, ScrappingToolsInterface):
             except Exception:
                 self._register_error(key, url, self.ERROR_MESSAGES["scrapping"])
                 continue
-            print("scrapping")
             # (5)
             try:
                 df = self._rework_data(values, col_names, todo)
             except Exception:
                 self._register_error(key, url, self.ERROR_MESSAGES["reworking"])
                 continue
-            print("rework ok")
             yield df
 
     def run(self) -> pd.DataFrame:

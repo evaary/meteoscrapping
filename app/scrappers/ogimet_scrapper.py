@@ -96,7 +96,7 @@ class OgimetScrapper(MonthlyScrapper):
             pass
         
         # (3)
-        col_names = [
+        columns_names = [
             f"{main.strip()} {sub.strip()}"\
             .strip()\
             .lower()\
@@ -110,10 +110,10 @@ class OgimetScrapper(MonthlyScrapper):
         ]
         
         # (4)
-        if "daily_weather_summary" in col_names:
-            col_names += [f"daily_weather_summary_{i}" for i in range(7)]
+        if "daily_weather_summary" in columns_names:
+            columns_names += [f"daily_weather_summary_{i}" for i in range(7)]
 
-        return col_names
+        return columns_names
 
     @staticmethod
     def _scrap_columns_values(table):
@@ -173,7 +173,7 @@ class OgimetScrapper(MonthlyScrapper):
 
         return done
 
-    def _rework_data(self, values, col_names, todo):
+    def _rework_data(self, values, columns_names, todo):
         
         # (1) Dimensions du futur tableau de données et nombre de valeurs collectées. S'il manque des
         #     données dans la liste des valeurs récupérées, on la complète pour avoir 1 valeur par cellule
@@ -190,7 +190,7 @@ class OgimetScrapper(MonthlyScrapper):
         # (1)
         year, month = todo
 
-        n_cols = len(col_names)
+        n_cols = len(columns_names)
         n_rows = self.DAYS[month]   # obligatoire pour contrôler le nombre de valeurs récupérées
         n_filled = n_rows * n_cols # nombre de valeurs attendu
         n_values = len(values)
@@ -199,18 +199,22 @@ class OgimetScrapper(MonthlyScrapper):
         
         if n_values != n_filled:
             values = self._fill_missing_values(values, n_cols, n_filled, month)
+        
         # (2)
         values = np.array(values).reshape(-1, n_cols)
-        df = pd.DataFrame(values, columns=col_names)
+        df = pd.DataFrame(values, columns=columns_names)
+        
         # (3)
         df["date"] = str(year) + "/" + df["date"]
         df["date"] = pd.to_datetime(df["date"])
         df = df.sort_values(by="date")
+        
         # (4)
         numeric_cols = [col for col in df.columns if col not in ["date", "wind_(km/h)_dir"]]
         
         for col in numeric_cols:
             df[col] = pd.to_numeric(df[col], errors="coerce")
+        
         # (5)
         try:  
             col = "wind_(km/h)_dir"
@@ -218,6 +222,7 @@ class OgimetScrapper(MonthlyScrapper):
             df.loc[indexes, col] = ""
         except KeyError:
             pass
+        
         # (6)
         cols = [col for col in df.columns if "daily_weather_summary" not in col]
         df = df[cols]

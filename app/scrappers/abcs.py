@@ -117,8 +117,17 @@ class MeteoScrapper(ABC, ScrappingToolsInterface):
         '''
 
     @abstractmethod
-    def _rework_data(self) -> pd.DataFrame:
-        '''Mise en forme du tableau de données.'''
+    def _rework_data(self, values: list, columns_names: "list[str]", todo: tuple) -> pd.DataFrame:
+        '''
+        Mise en forme du tableau de données.
+        
+        @params
+            values - la liste des valeurs contenues dans le tableau
+            column_names - la liste des noms de colonnes
+            todo - le tuple contenant la date
+        
+        @return le dataframe équivalent au tableau de données html. 
+        '''
     
     # méthodes principales **************************************************************************************
     def _scrap_data(self) -> pd.DataFrame:

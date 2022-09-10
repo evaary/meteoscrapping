@@ -73,7 +73,7 @@ class WundergroundScrapper(MonthlyScrapper):
         
         return [ td.text for td in table.find("tbody")[0].find("td") if "\n" in td.text ]
 
-    def _rework_data(self, values, main_names, todo):
+    def _rework_data(self, values, columns_names, todo):
         
         # (1) values est une liste de str. Chaque str contient toutes les données d'1 colonne principale
         #     séparées par des \n ("x\nx\nx\nx..."). On convertit ces str en liste de données [x,x,x, ...].
@@ -104,8 +104,10 @@ class WundergroundScrapper(MonthlyScrapper):
         # (1)
         values = [string.split("\n") for string in values]
         n_rows = len(values[0])
+        
         # (2)
         df = np.array(values[0]).reshape(n_rows, 1)
+        
         # (3)
         sub_names = [[""]]
 
@@ -120,38 +122,44 @@ class WundergroundScrapper(MonthlyScrapper):
             df = np.hstack((df, new_columns))
         
         # (4)
-        for index, main_name in enumerate(main_names):
+        for index, main_name in enumerate(columns_names):
 
             for key in self.UNITS_CONVERSION.keys():
 
                 is_key_in_name = key in main_name.lower().strip()
 
                 if is_key_in_name:
-                    main_names[index] = self.UNITS_CONVERSION[key]["new_name"]
+                    columns_names[index] = self.UNITS_CONVERSION[key]["new_name"]
                     break
 
-        col_names = [
+        final_col_names = [
             "_".join( [ main, sub.strip().lower() ] ) if sub else main
 
-            for main, subs in zip(main_names, sub_names)
+            for main, subs in zip(columns_names, sub_names)
             for sub in subs
         ]
 
-        col_names[0] = "date"
+        final_col_names[0] = "date"
+        
         # (5)
-        df = pd.DataFrame(df, columns=col_names)
+        df = pd.DataFrame(df, columns=final_col_names)
         df = df.drop([0], axis="index")
+        
         # (6)
         year, month = todo
         month = "0" + str(month) if month < 10 else str(month)
+        
         df["date"] = [
             f"{year}/{month}/0{day}" if int(day) < 10 else f"{year}/{month}/{day}" for day in df.date
         ]
+        
         df["date"] = pd.to_datetime(df["date"])
         df = df.sort_values(by="date")
+        
         # (7)
         for col in df.columns[1:]:
             df[col] = pd.to_numeric(df[col])
+        
         # (8)
         for variable, dico in self.UNITS_CONVERSION.items():
             

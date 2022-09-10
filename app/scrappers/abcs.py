@@ -108,7 +108,7 @@ class MeteoScrapper(ABC, ScrappingToolsInterface):
         '''
 
     @abstractmethod
-    def _set_url(self, todo: tuple) -> str:
+    def _build_url(self, todo: tuple) -> str:
         '''
         @todo : un tuple contenant 2 à 3 int : l'année, le mois, le jour
             le tuple est issu de update dans les scrappers mensuels / quotidiens

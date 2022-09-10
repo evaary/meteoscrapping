@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from string import Template
 from app.scrappers.abcs import MonthlyScrapper
 
 class OgimetScrapper(MonthlyScrapper):
@@ -33,22 +34,24 @@ class OgimetScrapper(MonthlyScrapper):
     # Critère de sélection qui sert à retrouver le tableau de donner dans la page html
     CRITERIA = ("bgcolor", "#d0d0d0")
     SCRAPPER = "ogimet"
-    BASE_URL = f"http://www.ogimet.com/cgi-bin/gsynres?lang=en&ind=$ind&"
+    BASE_URL = Template(f"http://www.ogimet.com/cgi-bin/gsynres?lang=en&ind=$ind&ano=$ano&mes=$mes&day=0&hora=0&min=0&ndays=$ndays")
     
     def __init__(self):
         self._ind = ""
-        self._url = self.BASE_URL
 
     def update(self, config):
 
         super().update(config)
         self._ind = config["ind"]
-        self._url = self.BASE_URL
 
-    def _set_url(self, todo):
+    def _build_url(self, todo):
 
         year, month = todo
-        url = self._url + f"ano={year}&mes={self.NUMEROTATIONS[month]}&day=0&hora=0&min=0&ndays={self.DAYS[month]}"
+        
+        url = self.BASE_URL.substitute(ind=self._ind,
+                                       ano=year,
+                                       mes=self.NUMEROTATIONS[month],
+                                       ndays=self.DAYS[month])
 
         month = "0" + str(month) if month < 10 else str(month)
         print(f"{self.SCRAPPER} - {self._city} - {month}/{year} - {url}")
@@ -217,3 +220,4 @@ class OgimetScrapper(MonthlyScrapper):
         df = df[cols]
         
         return df
+   

@@ -1,3 +1,4 @@
+from string import Template
 import numpy as np
 import pandas as pd
 from app.scrappers.abcs import MonthlyScrapper
@@ -24,24 +25,27 @@ class WundergroundScrapper(MonthlyScrapper):
     # Critère de sélection qui sert à retrouver le tableau de donner dans la page html
     CRITERIA = ("aria-labelledby", "History days")
     SCRAPPER = "wunderground"
-    BASE_URL = "https://www.wunderground.com/history/monthly/$country_code/$city/$region/date"
+    BASE_URL = Template("https://www.wunderground.com/history/monthly/$country_code/$city/$region/date/$year-$month")
     
     def __init__(self):
         self._country_code = ""
         self._region = ""
-        self._url = self.BASE_URL
 
     def update(self, config):
 
         super().update(config)
         self._country_code = config["country_code"]
         self._region = config["region"]
-        self._url = self.BASE_URL
 
-    def _set_url(self, todo):
+    def _build_url(self, todo):
 
         year, month = todo
-        url = self._url + f"/{year}-{month}"
+
+        url = self.BASE_URL.substitute(country_code = self._country_code,
+                                       city = self._city,
+                                       region = self._region,
+                                       year = year,
+                                       month = month)
         
         month = "0" + str(month) if month < 10 else str(month)
         print(f"{self.SCRAPPER} - {self._city} - {month}/{year} - {url}")

@@ -1,4 +1,5 @@
 
+from string import Template
 import numpy as np
 import pandas as pd
 import re
@@ -18,24 +19,26 @@ class MeteocielScrapper(MonthlyScrapper):
     # Critère de sélection qui sert à retrouver le tableau de donner dans la page html
     CRITERIA = ("cellpadding", "2")
     SCRAPPER = "meteociel"
-    BASE_URL = "https://www.meteociel.com/climatologie/obs_villes.php?code$code_num=$code"
+    BASE_URL = Template("https://www.meteociel.com/climatologie/obs_villes.php?code$code_num=$code&mois=$mois&annee=$annee")
 
     def __init__(self):
         self._code_num = ""
         self._code = ""
-        self._url = self.BASE_URL
 
     def update(self, config):
         
         super().update(config)
         self._code_num = config["code_num"]
         self._code = config["code"]
-        self._url = self.BASE_URL
 
-    def _set_url(self, todo):
+    def _build_url(self, todo):
         
         year, month = todo
-        url = self._url + f"&mois={month}&annee={year}"
+        
+        url = self.BASE_URL.substitute(code_num = self._code_num,
+                                       code = self._code,
+                                       mois = month,
+                                       annee = year)
 
         month = "0" + str(month) if month < 10 else str(month)
         print(f"{self.SCRAPPER} - {self._city} - {month}/{year} - {url}")
@@ -148,24 +151,27 @@ class MeteocielDailyScrapper(DailyScrapper):
 
     CRITERIA = ("bgcolor", "#EBFAF7")
     SCRAPPER = "meteociel_daily"
-    BASE_URL = " https://www.meteociel.com/temps-reel/obs_villes.php?code$code_num=$code"
+    BASE_URL = Template("https://www.meteociel.com/temps-reel/obs_villes.php?code$code_num=$code&jour2=$jour2&mois2=$mois2&annee2=$annee2")
 
     def __init__(self):
         self._code_num = ""
         self._code = ""
-        self._url = self.BASE_URL
 
     def update(self, config):
         
         super().update(config)
         self._code_num = config["code_num"]
         self._code = config["code"]
-        self._url = self.BASE_URL
 
-    def _set_url(self, todo):
+    def _build_url(self, todo):
 
         year, month, day = todo
-        url = self._url + f"&jour2={day}&mois2={self.NUMEROTATIONS[month]}&annee2={year}"
+
+        url = self.BASE_URL.substitute(code_num = self._code_num,
+                                       code = self._code,
+                                       jour2 = day,
+                                       mois2 = self.NUMEROTATIONS[month],
+                                       annee2 = year)
 
         month = "0" + str(month) if month < 10 else str(month)
         day = "0" + str(day) if day < 10 else str(day)

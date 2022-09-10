@@ -122,7 +122,6 @@ class MeteoScrapper(ABC, ScrappingToolsInterface):
     def _scrap_data(self) -> pd.DataFrame:
         
         '''Générateur des dataframes à enregistrer.'''
-        # (0) Pour éviter de chercher les data du 31 février, entre autre, pour les daily_scrapper
         # (1) On créé une clé de dictionnaire à partir du todo.
         # (2) On reconstitue l'url et on charge la page html correspondante.
         # (3) On récupère la table de données html.
@@ -133,12 +132,6 @@ class MeteoScrapper(ABC, ScrappingToolsInterface):
         
         for todo in self._todos:
             print("start")
-            # (0)
-            try:
-                if not self._check_days(todo):
-                    continue
-            except AttributeError:
-                pass
             # (1)
             key = self._get_key(todo)
             print("key ok")
@@ -245,6 +238,8 @@ class DailyScrapper(MeteoScrapper):
 
             for day in range(config["day"][0],
                              config["day"][-1] + 1)
+
+            if self._check_day(year, month, day)
         )
 
     def _get_key(self, todo):
@@ -255,7 +250,7 @@ class DailyScrapper(MeteoScrapper):
         
         return f"{self._city}_{year}_{month}_{day}"
 
-    def _check_days(self, todo: tuple) -> str:
-        '''return false si on veut traiter un jour qui n'existe pas, comme le 31 février'''
+    def _check_day(self, todo: tuple) -> str:
+        '''return False si on veut traiter un jour qui n'existe pas, comme le 31 février'''
         _, month, day = todo
         return False if day > self.DAYS[month] else True

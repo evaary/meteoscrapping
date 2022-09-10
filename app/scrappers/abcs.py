@@ -139,7 +139,7 @@ class MeteoScrapper(ABC, ScrappingToolsInterface):
             
             # (2)
             url = self._build_url(todo)
-            html_page = self._get_html_page(url, self._waiting)
+            html_page = self._load_html_page(url, self._waiting)
             if html_page is None:
                 self._register_error(key, url, self.ERROR_MESSAGES["load"])
                 continue

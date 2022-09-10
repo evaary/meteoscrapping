@@ -1,4 +1,6 @@
-from requests_html import HTMLSession
+from requests_html import HTMLSession, Element
+from requests import Response
+from requests.exceptions import ConnectionError
 
 class ScrappingToolsInterface:
     
@@ -8,46 +10,52 @@ class ScrappingToolsInterface:
     '''
 
     @staticmethod
-    def _get_html_page(url: str, waiting: int):
+    def _load_html_page(url: str, waiting: int) -> Response:
         
         '''
         Charge la page html où se trouvent les données à récupérer
         
-        @param url : string, l'url de la page contenant le tableau de données
-        @param waiting : int, le temps que l'on doit attendre pour que le javascript s'éxecute
-            et que les données soient disponibles sur la page (wunderground et ogimet).
+        @params
+            url - l'url de la page contenant le tableau de données
+            waiting - le temps que l'on doit attendre pour que le javascript s'éxecute
+                      et que les données soient disponibles sur la page (wunderground et ogimet).
         
-        @return: html_page (requests.Response ou None, voir doc requests python)
+        @return la page html, ou None
         '''
-        # (1) Instanciation de l'objet qui récupèrera le code html. i est le nombre de tentatives de connexion.
-        # (2) On tente max 3 fois de charger la page à l'url donnée. Si le chargement réussit, on garde la page. 
-        #     Sinon, on la déclare inexistante. A l'origine, cela sert à palier à des mauvaises connexions internet...
+        # On tente max 3 fois de charger la page à l'url donnée. Si le chargement réussit, on garde la page. 
+        # Sinon, on la déclare inexistante. A l'origine, cela sert à palier à de mauvaises connexions internet.
         html_page = None
-        i = 0
+
         with HTMLSession() as session:
-        # (2)
-            while(html_page is None and i < 3):
-                i += 1
-                if(i > 1):
+
+            for i in range(3):
+                
+                if(i > 0):
                     print("\tretrying...")
+                
                 try:
                     html_page = session.get(url) # long
-                    html_page.html.render(sleep=waiting, keep_page=True, scrolldown=1)
-                except Exception:
+
+                    if html_page.status_code == 200:
+                        html_page.html.render(sleep=waiting, keep_page=True, scrolldown=1)
+                        break
+
+                except ConnectionError:
                     html_page = None
 
         return html_page
     
     @staticmethod
-    def _find_table_in_html(html_page, criteria: tuple):
+    def _find_table_in_html(html_page: Response, criteria: "tuple[str, str]") -> Element:
         
         '''
         Extrait la table html contenant les données à récupérer.
-        @param html_page : requests.Response, la page html contenant le tableau de données.
-        @param criteria : tuple(str, str), l'attribut css et sa valeur permettant
-            d'identifier la table à récupérer.
+
+        @params
+            html_page - la page html contenant le tableau de données retourée par _load_html_page.
+            criteria - l'attribut css et sa valeur permettant d'identifier la table à récupérer.
             
-        @return : table (requests-html.Element ou None, voir doc requests-html python).
+        @return : la table html contenant les données.
         '''
         # (1) Le critère permet d'identifier le tableau que l'on cherche dans la page html.
         #     Il se compose d'un attribut html et de sa valeur.
@@ -78,16 +86,18 @@ class ScrappingToolsInterface:
         return table
     
     @staticmethod
-    def _scrap_columns_names(table):
+    def _scrap_columns_names(table: Element) -> "list[str]":
         '''
-        @param : table, le tableau html retourné par _find_table_in_html
-        @return : la liste des noms des colonnes (list de str).
+        récupération des noms des colonnes
+
+        @param table - le tableau html retourné par _find_table_in_html
+        @return la liste des noms des colonnes.
         '''
         pass
 
     @staticmethod
-    def _scrap_columns_values(table):
+    def _scrap_columns_values(table: Element):
         '''
-        @param : table, le tableau html retourné par _find_table_in_html
+        @param table - le tableau html retourné par _find_table_in_html
         '''
         pass

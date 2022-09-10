@@ -79,6 +79,7 @@ class OgimetScrapper(MonthlyScrapper):
         trs = table.find("thead")[0].find("tr")
         main_names = [th.text for th in trs[0].find("th")]
         sub_values = [th.text for th in trs[1].find("th")]
+
         # (2)
         sub_names = [ [""] for _ in range(len(main_names)) ]
 
@@ -93,6 +94,7 @@ class OgimetScrapper(MonthlyScrapper):
             sub_names[W_index] = [x for x in sub_values if x in ["Dir.", "Int.", "Gust.", "Dir", "Int", "Gust"]]
         except IndexError:
             pass
+        
         # (3)
         col_names = [
             f"{main.strip()} {sub.strip()}"\
@@ -106,6 +108,7 @@ class OgimetScrapper(MonthlyScrapper):
             for main, subs in zip(main_names, sub_names)
             for sub in subs
         ]
+        
         # (4)
         if "daily_weather_summary" in col_names:
             col_names += [f"daily_weather_summary_{i}" for i in range(7)]

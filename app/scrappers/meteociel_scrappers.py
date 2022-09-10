@@ -45,14 +45,14 @@ class MeteocielScrapper(MonthlyScrapper):
         
         return url
     
-    def _scrap_columns_names(self, table):
+    @staticmethod
+    def _scrap_columns_names(table):
         
         # (1) On récupère les noms des colonnes contenus dans la 1ère ligne du tableau.
         # (2) Certains caractères à accents passent mal, on les remplace, et on enlève les . .
         # (3) On remplace les espaces par des _, on renomme la colonne jour en date.
         # (4) La dernière colonne contient des images et n'a pas de noms. On la supprimera,
         #     on la nomme to_delete.
-        # (5) On ajoute au nom de la colonne son unité.
         
         # (1)
         cols = [td.text.lower() for td in table.find("tr")[0].find("td")]
@@ -62,8 +62,6 @@ class MeteocielScrapper(MonthlyScrapper):
         cols = ["date" if col == "jour" else "_".join(col.split(" ")) for col in cols]
         # (4)
         cols = ["to_delete" if col == "" else col for col in cols]
-        # (5)
-        cols = [ f"{col}_{self.UNITS[col.split('_')[0]]}" if col not in ("date", "to_delete") else col for col in cols ]
 
         return cols
 
@@ -73,9 +71,8 @@ class MeteocielScrapper(MonthlyScrapper):
         # sauf la 1ère (noms des colonnes) et la denrière (cumul mensuel).
         return [ td.text for tr in table.find("tr")[1:-1] for td in tr.find("td") ]
 
-    @staticmethod
-    def _rework_data(values, col_names, todo):
-        
+    def _rework_data(self, values, col_names, todo):
+        # (0) On ajoute au nom de la colonne son unité.
         # (1) On définit les dimensions du tableau puis on le créé.
         # (2) Si une colonne to_delete existe, on la supprime.
         # (3) Le tableau ne contient que des string composées d'une valeur et d'une unité.
@@ -87,22 +84,31 @@ class MeteocielScrapper(MonthlyScrapper):
         # (5) On extrait les valeurs des autres colonnes.
         # (6) On trie le dataframe selon la date.
 
+        # (0)
+        col_names = [ f"{col}_{self.UNITS[col.split('_')[0]]}" 
+                      if col not in ("date", "to_delete") else col 
+                      for col in col_names ]
+        
         # (1)
         year, month = todo
         month = "0" + str(month) if month < 10 else str(month)
         
         n_rows = len(values) // len(col_names)
         n_cols = len(col_names)
-        df = pd.DataFrame(np.array(values).reshape(n_rows, n_cols), columns=col_names)
+        df = pd.DataFrame(np.array(values).reshape(n_rows, n_cols),
+                          columns=col_names)
+        
         # (2)
         try:
             df = df.drop("to_delete", axis=1)
         except KeyError:
             pass
+        
         # (3)
         template = r'-?\d+\.?\d*'
         f_num_extract = np.vectorize(lambda string : np.NaN if string in("---", "") else 0 if string in ("aucune", "traces") else float(re.findall(template, string)[0]))
         f_rework_dates = np.vectorize(lambda day : f"{year}-{month}-0{int(day)}" if day < 10 else f"{year}-{month}-{int(day)}")
+        
         # (4)
         df["date"] = f_num_extract(df["date"])
         df["date"] = f_rework_dates(df["date"])
@@ -180,7 +186,8 @@ class MeteocielDailyScrapper(DailyScrapper):
         
         return url
 
-    def _scrap_columns_names(self, table):
+    @staticmethod
+    def _scrap_columns_names(table):
         
         cols = [td.text.lower() for td in table.find("tr")[0].find("td")]
         
@@ -188,12 +195,10 @@ class MeteocielDailyScrapper(DailyScrapper):
         
         cols = [col.split("\n")[0] if "\n" in col else col for col in cols]
         
-        cols = [ f"{col}_{self.UNITS[col]}" if col not in ("heure", "temps", "neb", "humidex", "windchill") else col for col in cols ]
-        
         # La colonne vent est composée de 2 sous colonnes: direction et vitesse.
         # Le tableau compte donc n colonnes mais n-1 noms de colonnes.
         # On rajoute donc un nom pour la colonne de la direction du vent.
-        indexe = cols.index("vent (rafales)_km/h")
+        indexe = cols.index("vent (rafales)")
         cols.insert(indexe, "winddir")
         
         return cols
@@ -202,8 +207,11 @@ class MeteocielDailyScrapper(DailyScrapper):
     def _scrap_columns_values(table):
         return [ td.text for tr in table.find("tr")[1:] for td in tr.find("td") ]
 
-    @staticmethod
-    def _rework_data(values, col_names, todo):
+    def _rework_data(self, values, col_names, todo):
+
+        col_names = [f"{col}_{self.UNITS[col]}"
+                     if col not in ("heure", "temps", "neb", "humidex", "windchill") else col 
+                     for col in col_names]
 
         year, month, day = todo
         month = "0" + str(month) if month < 10 else str(month)

@@ -56,7 +56,7 @@ class MeteocielMonthly(MonthlyScrapper):
     @staticmethod
     def _scrap_columns_values(table):
         # On récupère les valeurs des cellules de toutes les lignes,
-        # sauf la 1ère (noms des colonnes) et la denrière (cumul mensuel).
+        # sauf la 1ère (noms des colonnes) et la dernière (cumul / moyenne mensuel).
         return [ td.text for tr in table.find("tr")[1:-1] for td in tr.find("td") ]
 
     def _rework_data(self, values, columns_names, todo):

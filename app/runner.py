@@ -17,10 +17,10 @@ class Runner:
     }
 
     SCRAPPERS = {
-        "ogimet": OgimetScrapper.instance(),
-        "wunderground": WundergroundScrapper.instance(),
-        "meteociel": MeteocielScrapper.instance(),
-        "meteociel_daily": MeteocielDailyScrapper.instance()
+        "ogimet": OgimetScrapper(),
+        "wunderground": WundergroundScrapper(),
+        "meteociel": MeteocielScrapper(),
+        "meteociel_daily": MeteocielDailyScrapper()
     }
 
     CHECKER = ConfigFilesChecker.instance()
@@ -56,7 +56,7 @@ class Runner:
                 except KeyError:
                     config["waiting"] = 3
 
-                scrapper = scrapper.from_config(config)
+                scrapper.update(config)
                 
                 path_data = os.path.join(cls.PATHS["results"], f"{config['city']}_{scrapper_type}_{cls.JOB_ID}.csv")
                 path_errors = os.path.join(cls.PATHS["errors"], f"{config['city']}_{scrapper_type}_{cls.JOB_ID}_errors.json")

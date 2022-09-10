@@ -24,14 +24,19 @@ class WundergroundScrapper(MonthlyScrapper):
     # Critère de sélection qui sert à retrouver le tableau de donner dans la page html
     CRITERIA = ("aria-labelledby", "History days")
     SCRAPPER = "wunderground"
-    BASE_URL = "https://www.wunderground.com/history/monthly/"
+    BASE_URL = "https://www.wunderground.com/history/monthly/$country_code/$city/$region/date"
     
-    def from_config(self, config):
+    def __init__(self):
+        self._country_code = ""
+        self._region = ""
+        self._url = self.BASE_URL
 
-        super().from_config(config)
-        self._url = self.BASE_URL + f"{config['country_code']}/{config['city']}/{config['region']}/date"
+    def update(self, config):
 
-        return self
+        super().update(config)
+        self._country_code = config["country_code"]
+        self._region = config["region"]
+        self._url = self.BASE_URL
 
     def _set_url(self, todo):
 

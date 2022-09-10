@@ -33,14 +33,17 @@ class OgimetScrapper(MonthlyScrapper):
     # Critère de sélection qui sert à retrouver le tableau de donner dans la page html
     CRITERIA = ("bgcolor", "#d0d0d0")
     SCRAPPER = "ogimet"
-    BASE_URL = f"http://www.ogimet.com/cgi-bin/gsynres?lang=en&"
+    BASE_URL = f"http://www.ogimet.com/cgi-bin/gsynres?lang=en&ind=$ind&"
     
-    def from_config(self, config):
-        
-        super().from_config(config)
-        self._url = self.BASE_URL + f"ind={config['ind']}&"
+    def __init__(self):
+        self._ind = ""
+        self._url = self.BASE_URL
 
-        return self
+    def update(self, config):
+
+        super().update(config)
+        self._ind = config["ind"]
+        self._url = self.BASE_URL
 
     def _set_url(self, todo):
 

@@ -7,7 +7,7 @@ from app.scrappers.abcs import MonthlyScrapper, DailyScrapper
 class MeteocielScrapper(MonthlyScrapper):
     
     '''
-    Les méthodes from_config, set_url et rework_data complètent ou sont
+    Les méthodes update, set_url et rework_data complètent ou sont
     l' implémententation des méthodes de l'abc MeteoScrapper.
 
     Les méthodes scrap_columns_names et scrap_columns_values sont l'implémentation
@@ -18,14 +18,19 @@ class MeteocielScrapper(MonthlyScrapper):
     # Critère de sélection qui sert à retrouver le tableau de donner dans la page html
     CRITERIA = ("cellpadding", "2")
     SCRAPPER = "meteociel"
-    BASE_URL = "https://www.meteociel.com/climatologie/obs_villes.php?"
+    BASE_URL = "https://www.meteociel.com/climatologie/obs_villes.php?code$code_num=$code"
 
-    def from_config(self, config):
+    def __init__(self):
+        self._code_num = ""
+        self._code = ""
+        self._url = self.BASE_URL
+
+    def update(self, config):
         
-        super().from_config(config)
-        self._url = self.BASE_URL + f"code{config['code_num']}={config['code']}"
-
-        return self
+        super().update(config)
+        self._code_num = config["code_num"]
+        self._code = config["code"]
+        self._url = self.BASE_URL
 
     def _set_url(self, todo):
         
@@ -109,7 +114,7 @@ class MeteocielScrapper(MonthlyScrapper):
 class MeteocielDailyScrapper(DailyScrapper):
 
     '''
-    Les méthodes from_config, set_url et rework_data complètent ou sont
+    Les méthodes update, set_url et rework_data complètent ou sont
     l' implémententation des méthodes de l'abc MeteoScrapper.
 
     Les méthodes scrap_columns_names et scrap_columns_values sont l'implémentation
@@ -143,14 +148,19 @@ class MeteocielDailyScrapper(DailyScrapper):
 
     CRITERIA = ("bgcolor", "#EBFAF7")
     SCRAPPER = "meteociel_daily"
-    BASE_URL = " https://www.meteociel.com/temps-reel/obs_villes.php?"
+    BASE_URL = " https://www.meteociel.com/temps-reel/obs_villes.php?code$code_num=$code"
 
-    def from_config(self, config):
+    def __init__(self):
+        self._code_num = ""
+        self._code = ""
+        self._url = self.BASE_URL
+
+    def update(self, config):
         
-        super().from_config(config)
-        self._url = self.BASE_URL + f"code{config['code_num']}={config['code']}"
-
-        return self
+        super().update(config)
+        self._code_num = config["code_num"]
+        self._code = config["code"]
+        self._url = self.BASE_URL
 
     def _set_url(self, todo):
 

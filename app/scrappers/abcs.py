@@ -9,7 +9,7 @@ class MeteoScrapper(ABC, ScrappingToolsInterface):
 
         Scrapper de base, construit sur le modèle du singleton.
 
-        Les méthodes instance(), from_config() et run() sont destinées à être appelées
+        Les méthodes instance(), update() et run() sont destinées à être appelées
         par l'utilisateur. Les autres méthodes sont des utilitaires permettant de 
         réaliser des opérations simples.
 
@@ -20,12 +20,12 @@ class MeteoScrapper(ABC, ScrappingToolsInterface):
         Cette classe implémente la ScrappingToolsInterface qui contient les méthodes permettant de
         scrapper les pages html.
 
-        Les scrappers abstraits suivants implémentent get_key() et complètent from_config().
+        Les scrappers abstraits suivants implémentent get_key() et complètent update().
 
     Comment ça marche :
 
         Un scrapper doit être instancié avec la méthode instance().
-        Une fois le scraper instancié, la méthode from_config() permet de le configurer.
+        Une fois le scraper instancié, la méthode update() permet de le configurer.
         Une fois configuré, la méthode run() récupère les données.
 
         Lors de l'étape de configuration, on créé toutes les combinaisons de (jours/)mois/années
@@ -62,32 +62,21 @@ class MeteoScrapper(ABC, ScrappingToolsInterface):
         "scrapping": "error while scrapping data",
         "reworking": "error while reworking data"
     }
-    
-    # pattern singleton ************************************************************************************** 
-    _instance = None
 
     def __init__(self):
-        raise RuntimeError(f"use {self.__class__.__name__}.instance() instead")
-
-    @classmethod
-    def instance(cls):
-
-        if cls._instance is not None:
-            return cls._instance
-        
-        cls._instance = cls.__new__(cls)
-        cls._instance.errors = {}
-        
-        return cls._instance
+        self.errors = dict()
+        self._todos = tuple()
+        self._city = ""
+        self._waiting = 3
     
     # utilitaires **************************************************************************************
-    def from_config(self, config: dict):
+    def update(self, config: dict):
         '''
         Mise à jour des variables d'instance.
         
-        @param config : un dictionnaire contenant les infos qui permettront de reconstruire l'url.
+        @params
+            config - infos qui permettront de reconstruire l'url.
         '''
-
         self.errors.clear()
         self._city = config["city"]
         self._waiting = config["waiting"]
@@ -111,7 +100,7 @@ class MeteoScrapper(ABC, ScrappingToolsInterface):
         Cette fonction est implémentée dans les scrappers quotidiens ou mensuels.
         
         @todo : un tuple contenant 2 à 3 int : l'année, le mois, le jour.
-            Le tuple est issu de from_config dans les scrappers mensuels / quotidiens.
+            Le tuple est issu de update dans les scrappers mensuels / quotidiens.
 
         @return : str au format city_yyyy_mm_dd.
         '''
@@ -120,7 +109,7 @@ class MeteoScrapper(ABC, ScrappingToolsInterface):
     def _set_url(self, todo: tuple) -> str:
         '''
         @todo : un tuple contenant 2 à 3 int : l'année, le mois, le jour
-            le tuple est issu de from_config dans les scrappers mensuels / quotidiens
+            le tuple est issu de update dans les scrappers mensuels / quotidiens
 
         @return : str, l'url complète au format str du tableau de données à récupérer.
         '''
@@ -207,20 +196,23 @@ class MonthlyScrapper(MeteoScrapper):
 
     '''
     Scrapper spécialisé dans la récupération de données mensuelles.
-    Complétion du from_config qui génère l'ensemble des couples année - mois à traiter,
+    Complétion du update qui génère l'ensemble des couples année - mois à traiter,
     et implémentation du read_todo qui fournit l'année et le mois dans la clé.
     '''
-    def from_config(self, config):
+    def update(self, config):
         
-        super().from_config(config)
+        super().update(config)
 
         self._todos = (
-            (year, month)
-            for year in range(config["year"][0], config["year"][-1] + 1)
-            for month in range(config["month"][0], config["month"][-1] + 1)
-        )
 
-        return self
+            (year, month)
+
+            for year in range(config["year"][0],
+                              config["year"][-1] + 1)
+
+            for month in range(config["month"][0],
+                               config["month"][-1] + 1)
+        )
 
     def _get_key(self, todo):
         
@@ -232,23 +224,28 @@ class MonthlyScrapper(MeteoScrapper):
 class DailyScrapper(MeteoScrapper):
     '''
     Scrapper spécialisé dans la récupération de données quotidiennes.
-    Complétion du from_config qui génère l'ensemble des trios année - mois - jour à traiter,
+    Complétion du update qui génère l'ensemble des trios année - mois - jour à traiter,
     et implémentation du read_todo qui fournit l'année, le mois et le jour dans la clé.
     Ajout d'une fonction permet également de passer les traitements de jours qui n'existent pas.
     '''
 
-    def from_config(self, config):
+    def update(self, config):
         
-        super().from_config(config)
+        super().update(config)
 
         self._todos = (
-            (year, month, day)
-            for year in range(config["year"][0], config["year"][-1] + 1)
-            for month in range(config["month"][0], config["month"][-1] + 1)
-            for day in range(config["day"][0], config["day"][-1] + 1)
-        )
 
-        return self
+            (year, month, day)
+
+            for year in range(config["year"][0],
+                              config["year"][-1] + 1)
+
+            for month in range(config["month"][0],
+                               config["month"][-1] + 1)
+
+            for day in range(config["day"][0],
+                             config["day"][-1] + 1)
+        )
 
     def _get_key(self, todo):
         

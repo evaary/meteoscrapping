@@ -1,7 +1,7 @@
 class ConfigFilesChecker:
 
     '''Singleton contrôlant la validité d'un fichier de config.'''
-    
+
     EXPECTED_SCRAPPERS = {
         "wunderground": {"country_code", "city", "region", "year", "month"},
         "ogimet": {"ind", "city", "year", "month"},
@@ -19,7 +19,7 @@ class ConfigFilesChecker:
     }
 
     _instance = None
-    
+
     def __init__(self):
         raise RuntimeError(f"use {self.__class__.__name__}.instance() instead")
 
@@ -33,9 +33,9 @@ class ConfigFilesChecker:
         cls._instance.is_legal = True
         cls._instance.error = "initial status"
 
-        return cls._instance 
-    
-    def _check_main_fields(self, config:dict):
+        return cls._instance
+
+    def _check_main_fields(self, config: dict) -> None:
         # un fichier de config contient le champs waiting, il est légal, mais n'est pas
         # un scrapper et donc pas présent dans EXPECTED_SCRAPPERS. On le rajoute.
         reference = set(self.EXPECTED_SCRAPPERS.keys()).union({"waiting"})
@@ -45,22 +45,22 @@ class ConfigFilesChecker:
             self.is_legal = False
             self.error = f"{self.ERRORS['main_fields']} {reference}"
 
-    def _check_keys(self, config:dict):
-        
+    def _check_keys(self, config: dict) -> None:
+
         # On contrôle que toutes les clés des configs correspondent à ce qu'on attend.
         for x in config.keys():
-            
+
             if x == "waiting":
                 continue
-            
+
             test = all([ set(dico.keys()) == self.EXPECTED_SCRAPPERS[x] for dico in config[x] ])
             wrong_configs = [ dico for dico in config[x] if set(dico.keys()) != self.EXPECTED_SCRAPPERS[x] ]
-            
+
             if not test:
                 self.is_legal = False
                 self.error = f"des configs {x} posent problème, {wrong_configs}"
 
-    def _check_values(self, config):
+    def _check_values(self, config: dict) -> None:
 
         for scrapper in config.keys():
 
@@ -71,7 +71,7 @@ class ConfigFilesChecker:
 
             if scrapper == "waiting":
                 continue
-            
+
             dicos = config[scrapper]
 
             for x in ("year", "month", "day"):
@@ -82,7 +82,7 @@ class ConfigFilesChecker:
                     if not is_list:
                         self.is_legal = False
                         self.error = self.ERRORS["dates"]
-                        return 
+                        return
 
                     are_positive_ints = all( [ isinstance(y, int) and y > 0 for dico in dicos for y in dico[x] ] )
                     if not are_positive_ints:
@@ -113,17 +113,17 @@ class ConfigFilesChecker:
                 pass
 
             todo = {field for field in self.EXPECTED_SCRAPPERS[scrapper] if field not in ("year", "month", "day")}
-            
+
             if not all( [ isinstance(dico[field], str) for dico in dicos for field in todo ] ):
                 self.is_legal = False
                 self.error = self.ERRORS["other"]
-    
-    def run(self, config):
+
+    def check(self, config):
 
         for func in [self._check_main_fields, self._check_keys, self._check_values]:
 
             func(config)
-            
+
             if not self.is_legal:
                 return
 

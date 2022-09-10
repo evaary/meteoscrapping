@@ -8,7 +8,7 @@ class MeteoScrapper(ABC, ScrappingToolsInterface):
     Scrapper de base.
 
     Après instanciation, initialiser les attributs du scrapper avec update(config).
-    Une fois initialisé, appeler run() pour récupérer les données.
+    Une fois initialisé, appeler scrap() pour récupérer les données.
 
     Cette classe implémente la ScrappingToolsInterface qui contient les méthodes permettant de
     scrapper les pages html.
@@ -64,16 +64,16 @@ class MeteoScrapper(ABC, ScrappingToolsInterface):
         self._city = config["city"]
         self._waiting = config["waiting"]
 
-    def run(self) -> pd.DataFrame:
+    def scrap(self) -> pd.DataFrame:
 
         '''
         Méthode pour démarrer le scrapping.
         '''
 
         try:
-            data = next(self._scrap_data())
+            data = next(self._generate_data())
 
-            for df in self._scrap_data():
+            for df in self._generate_data():
                 data = pd.concat([data, df])
 
         except StopIteration:
@@ -134,7 +134,7 @@ class MeteoScrapper(ABC, ScrappingToolsInterface):
         '''
 
     # Méthode principale
-    def _scrap_data(self) -> pd.DataFrame:
+    def _generate_data(self) -> pd.DataFrame:
 
         '''Générateur des dataframes à enregistrer.'''
         # (1) On créé une clé de dictionnaire à partir du todo.
@@ -153,7 +153,7 @@ class MeteoScrapper(ABC, ScrappingToolsInterface):
             # (2)
             url = self._build_url(todo)
             self._url = url
-            print(self)
+            print(todo , self)
             html_page = self._load_html_page(url, self._waiting)
             if html_page is None:
                 self._register_error(key, url, self.ERROR_MESSAGES["load"])
@@ -238,7 +238,7 @@ class DailyScrapper(MeteoScrapper):
             for day in range(config["day"][0],
                              config["day"][-1] + 1)
 
-            if self._check_day(year, month, day)
+            if self._check_day( (year, month, day) )
         )
 
     def _build_key(self, todo: "tuple[int, int, int]"):

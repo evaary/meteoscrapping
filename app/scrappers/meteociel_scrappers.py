@@ -154,11 +154,11 @@ class MeteocielDailyScrapper(DailyScrapper):
     BASE_URL = Template("https://www.meteociel.com/temps-reel/obs_villes.php?code$code_num=$code&jour2=$jour2&mois2=$mois2&annee2=$annee2")
 
     def __init__(self):
+        super().__init__()
         self._code_num = ""
         self._code = ""
 
     def update(self, config):
-        
         super().update(config)
         self._code_num = config["code_num"]
         self._code = config["code"]

@@ -37,10 +37,10 @@ class OgimetScrapper(MonthlyScrapper):
     BASE_URL = Template(f"http://www.ogimet.com/cgi-bin/gsynres?lang=en&ind=$ind&ano=$ano&mes=$mes&day=0&hora=0&min=0&ndays=$ndays")
     
     def __init__(self):
+        super().__init__()
         self._ind = ""
 
     def update(self, config):
-
         super().update(config)
         self._ind = config["ind"]
 

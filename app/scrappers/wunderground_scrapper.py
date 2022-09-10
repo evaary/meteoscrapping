@@ -3,30 +3,33 @@ import numpy as np
 import pandas as pd
 from app.scrappers.abcs import MonthlyScrapper
 
-class WundergroundScrapper(MonthlyScrapper):
-
-    '''
-    Les méthodes from_config, set_url et rework_data complètent ou sont
-    l'implémententation des méthodes de l'abc MeteoScrapper.
-
-    Les méthodes scrap_columns_names et scrap_columns_values sont l'implémentation
-    des méthodes de l'interface ScrappingToolsInterface.
-    '''
+class WundergroundMonthly(MonthlyScrapper):
 
     UNITS_CONVERSION = {
-        "temperature": { "new_name": "temperature_°C", "func": (lambda x: (x-32)*5/9 )},
-        "dew" : { "new_name": "dew_point_°C", "func": (lambda x: (x-32)*5/9 )},
-        "wind": { "new_name": "wind_speed_(km/h)", "func": (lambda x: x*1.609344) },
-        "precipitation": { "new_name": "precipitation_(mm)", "func": (lambda x: x*25.4) },
-        "pressure": { "new_name": "pressure_(hPa)",  "func": (lambda x: x*33.86388) },
-        "humidity": { "new_name": "humidity_(%)",  "func": (lambda x: x) },
+        "dew" : {"new_name": "dew_point_°C",
+                 "func": (lambda x: (x-32)*5/9 )},
+
+        "wind": {"new_name": "wind_speed_(km/h)",
+                 "func": (lambda x: x*1.609344)},
+
+        "pressure": {"new_name": "pressure_(hPa)",
+                     "func": (lambda x: x*33.86388)},
+
+        "humidity": {"new_name": "humidity_(%)",
+                     "func": (lambda x: x)},
+
+        "temperature": {"new_name": "temperature_°C",
+                        "func": (lambda x: (x-32)*5/9 )},
+
+        "precipitation": {"new_name": "precipitation_(mm)",
+                          "func": (lambda x: x*25.4)}
     }
 
     # Critère de sélection qui sert à retrouver le tableau de donner dans la page html
     CRITERIA = ("aria-labelledby", "History days")
-    SCRAPPER = "wunderground"
+
     BASE_URL = Template("https://www.wunderground.com/history/monthly/$country_code/$city/$region/date/$year-$month")
-    
+
     def __init__(self):
         super().__init__()
         self._country_code = ""
@@ -47,10 +50,6 @@ class WundergroundScrapper(MonthlyScrapper):
                                        region = self._region,
                                        year = year,
                                        month = month)
-        
-        month = "0" + str(month) if month < 10 else str(month)
-        print(f"{self.SCRAPPER} - {self._city} - {month}/{year} - {url}")
-        
         return url
 
     @staticmethod
@@ -59,7 +58,7 @@ class WundergroundScrapper(MonthlyScrapper):
 
     @staticmethod
     def _scrap_columns_values(table):
-        
+
         # La structure html du tableau est tordue, ce qui conduit à des doublons dans values.
         # Daily Observations compte 7 colonnes principales et 17 sous-colonnes.
         # Elle est donc de dimension (lignes, sous-colonnes).
@@ -70,11 +69,11 @@ class WundergroundScrapper(MonthlyScrapper):
         # la nième valeur contient les données de la nième colonne principale,
         # et donc de toutes ses sous-colonnes.
         # On récupère ces 7 valeurs additionnelles qui contiennent le caractère \n.
-        
+
         return [ td.text for td in table.find("tbody")[0].find("td") if "\n" in td.text ]
 
     def _rework_data(self, values, columns_names, todo):
-        
+
         # (1) values est une liste de str. Chaque str contient toutes les données d'1 colonne principale
         #     séparées par des \n ("x\nx\nx\nx..."). On convertit ces str en liste de données [x,x,x, ...].
         #     values devient une liste de listes.
@@ -100,27 +99,27 @@ class WundergroundScrapper(MonthlyScrapper):
         #     par la date au format AAAA-MM-JJ et on trie.
         # (7) Jusqu'ici les valeur du dataframe sont au format str. On les convertit en numérique.
         # (8) On convertit vers les unités classiques .
-        
+
         # (1)
         values = [string.split("\n") for string in values]
         n_rows = len(values[0])
-        
+
         # (2)
         df = np.array(values[0]).reshape(n_rows, 1)
-        
+
         # (3)
         sub_names = [[""]]
 
         for values_list in values[1:]:
-            
+
             n_cols = len(values_list) // n_rows
 
             sub_names += [values_list[0:n_cols]]
 
             new_columns = np.array(values_list).reshape(n_rows, n_cols)
-            
+
             df = np.hstack((df, new_columns))
-        
+
         # (4)
         for index, main_name in enumerate(columns_names):
 
@@ -140,31 +139,31 @@ class WundergroundScrapper(MonthlyScrapper):
         ]
 
         final_col_names[0] = "date"
-        
+
         # (5)
         df = pd.DataFrame(df, columns=final_col_names)
         df = df.drop([0], axis="index")
-        
+
         # (6)
         year, month = todo
         month = "0" + str(month) if month < 10 else str(month)
-        
+
         df["date"] = [
             f"{year}/{month}/0{day}" if int(day) < 10 else f"{year}/{month}/{day}" for day in df.date
         ]
-        
+
         df["date"] = pd.to_datetime(df["date"])
         df = df.sort_values(by="date")
-        
+
         # (7)
         for col in df.columns[1:]:
             df[col] = pd.to_numeric(df[col])
-        
+
         # (8)
         for variable, dico in self.UNITS_CONVERSION.items():
-            
+
             cols_to_convert = [col for col in df.columns if variable in col]
-            
+
             df[cols_to_convert] = np.round(dico["func"](df[cols_to_convert]), 1)
-            
+
         return df

@@ -250,7 +250,7 @@ class DailyScrapper(MeteoScrapper):
         
         return f"{self._city}_{year}_{month}_{day}"
 
-    def _check_day(self, todo: tuple) -> str:
+    def _check_day(self, todo: "tuple[int, int, int]") -> str:
         '''return False si on veut traiter un jour qui n'existe pas, comme le 31 février'''
         _, month, day = todo
         return False if day > self.DAYS[month] else True

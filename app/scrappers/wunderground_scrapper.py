@@ -27,6 +27,7 @@ class WundergroundScrapper(MonthlyScrapper):
     BASE_URL = "https://www.wunderground.com/history/monthly/$country_code/$city/$region/date"
     
     def __init__(self):
+        super().__init__()
         self._country_code = ""
         self._region = ""
         self._url = self.BASE_URL

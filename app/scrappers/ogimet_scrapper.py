@@ -36,11 +36,11 @@ class OgimetScrapper(MonthlyScrapper):
     BASE_URL = f"http://www.ogimet.com/cgi-bin/gsynres?lang=en&ind=$ind&"
     
     def __init__(self):
+        super().__init__()
         self._ind = ""
         self._url = self.BASE_URL
 
     def update(self, config):
-
         super().update(config)
         self._ind = config["ind"]
         self._url = self.BASE_URL

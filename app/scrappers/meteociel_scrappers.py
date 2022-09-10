@@ -21,12 +21,12 @@ class MeteocielScrapper(MonthlyScrapper):
     BASE_URL = "https://www.meteociel.com/climatologie/obs_villes.php?code$code_num=$code"
 
     def __init__(self):
+        super().__init__()
         self._code_num = ""
         self._code = ""
         self._url = self.BASE_URL
 
     def update(self, config):
-        
         super().update(config)
         self._code_num = config["code_num"]
         self._code = config["code"]

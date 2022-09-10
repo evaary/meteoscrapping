@@ -57,10 +57,10 @@ class MeteoScrapper(ABC, ScrappingToolsInterface):
 
     # dictionnaire contenant les messages à afficher en cas d'erreur
     ERROR_MESSAGES = {
-        "loading": "error while loading html page",
-        "searching": "no data table found",
-        "scrapping": "error while scrapping data",
-        "reworking": "error while reworking data"
+        "load": "erreur lors du chargement de la page html",
+        "search": "aucun tableau de données trouvé",
+        "scrap": "erreur lors de la récupération des données",
+        "rework": "erreur lors du traitement des données"
     }
 
     def __init__(self):
@@ -85,24 +85,26 @@ class MeteoScrapper(ABC, ScrappingToolsInterface):
         '''
         Garder une trace d'une erreur et la signaler.
         
-        @param key : une str identifiant un job pour une ville à une date donnée, fournit par get_key()
-        @param url : l'url du tableau de données à récupérer
-        @param message : le message à afficher et à enregistrer
+        @params
+            key - identifiant d'un job pour une ville à une date donnée, fournit par build_key()
+            url - l'url du tableau de données à récupérer
+            message - le message à afficher et à enregistrer
         '''
         self.errors[key] = {"url": url, "error": message}
         print(f"\t{message}")
     
     @abstractmethod
-    def _get_key(self, todo: tuple) -> str:
+    def _build_key(self, todo: tuple) -> str:
         '''
-        Génère une str contenant la ville et la date (format city_yyyy_mm_dd).
+        Génère une str au format city_yyyy_mm_dd.
         Elle sert de clé pour sauvegarder les erreurs dans le dictionnaire errors.
         Cette fonction est implémentée dans les scrappers quotidiens ou mensuels.
         
-        @todo : un tuple contenant 2 à 3 int : l'année, le mois, le jour.
-            Le tuple est issu de update dans les scrappers mensuels / quotidiens.
+        @param
+            todo - un tuple contenant 2 à 3 int : l'année, le mois, le jour.
+                   Généré par update() dans les Monthly / Daily Scrappers.
 
-        @return : str au format city_yyyy_mm_dd.
+        @return une str au format city_yyyy_mm_dd.
         '''
 
     @abstractmethod
@@ -133,37 +135,32 @@ class MeteoScrapper(ABC, ScrappingToolsInterface):
         for todo in self._todos:
             print("start")
             # (1)
-            key = self._get_key(todo)
+            key = self._build_key(todo)
             print("key ok")
             # (2)
             url = self._set_url(todo)
-            print("url ok")
             html_page = self._get_html_page(url, self._waiting)
             if html_page is None:
-                self._register_error(key, url, self.ERROR_MESSAGES["loading"])
+                self._register_error(key, url, self.ERROR_MESSAGES["load"])
                 continue
-            print("html ok")
             # (3)
             table = self._find_table_in_html(html_page, self.CRITERIA)
             if table is None:
-                self._register_error(key, url, self.ERROR_MESSAGES["searching"])
+                self._register_error(key, url, self.ERROR_MESSAGES["search"])
                 continue
-            print("table ok")
             # (4)
             try:
                 col_names = self._scrap_columns_names(table)
                 values = self._scrap_columns_values(table)
             except Exception:
-                self._register_error(key, url, self.ERROR_MESSAGES["scrapping"])
+                self._register_error(key, url, self.ERROR_MESSAGES["scrap"])
                 continue
-            print("scrapping")
             # (5)
             try:
                 df = self._rework_data(values, col_names, todo)
             except Exception:
-                self._register_error(key, url, self.ERROR_MESSAGES["reworking"])
+                self._register_error(key, url, self.ERROR_MESSAGES["rework"])
                 continue
-            print("rework ok")
             yield df
 
     def run(self) -> pd.DataFrame:
@@ -207,7 +204,7 @@ class MonthlyScrapper(MeteoScrapper):
                                config["month"][-1] + 1)
         )
 
-    def _get_key(self, todo):
+    def _build_key(self, todo: "tuple[int, int]"):
         
         year, month = todo
         month = "0" + str(month) if month < 10 else str(month)
@@ -242,7 +239,7 @@ class DailyScrapper(MeteoScrapper):
             if self._check_day(year, month, day)
         )
 
-    def _get_key(self, todo):
+    def _build_key(self, todo: "tuple[int, int, int]"):
         
         year, month, day = todo
         month = "0" + str(month) if month < 10 else str(month)

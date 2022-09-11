@@ -105,6 +105,7 @@ class MeteoScrapper(ABC, ScrappingToolsInterface):
 
         @return une str au format city_yyyy_mm_dd.
         '''
+        pass
 
     @abstractmethod
     def _build_url(self, todo: tuple) -> str:
@@ -117,6 +118,7 @@ class MeteoScrapper(ABC, ScrappingToolsInterface):
 
         @return l'url complète au format str du tableau de données à récupérer.
         '''
+        pass
 
     @abstractmethod
     def _rework_data(self, values: list, columns_names: "list[str]", todo: tuple) -> pd.DataFrame:
@@ -131,6 +133,7 @@ class MeteoScrapper(ABC, ScrappingToolsInterface):
 
         @return le dataframe équivalent au tableau de données html.
         '''
+        pass
 
     # Méthode principale
     def _generate_data(self) -> pd.DataFrame:

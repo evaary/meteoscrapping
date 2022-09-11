@@ -1,7 +1,7 @@
 Un programme de webscrapping pour récupérer des données météorologiques depuis 3 sites : ogimet, wunderground et meteociel.
 /!\ La 1ère fois que le programme se lance, il téléchargera chromium, c'est normal.
-/!\ Une ConnectionResetError peut être levée aléatoirement, cela n'influe pas sur le bon fonctionnement du programme. Je ne sais pas d'où elle sort, des corrections
-seront apportées.
+/!\ python 3.7 (ne fonctionne pas avec 3.10)
+/!\ il n'existe qu'1 scrapper quotidien, meteociel_daily
 
 exemples de tableaux récupérés:
     1 - http://www.ogimet.com/cgi-bin/gsynres?lang=en&ind=08180&ano=2017&mes=8&day=0&hora=0&min=0&ndays=31
@@ -9,33 +9,31 @@ exemples de tableaux récupérés:
     3 - https://www.meteociel.com/climatologie/obs_villes.php?code2=7249&mois=1&annee=2021
     4 - https://www.meteociel.com/temps-reel/obs_villes.php?code2=7249&jour2=1&mois2=0&annee2=2020
 
-Pour lancer le programme:
+Utilisation:
 
     télécharger l'exécutable
         - fichier zip : https://drive.google.com/file/d/1nizRr_Yzv-Rc5IabFTKEWip8etFVAnNN/view?usp=sharing
         - dézipper
-    
-    créer un fichier "config.json" à côté l'éxecutable
-        - un modèle de fichier config est donné ci-après ou dans le fichier exemple_config.json (à renommer en config.json)
 
-    double cliquer sur l'éxecutable
-    ou
-    ouvrir un powershell (alt + f dans le répertoire où se trouve l'exécutable puis taper .\meteoscrapping.exe) pour plus de détails.
+    créer un fichier "config.json" à côté l'éxecutable (nom config.json impératif)
+        - un modèle de fichier config est donné ci-après ou dans le fichier exemple_config.json
 
-    les résultats seront stockés dans un répertoire "results" créé automatiquement à côté du fichier config
+    double cliquer sur l'éxecutable.
+
+    les résultats seront stockés dans un répertoire "results" à côté du fichier config
         - les résultats sont des fichiers csv, 1 par job, si des données ont été récupérées
-    
-    les erreurs seront stockées dans un répertoire "errors" créé automatiquement à côté du fichier config
+
+    les erreurs seront stockées dans un répertoire "errors" à côté du fichier config
         - les erreurs sont des fichiers json, 1 par job s'il y a eu des erreurs
         - chaque fichier json contient les url à partir desquelles aucune donnée n'a pu être récupérée par le programme.
 
 structure du fichier config.json
 {
-    "waiting": 10,
+    "waiting": 3,
 
     "ogimet":[
         { "ind":"16138", "city":"Ferrara", "year":[2021], "month":[2] },
-        { "ind":"16288", "city":"Caserta", "year":[2020, 2021], "month":[1,2] }
+        { "ind":"16288", "city":"Caserta", "year":[2020, 2025], "month":[1,2] }
     ],
 
     "wunderground":[
@@ -51,21 +49,28 @@ structure du fichier config.json
     ]
 }
 
-Le champ waiting sert à patienter suffisamment longtemps pour que les données soient disponibles sur la page.
-Si un problème de chargement de la page html survient, essayez d'augmenter le waiting. Par défaut il vaut 3.
+Le champ waiting (optionnel) sert à patienter suffisamment longtemps pour que les données soient disponibles sur la page.
+Si une erreur "aucun tableau trouvé" apparait, augmenter le waiting peut résoudre le problème si le tableau existe bien.
 
-Chaque élément dans les listes ogimet, wounderground ... correspond aux paramètres pour 1 job.
+Chaque élément entre { } correspond aux paramètres pour 1 job.
 
 Les champs day, month et year doivent être des listes ordonnées d'1 ou 2 entiers positifs.
 
-Les autres champs sont à récupérer directement depuis le site ou l'url voulue (voir exemples de tableaux récupérés),
-sauf le "city" qui est à choisir soi-même pour les scrappers autres que wunderground.
+Pour l'exemple ogimet n°2, on récupère les données des mois de janvier à février 2020 à 2025.
+Pour l'exemple meteociel_daily : on récupère les jours 27 à 31 du mois de février 2020.
+
+/!\ Les jours qui n'existent pas (le 31 février typiquement) sont ignorés sans poser de problèmes.
+    Pour récupérer tous les jours, on peut écrire day: [1,31], quelque soit le mois.
+
+Les autres champs sont à récupérer directement depuis le site ou l'url voulue (voir ci-après),
+sauf le "city" qui est obligatoire mais arbitraire pour les scrappers autres que wunderground.
 
 
 Pour les jobs ogimet:
     - Le champ city sert juste à nommer le fichier csv.
     - Les colonnes daily weather summary sur ogimet sont ignorées.
     - les mois dans l'url sont numérotés différement. Dans la config, utiliser les numéros usuels.
+    - http://www.ogimet.com/cgi-bin/gsynres?lang=en&ind=<ind>&ano=2017&mes=8&day=0&hora=0&min=0&ndays=31
 
 Pour les jobs wunderground:
     - Les unités sont converties : températures (°F -> °C), vitesses (mph -> km/h), précipitations (in -> mm), pressions (inHg -> hPa).
@@ -78,10 +83,7 @@ Pour les job meteociel:
 
 Pour les job meteociel_daily:
     - La colonne temps et les directions du vent sont ignorées.
-    - Vent et rafale sont récupérées dans des colonnes distinctes.
-    - L'heure est convertie en datetime.
-    - Les jobs pour des jours qui n'existent pas (le 31 février typiquement) sont automatiquement
-        détectés et ignorés sans influencer le bon fonctionnement du programme.
-        Pour récupérer tous les jours des mois de janvier et février, on peut écrire day: [1,31].
+    - Vent et rafales sont récupérées dans des colonnes distinctes.
+    - L'heure est convertie en date et heure.
     - Les mois dans l'url sont numérotés différement. Dans la config, utiliser les numéros usuels.
     - https://www.meteociel.com/temps-reel/obs_villes.php?code<code_num>=<code>&jour2=1&mois2=0&annee2=2020

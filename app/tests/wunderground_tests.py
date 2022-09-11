@@ -1,10 +1,9 @@
 from unittest import TestCase
 import pandas as pd
-import numpy as np
 
 from app.scrappers.wunderground_scrapper import WundergroundMonthly
 
-class WundergroundTester(TestCase):
+class Wunderground_MonthlyTester(TestCase):
 
     SCRAPPER = WundergroundMonthly()
 

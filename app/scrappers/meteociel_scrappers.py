@@ -97,7 +97,7 @@ class MeteocielMonthly(MonthlyScrapper):
         template = r'-?\d+\.?\d*'
 
         f_num_extract = np.vectorize(lambda string : np.NaN if string in("---", "") else 0
-                                     if string in ("aucune", "traces") else float(re.findall(template, string)[0]))
+                                                     if string in ("aucune", "traces") else float(re.findall(template, string)[0]))
 
         f_rework_dates = np.vectorize(lambda day : f"{year}-{month}-0{int(day)}" if day < 10 else f"{year}-{month}-{int(day)}")
 
@@ -120,7 +120,8 @@ class MeteocielDaily(DailyScrapper):
         "visi": "km",
         "temperature": "°C",
         "humidite": "%",
-        "vent (rafales)": "km/h",
+        "vent": "km/h",
+        "rafales": "km/h",
         "pression": "hPa",
         "precip": "mm",
     }
@@ -190,18 +191,14 @@ class MeteocielDaily(DailyScrapper):
 
     def _rework_data(self, values, columns_names, todo):
 
-        # (0) On ajoute au nom de la colonne son unité.
         # (1) On définit les dimensions du tableau puis on le créé.
         # (2) On met de coté la colonne vent car il faut la séparer en 2.
         #     On supprime les colonnes inutiles.
         # (3) On convertit les valeurs du format string vers le format qui leur vont.
         # (4) Ajout des colonnes vent et rafales. Si 1 seule valeur est présente dans la colonne,
-        #     on en rajoute une vide pou bien avoir 2 valeurs, pour les 2 colonnes
-
-        # (0)
-        columns_names = [f"{col}_{self.UNITS[col]}"
-                         if col not in ("heure", "temps", "neb", "humidex", "windchill") else col
-                         for col in columns_names]
+        #     on en rajoute une vide pou bien avoir 2 valeurs, pour les 2 colonnes.
+        # (5) On réunit les données, on met en forme le tableau.
+        # (6) On ajoute au nom de la colonne son unité.
 
         # (1)
         year, month, day = todo
@@ -214,8 +211,8 @@ class MeteocielDaily(DailyScrapper):
         df = pd.DataFrame(np.array(values).reshape(n_rows, n_cols), columns=columns_names)
 
         # (2)
-        vent_rafale = df[["heure", "vent (rafales)_km/h"]].copy(deep=True)
-        df = df[[col for col in df.columns if col not in ("vent (rafales)_km/h", "winddir", "temps")]]
+        vent_rafale = df[["heure", "vent (rafales)"]].copy(deep=True)
+        df = df[[col for col in df.columns if col not in ("vent (rafales)", "winddir", "temps")]]
 
         # (3)
         not_numeric = ["date", "heure", "neb"]
@@ -224,9 +221,10 @@ class MeteocielDaily(DailyScrapper):
         template = r'-?\d+\.?\d*'
 
         f_num_extract = np.vectorize(lambda string : np.NaN if string in("---", "") else 0
-                                     if string in ("aucune", "traces") else float(re.findall(template, string)[0]))
+                                                     if string in ("aucune", "traces") else float(re.findall(template, string)[0]))
 
-        f_rework_dates = np.vectorize(lambda heure : f"{year}-{month}-{day} 0{int(heure)}:00:00" if heure < 10 else f"{year}-{month}-{day} {int(heure)}:00:00")
+        f_rework_dates = np.vectorize(lambda heure : f"{year}-{month}-{day} 0{int(heure)}:00:00" if heure < 10
+                                                     else f"{year}-{month}-{day} {int(heure)}:00:00")
 
         df["date"] = f_num_extract(df["heure"])
         df["date"] = f_rework_dates(df["date"])
@@ -237,18 +235,24 @@ class MeteocielDaily(DailyScrapper):
         df = df[not_numeric + numerics] # juste pour l'ordre des colonne, avoir la date en 1er
 
         # (4)
-        separated = [x.split("(") for x in vent_rafale["vent (rafales)_km/h"].values]
+        separated = [x.split("(") for x in vent_rafale["vent (rafales)"].values]
 
         for x in [separated.index(x) for x in separated if len(x) != 2]:
             separated[x].append("")
 
         separated = np.array(separated)
         separated = f_num_extract(separated)
-        separated = pd.DataFrame(separated, columns=["vent", "rafale"])
+        separated = pd.DataFrame(separated, columns=["vent", "rafales"])
         separated["heure"] = vent_rafale["heure"]
 
+        # (5)
         df = pd.merge(df, separated, on="heure", how="inner")
-        del df["heure"], separated, vent_rafale
+        df = df.drop(["heure"], axis=1)
         df = df.sort_values(by="date")
+
+        # (6)
+        df.columns = [f"{col}_{self.UNITS[col]}"
+                      if col not in ("date", "neb", "humidex", "windchill") else col
+                      for col in df.columns]
 
         return df

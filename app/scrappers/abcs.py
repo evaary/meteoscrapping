@@ -15,12 +15,8 @@ class MeteoScrapper(ABC, ScrappingToolsInterface):
 
     Elle définit le processus de récupération des données avec et certains outils à implémenter.
     '''
-
-    # (1) Nombre de jours dans chaque mois.
-    #     Wunderground et météociel récupèrent le 29ème jour de février s'il existe.
-    # (2) Dictionnaire contenant les messages à afficher en cas d'erreur
-
-    # (1)
+    # Nombre de jours dans chaque mois.
+    # Wunderground et météociel récupèrent le 29ème jour de février s'il existe.
     DAYS = {
         1  : 31,
         2  : 28,
@@ -36,7 +32,7 @@ class MeteoScrapper(ABC, ScrappingToolsInterface):
         12 : 31,
     }
 
-    # (2)
+    # Dictionnaire contenant les messages à afficher en cas d'erreur
     ERROR_MESSAGES = {
         "load": "erreur lors du chargement de la page html",
         "search": "aucun tableau de données trouvé",

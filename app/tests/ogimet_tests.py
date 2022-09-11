@@ -4,7 +4,7 @@ import numpy as np
 
 from app.scrappers.ogimet_scrapper import OgimetMonthly
 
-class WundergroundTester(TestCase):
+class Ogimet_MonthlyTester(TestCase):
 
     SCRAPPER = OgimetMonthly()
 

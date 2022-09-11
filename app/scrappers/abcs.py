@@ -62,7 +62,10 @@ class MeteoScrapper(ABC, ScrappingToolsInterface):
         self.errors.clear()
         self._url = ""
         self._city = config["city"]
-        self._waiting = config["waiting"]
+        try:
+            self._waiting = config["waiting"]
+        except KeyError:
+            pass
 
     def scrap(self) -> pd.DataFrame:
 

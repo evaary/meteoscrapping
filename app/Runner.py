@@ -6,7 +6,7 @@ from app.scrappers.abcs import MeteoScrapper
 from app.scrappers.meteociel_scrappers import MeteocielDaily, MeteocielMonthly
 from app.scrappers.wunderground_scrapper import WundergroundMonthly
 from app.scrappers.ogimet_scrapper import OgimetMonthly
-from app.ConfigFileChecker import ConfigFilesChecker
+from app.ConfigFileChecker import ConfigFilesChecker, ConfigCheckerException
 
 class Runner:
 
@@ -34,18 +34,18 @@ class Runner:
 
         try:
             configs = from_json(os.path.join(cls.WORKDIR, "config.json"))
+            cls.CHECKER.check(configs)
         except FileNotFoundError:
+            # from_json ne trouve pas le fichier
             print("pas de fichier config.json")
             return
         except JSONDecodeError:
+            # from_json n'arrive pas à lire le fichier
             print("le fichier config est mal formé, impossible de charger un format json.")
             return
-
-
-        cls.CHECKER.check(configs)
-
-        if not cls.CHECKER.is_legal:
-            print(cls.CHECKER.error)
+        except ConfigCheckerException as e :
+            # le checker a trouvé un problème avec le fichier
+            print(e)
             return
 
         for scrapper_type in {x for x in configs.keys() if x != "waiting"}:

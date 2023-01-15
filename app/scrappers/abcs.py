@@ -61,7 +61,7 @@ class MeteoScrapper(ABC, ScrappingToolsInterface):
         try:
             self._waiting = config["waiting"]
         except KeyError:
-            pass
+            self._waiting = 3
 
     def scrap(self) -> pd.DataFrame:
 

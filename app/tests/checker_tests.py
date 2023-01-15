@@ -1,6 +1,6 @@
 from unittest import TestCase
 import copy
-from app.ConfigFileChecker import ConfigFilesChecker
+from app.ConfigFileChecker import ConfigFilesChecker, ConfigCheckerException
 
 class CheckerTester(TestCase):
 
@@ -28,114 +28,123 @@ class CheckerTester(TestCase):
 
     def test_missing_main_fields(self):
 
-        '''test lorsqu'un champs principal est manquant'''
-
         todo = copy.deepcopy(self.CONFIG)
         del todo["waiting"]
 
-        self.CHECKER._check_main_fields(todo)
-        # on cherche un terme spécifique à l'erreur attendue dans l'erreur retournée
-        self.assertIn("principaux", self.CHECKER.error)
-        self.assertFalse(self.CHECKER.is_legal)
+        with self.assertRaises(ConfigCheckerException) as e:
+            self.CHECKER._check_main_fields(todo)
+
+        self.assertEqual(str(e.exception), self.CHECKER.ERRORS_MSG["main_fields"])
 
     def test_unknown_main_fields(self):
-
-        '''test lorsqu'un champs principal inconnu est présent'''
 
         todo = copy.deepcopy(self.CONFIG)
         todo["bouh"] = ["test"]
 
-        self.CHECKER._check_main_fields(todo)
-        self.assertIn("principaux", self.CHECKER.error)
-        self.assertFalse(self.CHECKER.is_legal)
+        with self.assertRaises(ConfigCheckerException) as e:
+            self.CHECKER._check_main_fields(todo)
+
+        self.assertEqual(str(e.exception), self.CHECKER.ERRORS_MSG["main_fields"])
 
     def test_wrong_fields_ogimet(self):
-
-        '''test lorsque les clés d'un dict ne correspondent pas à celles attendues'''
 
         todo = copy.deepcopy(self.CONFIG)
         del todo["ogimet"][0]["ind"]
 
-        self.CHECKER._check_keys(todo)
-        self.assertIn("ogimet", self.CHECKER.error)
-        self.assertFalse(self.CHECKER.is_legal)
+        with self.assertRaises(ConfigCheckerException) as e:
+            self.CHECKER._check_keys(todo)
+
+        self.assertEqual(str(e.exception), self.CHECKER.ERRORS_MSG["configs"])
 
     def test_wrong_fields_wunderground(self):
-
-        '''test lorsque les clés d'un dict ne correspondent pas à celles attendues'''
 
         todo = copy.deepcopy(self.CONFIG)
         todo["wunderground"][0]["bouh"] = 5
 
-        self.CHECKER._check_keys(todo)
-        self.assertIn("wunderground", self.CHECKER.error)
-        self.assertFalse(self.CHECKER.is_legal)
+        with self.assertRaises(ConfigCheckerException) as e:
+            self.CHECKER._check_keys(todo)
+
+        self.assertEqual(str(e.exception), self.CHECKER.ERRORS_MSG["configs"])
 
     def test_wrong_fields_meteociel(self):
-
-        '''test lorsque les clés d'un dict ne correspondent pas à celles attendues'''
 
         todo = copy.deepcopy(self.CONFIG)
         todo["meteociel"][0]["bouh"] = 5
 
-        self.CHECKER._check_keys(todo)
-        self.assertIn("meteociel", self.CHECKER.error)
-        self.assertFalse(self.CHECKER.is_legal)
+        with self.assertRaises(ConfigCheckerException) as e:
+            self.CHECKER._check_keys(todo)
 
-    def test_year_month_not_list(self):
+        self.assertEqual(str(e.exception), self.CHECKER.ERRORS_MSG["configs"])
 
-        '''test lorsque les year et month ne sont pas des listes de 2 entiers positifs'''
+    def test_year_not_list(self):
 
         todo = copy.deepcopy(self.CONFIG)
         todo["ogimet"][0]["year"] = "bouh"
 
-        self.CHECKER._check_values(todo)
-        self.assertIn("listes", self.CHECKER.error)
-        self.assertFalse(self.CHECKER.is_legal)
+        with self.assertRaises(ConfigCheckerException) as e:
+            self.CHECKER._check_values(todo)
 
-    def test_year_month_not_len_1_or_2(self):
+        self.assertEqual(str(e.exception), self.CHECKER.ERRORS_MSG["dates"])
 
-        '''test lorsque les year et month ne sont pas des listes de max 2 entiers positifs'''
+    def test_month_not_len_1_or_2(self):
 
         todo = copy.deepcopy(self.CONFIG)
         todo["meteociel"][0]["month"] = [1,2,3]
 
-        self.CHECKER._check_values(todo)
-        self.assertIn("2", self.CHECKER.error)
-        self.assertFalse(self.CHECKER.is_legal)
+        with self.assertRaises(ConfigCheckerException) as e:
+            self.CHECKER._check_values(todo)
 
-    def test_year_month_not_ints(self):
+        self.assertEqual(str(e.exception), self.CHECKER.ERRORS_MSG["dates"])
 
-        '''test lorsque les year et month ne sont pas des listes de 2 entiers positifs'''
+    def test_year_not_ints(self):
 
         todo = copy.deepcopy(self.CONFIG)
         todo["wunderground"][0]["year"] = [1.1, "bouh"]
 
-        self.CHECKER._check_values(todo)
-        self.assertIn("entiers", self.CHECKER.error)
-        self.assertFalse(self.CHECKER.is_legal)
+        with self.assertRaises(ConfigCheckerException) as e:
+            self.CHECKER._check_values(todo)
 
-    def test_year_month_not_ordered(self):
+        self.assertEqual(str(e.exception), self.CHECKER.ERRORS_MSG["dates"])
 
-        '''test lorsque les year et month ne sont pas des listes ordonnées'''
+    def test_day_not_positive(self):
+
+        todo = copy.deepcopy(self.CONFIG)
+        todo["meteociel_daily"][0]["day"] = [-1, 17]
+
+        with self.assertRaises(ConfigCheckerException) as e:
+            self.CHECKER._check_values(todo)
+
+        self.assertEqual(str(e.exception), self.CHECKER.ERRORS_MSG["dates"])
+
+    def test_days_not_ordered(self):
 
         todo = copy.deepcopy(self.CONFIG)
         todo["meteociel_daily"][0]["day"] = [2,1]
 
-        self.CHECKER._check_values(todo)
-        self.assertIn("ordonnés", self.CHECKER.error)
-        self.assertFalse(self.CHECKER.is_legal)
+        with self.assertRaises(ConfigCheckerException) as e:
+            self.CHECKER._check_values(todo)
+
+        self.assertEqual(str(e.exception), self.CHECKER.ERRORS_MSG["dates"])
 
     def test_outbound_month(self):
-
-        '''test lorsque le mois n'est pas entre 1 et 12'''
 
         todo = copy.deepcopy(self.CONFIG)
         todo["ogimet"][0]["month"] = [1,17]
 
-        self.CHECKER._check_values(todo)
-        self.assertIn("compris", self.CHECKER.error)
-        self.assertFalse(self.CHECKER.is_legal)
+        with self.assertRaises(ConfigCheckerException) as e:
+            self.CHECKER._check_values(todo)
+
+        self.assertEqual(str(e.exception), self.CHECKER.ERRORS_MSG["month"])
+
+    def test_outbound_day(self):
+
+        todo = copy.deepcopy(self.CONFIG)
+        todo["meteociel_daily"][0]["day"] = [1,56]
+
+        with self.assertRaises(ConfigCheckerException) as e:
+            self.CHECKER._check_values(todo)
+
+        self.assertEqual(str(e.exception), self.CHECKER.ERRORS_MSG["day"])
 
     def test_not_str_value(self):
 
@@ -144,9 +153,10 @@ class CheckerTester(TestCase):
         todo = copy.deepcopy(self.CONFIG)
         todo["meteociel"][0]["city"] = 12
 
-        self.CHECKER._check_values(todo)
-        self.assertIn("autres que", self.CHECKER.error)
-        self.assertFalse(self.CHECKER.is_legal)
+        with self.assertRaises(ConfigCheckerException) as e:
+            self.CHECKER._check_values(todo)
+
+        self.assertEqual(str(e.exception), self.CHECKER.ERRORS_MSG["other"])
 
     def test_wrong_waiting_value(self):
 
@@ -155,10 +165,15 @@ class CheckerTester(TestCase):
         todo = copy.deepcopy(self.CONFIG)
         todo["waiting"] = "test"
 
-        self.CHECKER._check_values(todo)
-        self.assertIn("waiting", self.CHECKER.error)
-        self.assertFalse(self.CHECKER.is_legal)
+        with self.assertRaises(ConfigCheckerException) as e:
+            self.CHECKER._check_values(todo)
+
+        self.assertEqual(str(e.exception), self.CHECKER.ERRORS_MSG["waiting"])
 
     def test_correct_config(self):
-        self.CHECKER.check(self.CONFIG)
-        self.assertTrue(self.CHECKER.is_legal)
+
+        try:
+            self.CHECKER.check(self.CONFIG)
+        except:
+            self.fail("exception dans le cas où tout va bien")
+

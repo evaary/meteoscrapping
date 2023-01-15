@@ -1,5 +1,6 @@
 from unittest import TestCase
 import pandas as pd
+import numpy as np
 
 from app.scrappers.wunderground_scrapper import WundergroundMonthly
 
@@ -80,9 +81,9 @@ class Wunderground_MonthlyTester(TestCase):
         data = next(self.SCRAPPER._generate_data()).set_index("date")
         self.assertTrue(data[self.NOT_CONVERTED].equals(self.RESULTATS[self.NOT_CONVERTED]))
 
-        # converted = [col for col in data.columns if col not in self.NOT_CONVERTED]
-        # converted = [col for col in converted if "°C" not in col]
-        # difference = np.round((data[converted] - self.RESULTATS[converted]) * 100 / self.RESULTATS[converted] , 2)
-        # print(data[converted])
-        # print(difference)
-        # self.assertTrue(difference.max(numeric_only=True).max() <= 5)
+        converted = [col for col in data.columns if col not in self.NOT_CONVERTED]
+        converted = [col for col in converted if "°C" not in col]
+        difference = np.round((data[converted] - self.RESULTATS[converted]) * 100 / self.RESULTATS[converted] , 2)
+        # on exclue les colonnes du vent car les écarts dûs à la conversion peuvent être importants
+        difference = difference[[x for x in list(difference.columns) if "wind" not in x]]
+        self.assertTrue(difference.max(numeric_only=True).max() <= 0.5)

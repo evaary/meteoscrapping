@@ -1,5 +1,6 @@
 import os
 
+from json.decoder import JSONDecodeError
 from app.data_managers import from_json, to_csv, to_json
 from app.scrappers.abcs import MeteoScrapper
 from app.scrappers.meteociel_scrappers import MeteocielDaily, MeteocielMonthly
@@ -36,6 +37,10 @@ class Runner:
         except FileNotFoundError:
             print("pas de fichier config.json")
             return
+        except JSONDecodeError:
+            print("le fichier config est mal formé, impossible de charger un format json.")
+            return
+
 
         cls.CHECKER.check(configs)
 
@@ -45,10 +50,9 @@ class Runner:
 
         for scrapper_type in {x for x in configs.keys() if x != "waiting"}:
 
-            todos = configs[scrapper_type]
             scrapper = cls.SCRAPPERS[scrapper_type]
 
-            for config in todos:
+            for config in configs[scrapper_type]:
 
                 cls.JOB_ID += 1
 

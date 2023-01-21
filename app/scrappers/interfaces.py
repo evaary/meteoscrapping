@@ -24,7 +24,7 @@ class ScrappingToolsInterface:
         @return la page html, ou None
         '''
         # On tente max 3 fois de charger la page à l'url donnée. Si le chargement réussit, on garde la page.
-        # Sinon, on la déclare inexistante. A l'origine, cela sert à palier à de mauvaises connexions internet.
+        # Sinon, on la déclare inexistante. A l'origine, cela sert à palier de mauvaises connexions internet.
         html_page = None
 
         with HTMLSession() as session:

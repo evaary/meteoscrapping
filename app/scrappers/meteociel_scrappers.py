@@ -43,15 +43,15 @@ class MeteocielMonthly(MonthlyScrapper):
         #     on la nomme to_delete.
 
         # (1)
-        cols = [td.text.lower() for td in table.find("tr")[0].find("td")]
+        columns_names = [td.text.lower() for td in table.find("tr")[0].find("td")]
         # (2)
-        cols = [col.replace("ã©", "e").replace(".", "") for col in cols]
+        columns_names = [col.replace("ã©", "e").replace(".", "") for col in columns_names]
         # (3)
-        cols = ["date" if col == "jour" else "_".join(col.split(" ")) for col in cols]
+        columns_names = ["date" if col == "jour" else "_".join(col.split(" ")) for col in columns_names]
         # (4)
-        cols = ["to_delete" if col == "" else col for col in cols]
+        columns_names = ["to_delete" if col == "" else col for col in columns_names]
 
-        return cols
+        return columns_names
 
     @staticmethod
     def _scrap_columns_values(table):
@@ -171,19 +171,19 @@ class MeteocielDaily(DailyScrapper):
     @staticmethod
     def _scrap_columns_names(table):
 
-        cols = [td.text.lower() for td in table.find("tr")[0].find("td")]
+        columns_names = [td.text.lower() for td in table.find("tr")[0].find("td")]
 
-        cols = [col.replace("ã©", "e").replace(".", "") for col in cols]
+        columns_names = [col.replace("ã©", "e").replace(".", "") for col in columns_names]
 
-        cols = [col.split("\n")[0] if "\n" in col else col for col in cols]
+        columns_names = [col.split("\n")[0] if "\n" in col else col for col in columns_names]
 
         # La colonne vent est composée de 2 sous colonnes: direction et vitesse.
         # Le tableau compte donc n colonnes mais n-1 noms de colonnes.
         # On rajoute donc un nom pour la colonne de la direction du vent.
-        indexe = cols.index("vent (rafales)")
-        cols.insert(indexe, "winddir")
+        indexe = columns_names.index("vent (rafales)")
+        columns_names.insert(indexe, "winddir")
 
-        return cols
+        return columns_names
 
     @staticmethod
     def _scrap_columns_values(table):

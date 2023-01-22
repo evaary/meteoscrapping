@@ -15,8 +15,6 @@ class Ogimet_MonthlyTester(TestCase):
 
     KEY_REF = "Ferrara_2021_02"
 
-    TODO = (2021, 2)
-
     # liste des colonnes qui n'ont pas besoin d'être converties dans une nouvelle unité
     # NOT_CONVERTED
 

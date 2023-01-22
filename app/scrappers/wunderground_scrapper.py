@@ -35,22 +35,38 @@ class WundergroundMonthly(MonthlyScrapper):
         self._country_code = ""
         self._region = ""
 
-    def update(self, config):
+    def _reinit(self):
+        super()._reinit()
+        self._country_code = ""
+        self._region = ""
 
-        super().update(config)
+    def _update_specific_parameters(self, config):
         self._country_code = config["country_code"]
         self._region = config["region"]
 
-    def _build_url(self, todo):
+    def _build_url(self):
+        return self.BASE_URL.substitute(country_code=self._country_code,
+                                        city=self._city,
+                                        region=self._region,
+                                        year=self._year,
+                                        month=self._month)
 
-        year, month = todo
+    def _update_parameters_from_url(self, url: str):
 
-        url = self.BASE_URL.substitute(country_code = self._country_code,
-                                       city = self._city,
-                                       region = self._region,
-                                       year = year,
-                                       month = month)
-        return url
+        *_, country_code, city, region, _, year_month = url.split("/")
+
+        year_str, month_str = year_month.split("-")
+
+        self.__dict__.update({
+            "_url": url,
+            "_country_code": country_code,
+            "_city": city,
+            "_region": region,
+            "_year": int(year_str),
+            "_year_str": year_str,
+            "_month": int(month_str),
+            "_month_str": month_str,
+        })
 
     @staticmethod
     def _scrap_columns_names(table):
@@ -72,7 +88,7 @@ class WundergroundMonthly(MonthlyScrapper):
 
         return [ td.text for td in table.find("tbody")[0].find("td") if "\n" in td.text ]
 
-    def _rework_data(self, values, columns_names, todo):
+    def _rework_data(self, values, columns_names):
 
         # (1) values est une liste de str. Chaque str contient toutes les données d'1 colonne principale
         #     séparées par des \n ("x\nx\nx\nx..."). On convertit ces str en liste de données [x,x,x, ...].
@@ -145,11 +161,10 @@ class WundergroundMonthly(MonthlyScrapper):
         df = df.drop([0], axis="index")
 
         # (6)
-        year, month = todo
-        month = "0" + str(month) if month < 10 else str(month)
-
         df["date"] = [
-            f"{year}/{month}/0{day}" if int(day) < 10 else f"{year}/{month}/{day}" for day in df.date
+            f"{self._year_str}/{self._month_str}/0{day}" if int(day) < 10
+            else f"{self._year_str}/{self._month_str}/{day}"
+            for day in df.date
         ]
 
         df["date"] = pd.to_datetime(df["date"])

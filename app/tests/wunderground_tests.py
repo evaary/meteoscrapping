@@ -67,18 +67,42 @@ class Wunderground_MonthlyTester(TestCase):
     def setUpClass(cls):
         cls.RESULTATS["date"] = pd.to_datetime(cls.RESULTATS["date"])
         cls.RESULTATS = cls.RESULTATS.set_index("date")
-        cls.SCRAPPER.update(cls.CONFIG)
 
     def test_key(self):
-        test = self.SCRAPPER._build_key(self.TODO)
-        self.assertEqual(self.KEY_REF, test)
+       self.SCRAPPER.__dict__.update(**{"_city": "matera",
+                                        "_year_str": "2021",
+                                        "_month_str": "01"})
+
+       self.assertEqual(self.KEY_REF, self.SCRAPPER._build_key())
 
     def test_url(self):
-        test = self.SCRAPPER._build_url(self.TODO)
-        self.assertEqual(self.URL_REF, test)
+       self.SCRAPPER.__dict__.update(**{"_country_code": "it",
+                                        "_city": "matera",
+                                        "_region": "LIBD",
+                                        "_year": 2021,
+                                        "_month": 1})
+
+       self.assertEqual(self.URL_REF, self.SCRAPPER._build_url())
 
     def test_data(self):
-        data = next(self.SCRAPPER._generate_data()).set_index("date")
+       self.SCRAPPER.__dict__.update(**{"_url": self.URL_REF,
+                                        "_year_str": "2021",
+                                        "_month_str": "01"})
+
+       data = self.SCRAPPER._scrap().set_index("date")
+       self.assertTrue(data[self.NOT_CONVERTED].equals(self.RESULTATS[self.NOT_CONVERTED]))
+
+       converted = [col for col in data.columns if col not in self.NOT_CONVERTED]
+       converted = [col for col in converted if "°C" not in col]
+       difference = np.round((data[converted] - self.RESULTATS[converted]) * 100 / self.RESULTATS[converted] , 2)
+       # on exclue les colonnes du vent car les écarts dûs à la conversion peuvent être importants
+       difference = difference[[x for x in list(difference.columns) if "wind" not in x]]
+       self.assertTrue(difference.max(numeric_only=True).max() <= 0.5)
+
+    def test_scrap_from_url(self):
+        data = self.SCRAPPER.scrap_from_url(self.URL_REF).set_index("date")
+        difference = (data - self.RESULTATS).sum().sum()
+
         self.assertTrue(data[self.NOT_CONVERTED].equals(self.RESULTATS[self.NOT_CONVERTED]))
 
         converted = [col for col in data.columns if col not in self.NOT_CONVERTED]

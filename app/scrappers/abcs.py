@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 import pandas as pd
+from app.scrappers.exceptions import HtmlPageException, HtmlTableException, ReworkException, ScrapException
 from app.scrappers.interfaces import ScrappingToolsInterface
 
 class MeteoScrapper(ABC, ScrappingToolsInterface):
@@ -7,16 +8,13 @@ class MeteoScrapper(ABC, ScrappingToolsInterface):
     '''
     Scrapper de base.
 
-    Après instanciation, initialiser les attributs du scrapper avec update(config).
-    Une fois initialisé, appeler scrap() pour récupérer les données.
+    Une fois initialisé, appeler scrap_from_config ou scrap_from_url pour récupérer les données.
 
     Cette classe implémente la ScrappingToolsInterface qui contient les méthodes permettant de
     scrapper les pages html.
-
-    Elle définit le processus de récupération des données avec et certains outils à implémenter.
     '''
     # Nombre de jours dans chaque mois.
-    # Wunderground et météociel récupèrent le 29ème jour de février s'il existe.
+    # Wunderground et Météociel récupèrent le 29ème jour de février s'il existe.
     DAYS = {
         1  : 31,
         2  : 28,
@@ -32,175 +30,202 @@ class MeteoScrapper(ABC, ScrappingToolsInterface):
         12 : 31,
     }
 
-    # Dictionnaire contenant les messages à afficher en cas d'erreur
-    ERROR_MESSAGES = {
-        "load": "erreur lors du chargement de la page html",
-        "search": "aucun tableau de données trouvé",
-        "scrap": "erreur lors de la récupération des données",
-        "rework": "erreur lors du traitement des données"
-    }
-
-    # Constructeur
     def __init__(self):
         self.errors = dict()
-        self._todos = tuple()
+        self._city = ""
+        self._waiting = 3
+        self._url = ""
+
+    def _reinit(self) -> None:
+        """Réinitialise les paramètres du scrapper."""
+        self.errors.clear()
         self._city = ""
         self._waiting = 3
         self._url = ""
 
     # Méthodes publiques
-    def update(self, config: dict) -> None:
-        '''
-        Mise à jour des variables d'instance à partir d'une configuration json.
+    def scrap_from_config(self, config: dict) -> pd.DataFrame:
 
-        @param config - infos qui permettront de reconstruire l'url.
-        '''
-        self.errors.clear()
-        self._url = ""
+        '''Récupération de données à partir d'un fichier de configuration.'''
+
+        # (1) Remise à 0 des paramètres du scrapper.
+        # (2) Mise à jour des paramètres avec les nouvelles données.
+        # (3) Récupération des données.
+        # (4) En cas de problème on signale l'étape qui est en échec et on sauvegarde l'erreur.
+
+        # (1)
+        self._reinit()
+
+        # (2)
         self._city = config["city"]
+        self._update_specific_parameters(config)
+
         try:
             self._waiting = config["waiting"]
         except KeyError:
-            self._waiting = 3
+            pass
 
-    def scrap(self) -> pd.DataFrame:
+        data = pd.DataFrame()
 
-        '''
-        Méthode pour démarrer le scrapping.
-        '''
+        for dates_parameters in self._create_dates_generator(config):
 
+            self.__dict__.update(dates_parameters)
+
+            key = self._build_key()
+
+            self._url = self._build_url()
+
+            print(self)
+
+            try:
+                # (3)
+                data = pd.concat([data, self._scrap()])
+            except Exception as e:
+                # (4)
+                print(str(e))
+                self.errors[key] = {"url": self._url, "error": str(e)}
+                continue
+
+        return data
+
+    def scrap_from_url(self, url: str) -> pd.DataFrame:
+        """Récupération de données à l'url fournie.
+
+        @param url - l'url à lquelle se trouvent les données à récupérer
+        @return le dataframe contenant les données."""
+
+        self._reinit()
+        self._update_parameters_from_url(url)
         try:
-            data = next(self._generate_data())
-
-            for df in self._generate_data():
-                data = pd.concat([data, df])
-
-        except StopIteration:
+            data = self._scrap()
+        except Exception as e:
+            print(str(e))
             data = pd.DataFrame()
 
         return data
 
     # Méthodes privées
-    def _register_error(self, key: str, url: str, message: str) -> None:
-        '''
-        Garder une trace d'une erreur et la signaler.
-
-        @params
-            key - identifiant d'un job pour une ville à une date donnée, fournit par build_key()
-            url - l'url du tableau de données à récupérer
-            message - le message à afficher et à enregistrer
-        '''
-        self.errors[key] = {"url": url, "error": message}
-        print(f"\t{message}")
-
     @abstractmethod
-    def _build_key(self, todo: tuple) -> str:
-        '''
-        Génère une str au format city_yyyy_mm_dd.
-        Elle sert de clé pour sauvegarder les erreurs dans le dictionnaire errors.
-        Cette fonction est implémentée dans les Monthly / Daily Scrappers.
+    def _update_parameters_from_url(self, url: str) -> None:
+        """Mise à jour des paramètres du scrapper à partir d'une url.
+        Implémentée dans chaque scrapper concrêt.
 
-        @param todo - Un tuple contenant 2 à 3 int : l'année, le mois, le jour.
-                      Généré par update() dans les Monthly / Daily Scrappers.
-
-        @return une str au format city_yyyy_mm_dd.
-        '''
+        @param l'url passée par l'utilisateur."""
         pass
 
     @abstractmethod
-    def _build_url(self, todo: tuple) -> str:
+    def _create_dates_generator(self, config) -> "tuple[dict]":
+        """Création des combinaisons années / mois (/ jour) à traiter.
+           Implémentée dans les Monthly / Daily Scrapper.
+
+           @return un tuple contenant des dictionnaires dont les clés correspondent
+                   aux parmètres de cette classe relatifs aux dates (année, mois, jour, version numérique et str)."""
+        pass
+
+    @abstractmethod
+    def _update_specific_parameters(self, config: dict) -> None:
+        """Mise à jour des paramètres spécifiques à chaque scrapper concrêt.
+        Utilisé lors de la récupération de données via un fichier config.
+        Implémentée dans chaque scrapper concrêt."""
+        pass
+
+    @abstractmethod
+    def _build_key(self) -> str:
+        """Création de la clé au format city_yyyy_mm_dd pour sauvegarder les erreurs (dict).
+           Implémentée dans les Monthly / Daily Scrapper.
+
+           @return la clé" du dict errors."""
+        pass
+
+    @abstractmethod
+    def _build_url(self) -> str:
         '''
         Reconstruction de l'url où se trouvent les données à récupérer.
         Implémentée dans chaque scrapper concrêt.
-
-        @param todo - Un tuple contenant 2 à 3 int : l'année, le mois, le jour.
-                      Généré par update() dans les Monthly / Daily Scrappers.
 
         @return l'url complète au format str du tableau de données à récupérer.
         '''
         pass
 
     @abstractmethod
-    def _rework_data(self, values: list, columns_names: "list[str]", todo: tuple) -> pd.DataFrame:
+    def _rework_data(self, values: "list[str]", columns_names: "list[str]") -> pd.DataFrame:
         '''
         Mise en forme du tableau de données. Implémentée dans chaque scrapper concrêt.
 
         @params
             values - La liste des valeurs contenues dans le tableau.
             column_names - La liste des noms de colonnes.
-            todo - Un tuple contenant 2 à 3 int : l'année, le mois, le jour.
-                   Généré par update() dans les Monthly / Daily Scrappers.
 
         @return le dataframe équivalent au tableau de données html.
         '''
         pass
 
     # Méthode principale
-    def _generate_data(self) -> pd.DataFrame:
+    def _scrap(self) -> pd.DataFrame:
 
-        '''Générateur des dataframes à enregistrer.'''
-        # (1) On créé une clé de dictionnaire à partir du todo.
-        # (2) On reconstitue l'url et on charge la page html correspondante.
-        # (3) On récupère la table de données html.
-        # (4) On récupère le noms des colonnes et les valeurs de la table de données html.
-        # (5) On met les données sous forme de dataframe.
-        #
-        # A chaque étape, si un problème est rencontré, on le signale et on passe au todo suivant.
+        """Récupération des données contenues dans une page html à partir de son url.
+        La variable CRITERIA est créée dans chaque scrapper concrêt.
 
-        for todo in self._todos:
+        @return le dataframe contenant les données."""
 
-            # (1)
-            key = self._build_key(todo)
+        try:
+            html_page = self._load_html_page(self._url, self._waiting)
+        except Exception:
+            raise HtmlPageException()
 
-            # (2)
-            url = self._build_url(todo)
-            self._url = url
-            print(todo , self)
-            html_page = self._load_html_page(url, self._waiting)
-            if html_page is None:
-                self._register_error(key, url, self.ERROR_MESSAGES["load"])
-                continue
-
-            # (3)
+        try:
             table = self._find_table_in_html(html_page, self.CRITERIA)
-            if table is None:
-                self._register_error(key, url, self.ERROR_MESSAGES["search"])
-                continue
+        except Exception:
+            raise HtmlTableException()
 
-            # (4)
-            try:
-                col_names = self._scrap_columns_names(table)
-                values = self._scrap_columns_values(table)
-            except Exception:
-                self._register_error(key, url, self.ERROR_MESSAGES["scrap"])
-                continue
+        try:
+            col_names = self._scrap_columns_names(table)
+            values = self._scrap_columns_values(table)
+        except Exception:
+            raise ScrapException()
 
-            # (5)
-            try:
-                df = self._rework_data(values, col_names, todo)
-            except Exception:
-                self._register_error(key, url, self.ERROR_MESSAGES["rework"])
-                continue
+        try:
+            df = self._rework_data(values, col_names)
+        except Exception:
+            raise ReworkException()
 
-            yield df
+        return df
 
-    # Dunder methods
-    def __repr__(self):
-        return f"<{self.__class__.__name__} ville:{self._city}, url:{self._url}>"
+
 
 class MonthlyScrapper(MeteoScrapper):
-    '''
-    Scrapper spécialisé dans la récupération de données mensuelles.
+    '''Scrapper spécialisé dans la récupération de données mensuelles.'''
 
-    L'ensemble des dates à traiter est généré dans update().
-    '''
-    def update(self, config):
+    def __init__(self):
 
-        super().update(config)
+        super().__init__()
 
-        self._todos = (
+        self._year = -1
+        self._month = -1
 
-            (year, month)
+        self._year_str = ""
+        self._month_str = ""
+
+    def _reinit(self):
+
+        super().__init__()
+
+        self._year = -1
+        self._month = -1
+
+        self._year_str = ""
+        self._month_str = ""
+
+    def _create_dates_generator(self, config):
+
+        return (
+
+            {
+                "_year": year,
+                "_month": month,
+                "_year_str": str(year),
+                "_month_str": "0" + str(month) if month < 10 else str(month)
+            }
 
             for year in range(config["year"][0],
                               config["year"][-1] + 1)
@@ -209,27 +234,56 @@ class MonthlyScrapper(MeteoScrapper):
                                config["month"][-1] + 1)
         )
 
-    def _build_key(self, todo: "tuple[int, int]"):
+    def _build_key(self):
+        return f"{self._city}_{self._year_str}_{self._month_str}"
 
-        year, month = todo
-        month = "0" + str(month) if month < 10 else str(month)
+    # Dunder methods
+    def __repr__(self):
+        date = f"{self._month_str}/{self._year_str}"
+        return f"<{self.__class__.__name__} ville: {self._city}, date: {date}, url: {self._url}>"
 
-        return f"{self._city}_{year}_{month}"
+
 
 class DailyScrapper(MeteoScrapper):
-    '''
-    Scrapper spécialisé dans la récupération de données quotidiennes.
+    '''Scrapper spécialisé dans la récupération de données quotidiennes.'''
 
-    L'ensemble des dates à traiter est généré dans update().
-    '''
+    def __init__(self):
 
-    def update(self, config):
+        super().__init__()
 
-        super().update(config)
+        self._year = -1
+        self._month = -1
+        self._day = -1
 
-        self._todos = (
+        self._year_str = ""
+        self._month_str = ""
+        self._day_str = ""
 
-            (year, month, day)
+    def _reinit(self):
+
+        super()._reinit()
+
+        self._year = -1
+        self._month = -1
+        self._day = -1
+
+        self._year_str = ""
+        self._month_str = ""
+        self._day_str = ""
+
+    def _create_dates_generator(self, config):
+
+        return (
+
+            {
+                "_year": year,
+                "_month": month,
+                "_day": day,
+
+                "_year_str": str(year),
+                "_month_str": "0" + str(month) if month < 10 else str(month),
+                "_day_str": "0" + str(day) if day < 10 else str(day)
+            }
 
             for year in range(config["year"][0],
                               config["year"][-1] + 1)
@@ -243,11 +297,10 @@ class DailyScrapper(MeteoScrapper):
             if day <= self.DAYS[month]
         )
 
-    def _build_key(self, todo: "tuple[int, int, int]"):
+    def _build_key(self):
+        return f"{self._city}_{self._year_str}_{self._month_str}_{self._day_str}"
 
-        year, month, day = todo
-        month = "0" + str(month) if month < 10 else str(month)
-        day = "0" + str(day) if day < 10 else str(day)
-
-        return f"{self._city}_{year}_{month}_{day}"
-
+    # Dunder methods
+    def __repr__(self):
+        date = f"{self._day_str}/{self._month_str}/{self._year_str}"
+        return f"<{self.__class__.__name__} ville: {self._city}, date: {date}, url: {self._url}>"

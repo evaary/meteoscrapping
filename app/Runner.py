@@ -1,3 +1,4 @@
+from datetime import datetime
 import os
 
 from json.decoder import JSONDecodeError
@@ -27,8 +28,6 @@ class Runner:
 
     CHECKER = ConfigFilesChecker.instance()
 
-    JOB_ID = 0
-
     @classmethod
     def run(cls):
 
@@ -54,19 +53,20 @@ class Runner:
 
             for config in configs[scrapper_type]:
 
-                cls.JOB_ID += 1
-
                 try:
                     config["waiting"] = configs["waiting"]
                 except KeyError:
                     config["waiting"] = 3
 
-                scrapper.update(config)
+                date = str( int( datetime.now().timestamp() ) )
 
-                path_data = os.path.join(cls.PATHS["results"], f"{config['city']}_{scrapper_type}_{cls.JOB_ID}.csv")
-                path_errors = os.path.join(cls.PATHS["errors"], f"{config['city']}_{scrapper_type}_{cls.JOB_ID}_errors.json")
+                datafilename = "_".join([date, config['city'], scrapper_type, ".csv"]).lower()
+                errorsfilename = "_".join([date, config['city'], scrapper_type, "_errors.json"]).lower()
 
-                data = scrapper.scrap()
+                path_data = os.path.join(cls.PATHS["results"], datafilename)
+                path_errors = os.path.join(cls.PATHS["errors"], errorsfilename)
+
+                data = scrapper.scrap_from_config(config)
                 errors = scrapper.errors
 
                 if not data.empty:

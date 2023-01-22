@@ -31,18 +31,38 @@ class OgimetMonthly(MonthlyScrapper):
         super().__init__()
         self._ind = ""
 
-    def update(self, config):
-        super().update(config)
+    def _reinit(self):
+        super()._reinit()
+        self._ind = ""
+
+    def _update_specific_parameters(self, config):
         self._ind = config["ind"]
 
-    def _build_url(self, todo):
-
-        year, month = todo
-
+    def _build_url(self):
         return self.BASE_URL.substitute(ind=self._ind,
-                                        ano=year,
-                                        mes=self.NUMEROTATIONS[month],
-                                        ndays=self.DAYS[month])
+                                        ano=self._year,
+                                        mes=self.NUMEROTATIONS[self._month],
+                                        ndays=self.DAYS[self._month])
+
+    def _update_parameters_from_url(self, url: str):
+
+        _, ind_part, year_part, month_part, *_ = url.split("&")
+
+        year = int(year_part.split("=")[1])
+        month = int(month_part.split("=")[1])
+
+        revert_numerotation = { value : key for key, value in self.NUMEROTATIONS.items() }
+
+        month = revert_numerotation[month]
+
+        self.__dict__.update({
+            "_url": url,
+            "_ind": ind_part.split("=")[1],
+            "_year": year,
+            "_month": month,
+            "_year_str": str(year),
+            "_month_str": str(month) if month >= 10 else "0" + str(month),
+        })
 
     @staticmethod
     def _scrap_columns_names(table):
@@ -106,7 +126,7 @@ class OgimetMonthly(MonthlyScrapper):
         return [td.text for td in table.find("tbody")[0].find("td")]
 
     @staticmethod
-    def _fill_missing_values(values: "list[str]", n_cols: int, n_filled: int, month: str):
+    def _fill_missing_values(values: "list[str]", n_cols: int, n_expected: int, month: str):
 
         '''
         Ogimet gère mal les trous dans les données.
@@ -121,7 +141,7 @@ class OgimetMonthly(MonthlyScrapper):
         @params
             values - la liste des valeurs récupérées dans le tableau.
             n_cols - nombre de colonnes du tableau.
-            n_filled - nombre de valeurs théoriques si le tableau était complet.
+            n_expected - nombre de valeurs théoriques si le tableau était complet.
             month - le numéro du mois au format mm
 
         @return la liste complétée des valeurs du tableau.
@@ -140,7 +160,7 @@ class OgimetMonthly(MonthlyScrapper):
         done = []
         todo = values.copy()
 
-        while len(done) != n_filled :
+        while len(done) != n_expected :
 
             # (2)
             row = todo[:n_cols]
@@ -163,7 +183,7 @@ class OgimetMonthly(MonthlyScrapper):
 
         return done
 
-    def _rework_data(self, values, columns_names, todo):
+    def _rework_data(self, values, columns_names):
 
         # (1) Dimensions du futur tableau de données et nombre de valeurs collectées. S'il manque des
         #     données dans la liste des valeurs récupérées, on la complète pour avoir 1 valeur par cellule
@@ -178,24 +198,20 @@ class OgimetMonthly(MonthlyScrapper):
         #     colonnes qui n'ont pas daily_weather_summary dans leur nom.
 
         # (1)
-        year, month = todo
-
         n_cols = len(columns_names)
-        n_rows = self.DAYS[month]   # obligatoire pour contrôler le nombre de valeurs récupérées
-        n_filled = n_rows * n_cols # nombre de valeurs attendu
+        n_rows = self.DAYS[self._month]
+        n_expected = n_rows * n_cols          # nombre de valeurs attendu
         n_values = len(values)
 
-        month = "0" + str(month) if month < 10 else str(month)
-
-        if n_values != n_filled:
-            values = self._fill_missing_values(values, n_cols, n_filled, month)
+        if n_values != n_expected:
+            values = self._fill_missing_values(values, n_cols, n_expected, self._month_str)
 
         # (2)
         values = np.array(values).reshape(-1, n_cols)
         df = pd.DataFrame(values, columns=columns_names)
 
         # (3)
-        df["date"] = str(year) + "/" + df["date"]
+        df["date"] = self._year_str + "/" + df["date"]
         df["date"] = pd.to_datetime(df["date"])
         df = df.sort_values(by="date")
 

@@ -1,5 +1,4 @@
-class ConfigCheckerException(Exception):
-    pass
+from app.scrappers.exceptions import ConfigCheckerException
 
 
 class ConfigFilesChecker:
@@ -14,6 +13,7 @@ class ConfigFilesChecker:
     }
 
     ERRORS_MSG = {
+        "not_dict": "ERREUR : le fichier importé ne contient pas de dictionnaire",
         "main_fields": "ERREUR : vérifiez les champ principaux",
         "configs": "ERREUR : vérifiez les paramètres des configs",
         "waiting": "ERREUR : waiting doit être un entier",
@@ -37,6 +37,10 @@ class ConfigFilesChecker:
         cls._instance = cls.__new__(cls)
 
         return cls._instance
+
+    def _check_data_type(self, config) -> None:
+        if not isinstance(config, dict):
+            raise ConfigCheckerException(self.ERRORS_MSG["not_dict"])
 
     def _check_main_fields(self, config: dict) -> None:
         # un fichier de config contient le champs waiting, il est légal, mais n'est pas
@@ -107,6 +111,7 @@ class ConfigFilesChecker:
                 raise ConfigCheckerException(self.ERRORS_MSG["other"])
 
     def check(self, config: dict) -> None:
+        self._check_data_type(config)
         self._check_main_fields(config)
         self._check_keys(config)
         self._check_values(config)

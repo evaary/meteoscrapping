@@ -76,14 +76,14 @@ Pour les jobs wunderground:
     - Les unités sont converties : températures (°F -> °C), vitesses (mph -> km/h), précipitations (in -> mm), pressions (inHg -> hPa).
     - https://www.wunderground.com/history/monthly/<country_code>/<city>/<region>/date/2020-3
 
-Pour les job meteociel:
+Pour les jobs meteociel:
     - La colonne des images est ignorée.
     - Le champ city sert juste à nommer le fichier csv.
     - https://www.meteociel.com/climatologie/obs_villes.php?code<code_num>=<code>&mois=1&annee=2021
 
-Pour les job meteociel_daily:
+Pour les jobs meteociel_daily:
     - La colonne temps et les directions du vent sont ignorées.
-    - Vent et rafales sont récupérées dans des colonnes distinctes.
+    - Les colonnes vent et rafales sont récupérées dans des colonnes distinctes.
     - L'heure est convertie en date et heure.
     - Les mois dans l'url sont numérotés différement. Dans la config, utiliser les numéros usuels.
     - https://www.meteociel.com/temps-reel/obs_villes.php?code<code_num>=<code>&jour2=1&mois2=0&annee2=2020

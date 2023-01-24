@@ -88,6 +88,7 @@ class Meteociel_MonthlyTester(TestCase):
         self.assertTrue(difference == 0)
 
 
+
 class Meteociel_DailyTester(TestCase):
 
     SCRAPPER = MeteocielDaily()

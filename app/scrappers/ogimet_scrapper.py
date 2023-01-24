@@ -230,7 +230,6 @@ class OgimetMonthly(MonthlyScrapper):
             pass
 
         # (6)
-        cols = [col for col in df.columns if "daily_weather_summary" not in col]
-        df = df[cols]
+        df = df[[col for col in df.columns if "daily_weather_summary" not in col]]
 
         return df

@@ -15,17 +15,81 @@ class Ogimet_MonthlyTester(TestCase):
 
     KEY_REF = "Ferrara_2021_02"
 
-    # liste des colonnes qui n'ont pas besoin d'être converties dans une nouvelle unité
-    # NOT_CONVERTED
+    RESULTATS = pd.DataFrame(
+        [["2021-02-01",   6.8,   5.6,	 6.4,	  4.2,	86.2,	"WNW",	 8.5,	 996.1, 	7.8, 	   7.8,	    3.8],
+         ["2021-02-02",   7.6,   1.0,	 4.7,	  2.7,	83.9,	"CAL",	 0.0,	1000.0, 	4.8, 	   4.2,	    9.2],
+         ["2021-02-03",  11.0,   1.4,	 5.2,	  4.0,	87.4,	" NW",	 2.8,	1011.8, 	2.8, 	   3.5,	    4.7],
+         ["2021-02-04",   7.6,   2.8,	 5.5,	  4.0,	87.7,	"ENE",	 4.1,	1014.7, 	7.8, 	   7.8,	    1.7],
+         ["2021-02-05",   8.3,   5.0,	 6.6,	  4.5,	86.1,	"SSW",	 2.2,	1017.4, 	5.6, 	   6.5,	    3.2],
+         ["2021-02-06",   9.8,   4.6,	 7.6,	  5.6,	85.3,	"ESE",	 1.1,	1018.7, 	7.8, 	   7.8,	    1.7],
+         ["2021-02-07",   9.2,   7.4,	 8.3,	  6.5,	87.6,	"CAL",	 0.0,	1014.4, 	8.0, 	   8.0,	    2.0],
+         ["2021-02-08",  10.0,   7.8,	 9.1,	  7.2,	86.8,	"ENE",	 1.5,	 998.0, 	8.0, 	   8.0,	    1.2],
+         ["2021-02-09",  13.2,   5.4,	 8.0,	  3.5,	71.7,	"SSE",	 3.7,	 995.2, 	2.2, 	   3.3,	    8.2],
+         ["2021-02-10",  11.0,   7.8,	 8.9,	  7.0,	86.8,	  "W",	 5.6,	 999.2, 	6.6, 	   5.8,	    8.2],
+         ["2021-02-11",  11.0,   7.0,	 9.3,	  7.9,	89.4,	 "NE",	 8.2,	 997.7, 	5.4, 	   3.6,	   10.0],
+         ["2021-02-12",  11.4,   3.8,	 6.8,	  4.5,	82.0,	"ENE",	 7.8,	1011.5, 	1.8, 	   3.0,	   10.4],
+         ["2021-02-13",   5.0,   2.8,	 3.6,	 -2.7,	62.5,	 "NE",	14.8,	1024.1, 	6.4, 	   6.4,	   17.0],
+         ["2021-02-14",   2.6,   1.4,	 1.7,   -10.0,	41.7,	 "NE",	22.2,	1029.4, 	2.4, 	   4.5,	   30.0],
+         ["2021-02-15",   7.4,  -2.0,	 2.0,	 -9.5,	44.8,	 "NW",	 8.2,	1037.6, 	0.4, 	np.NaN,	   16.0],
+         ["2021-02-16",   9.0,  -4.0,	 3.0,	 -9.1,	42.4,	"ESE",	 1.9,	1038.0, 	1.8, 	   3.5,	   44.0],
+         ["2021-02-17",  10.8,  -0.2,	 5.0,	 -0.7,	62.4,	"NNW",	 6.5,	1026.9, 	1.8, 	   0.2,	   16.0],
+         ["2021-02-18",  11.0,   4.0,	 6.6,	  3.1,	75.7,	"CAL",	 0.0,	1022.0, 	4.6, 	   7.7,	   10.0],
+         ["2021-02-19",  12.0,   4.8,	 8.4,	  3.7,	70.0,	  "S",	 3.1,	1023.5, 	3.2, 	   4.0,	    5.6],
+         ["2021-02-20",  14.4,   5.8,	 9.6,	  5.6,	74.1,	 "SW",	 2.6,	1024.1, 	4.2, 	   4.2,	    5.6],
+         ["2021-02-21",  15.0,   4.8,	 8.9,	  6.0,	78.9,	 "NE",	 2.5,	1025.9, 	4.2, 	   4.2,	    3.0],
+         ["2021-02-22",  13.8,   5.4,	 8.9,	  5.8,	77.4,	"ENE",	 1.9,	1027.2, 	4.6, 	   7.7,	    5.0],
+         ["2021-02-23",  12.0,   5.4,	 8.9,	  6.6,	84.6,	"NNW",	 3.0,	1031.4, 	4.6, 	   7.7,	    2.9],
+         ["2021-02-24",  13.4,   2.8,	 7.7,	  5.3,	79.5,	"NNW",	 3.0,	1035.9, 	0.0, 	np.NaN,	    2.6],
+         ["2021-02-25",  17.4,   2.8,	10.7,	  3.2,	58.6,	  "W",	 7.8,	1034.7, 	0.0, 	np.NaN,	    8.2],
+         ["2021-02-26",  18.6,   4.8,	10.9,	  3.6,	59.7,	  "W",	 4.1,	1031.6, 	0.0, 	np.NaN,	   10.4],
+         ["2021-02-27",  18.2,   3.2,	10.3,	  3.3,	59.6,	 "SW",	 5.6,	1027.3, 	0.0, 	np.NaN,	    9.4],
+         ["2021-02-28",  17.0,   3.2,	 9.4,	  5.7,	72.3,	 "SE",	 5.6,	1025.1, 	3.0, 	   0.0,	    5.2]],
 
-    # RESULTATS= pd.DataFrame([[]],
-    #
-    #     columns=[
-    #         "date","temperature_°C_max","temperature_°C_avg","temperature_°C_min",
-    #         "dew_point_°C_max","dew_point_°C_avg","dew_point_°C_min",
-    #         "humidity_(%)_max","humidity_(%)_avg","humidity_(%)_min",
-    #         "wind_speed_(km/h)_max","wind_speed_(km/h)_avg","wind_speed_(km/h)_min",
-    #         "pressure_(hPa)_max","pressure_(hPa)_avg","pressure_(hPa)_min",
-    #         "precipitation_(mm)_total"
-    #     ]
-    # )
+        columns=["date",
+                 "temperature_(°C)_max", "temperature_(°C)_min", "temperature_(°C)_avg",
+                 "td_avg_(°C)", "hr_avg_(%)",
+                 "wind_(km/h)_dir", "wind_(km/h)_int",
+                 "pres_slev_(hp)",
+                 "tot_cl_oct", "low_cl_oct",
+                 "vis_km"]
+    )
+
+    NUMERICS = RESULTATS.columns.difference(["wind_(km/h)_dir", "date"])
+
+    @classmethod
+    def setUpClass(cls):
+        cls.RESULTATS["date"] = pd.to_datetime(cls.RESULTATS["date"])
+        cls.RESULTATS = cls.RESULTATS.set_index("date")
+
+    def test_key(self):
+        self.SCRAPPER.__dict__.update(**{"_city": "Ferrara",
+                                         "_year_str": "2021",
+                                         "_month_str": "02"})
+
+        self.assertEqual(self.KEY_REF, self.SCRAPPER._build_key())
+
+    def test_url(self):
+       self.SCRAPPER.__dict__.update(**{"_ind": "16138",
+                                        "_year": 2021,
+                                        "_month": 2})
+
+       self.assertEqual(self.URL_REF, self.SCRAPPER._build_url())
+
+    def test_scrap_from_url(self):
+        data = self.SCRAPPER.scrap_from_url(self.URL_REF).set_index("date")
+
+        difference = data[self.NUMERICS] - self.RESULTATS[self.NUMERICS]
+
+        self.assertTrue( difference.sum().sum() == 0 )
+
+    def test_data(self):
+        self.SCRAPPER.__dict__.update(**{"_url": self.URL_REF,
+                                         "_month": 2,
+                                         "_year_str": "2021",
+                                         "_month_str": "02"})
+
+        data = self.SCRAPPER._scrap().set_index("date")
+        difference = data[self.NUMERICS] - self.RESULTATS[self.NUMERICS]
+
+        self.assertTrue( difference.sum().sum() == 0 )
+

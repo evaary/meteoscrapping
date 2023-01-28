@@ -148,7 +148,7 @@ class CheckerTester(TestCase):
 
     def test_not_str_value(self):
 
-        '''si une des clés hors year / month d'une config n'a pas pour valeur une string'''
+        # si une des clés hors year / month d'une config n'a pas pour valeur une string
 
         todo = copy.deepcopy(self.CONFIG)
         todo["meteociel"][0]["city"] = 12
@@ -160,7 +160,7 @@ class CheckerTester(TestCase):
 
     def test_wrong_waiting_value(self):
 
-        '''test lorsque wainting est une str'''
+        # test lorsque wainting est une str
 
         todo = copy.deepcopy(self.CONFIG)
         todo["waiting"] = "test"

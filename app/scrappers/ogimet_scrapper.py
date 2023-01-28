@@ -35,7 +35,7 @@ class OgimetMonthly(MonthlyScrapper):
         super()._reinit()
         self._ind = ""
 
-    def _update_specific_parameters(self, config):
+    def _update_specific_parameters_from_config(self, config):
         self._ind = config["ind"]
 
     def _build_url(self):
@@ -44,7 +44,7 @@ class OgimetMonthly(MonthlyScrapper):
                                         mes=self.NUMEROTATIONS[self._month],
                                         ndays=self.DAYS[self._month])
 
-    def _update_parameters_from_url(self, url: str):
+    def _update_parameters_from_url(self, url):
 
         _, ind_part, year_part, month_part, *_ = url.split("&")
 
@@ -128,7 +128,7 @@ class OgimetMonthly(MonthlyScrapper):
     @staticmethod
     def _fill_missing_values(values: "list[str]", n_cols: int, n_expected: int, month: str):
 
-        '''
+        """
         Ogimet gère mal les trous dans les données.
         Si certaines valeurs manquent en début ou milieu de ligne,
         elle sont comblées par "---", et tout va bien, on a des valeurs quand même.
@@ -138,14 +138,14 @@ class OgimetMonthly(MonthlyScrapper):
 
         Cette fonction comble les manques dans les lignes en ajoutant des "" à la fin.
 
-        @params
+        @param
             values - la liste des valeurs récupérées dans le tableau.
             n_cols - nombre de colonnes du tableau.
             n_expected - nombre de valeurs théoriques si le tableau était complet.
             month - le numéro du mois au format mm
 
         @return la liste complétée des valeurs du tableau.
-        '''
+        """
         # (1) done contient les valeurs traitées, todo les valeurs à traiter.
         # (2) Tant que done n'est pas complet, on sélectionne l'équivalent
         #     d'1 ligne dans todo.

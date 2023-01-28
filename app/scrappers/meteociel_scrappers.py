@@ -26,7 +26,7 @@ class MeteocielMonthly(MonthlyScrapper):
         self._code_num = ""
         self._code = ""
 
-    def _update_specific_parameters(self, config):
+    def _update_specific_parameters_from_config(self, config):
         self._code_num = config["code_num"]
         self._code = config["code"]
 
@@ -36,7 +36,7 @@ class MeteocielMonthly(MonthlyScrapper):
                                         mois = self._month,
                                         annee = self._year)
 
-    def _update_parameters_from_url(self, url: str):
+    def _update_parameters_from_url(self, url):
 
         base_url, month_part, year_part = url.split("&")
 
@@ -182,7 +182,7 @@ class MeteocielDaily(DailyScrapper):
         self._code_num = ""
         self._code = ""
 
-    def _update_specific_parameters(self, config):
+    def _update_specific_parameters_from_config(self, config):
         self._code_num = config["code_num"]
         self._code = config["code"]
 
@@ -193,7 +193,7 @@ class MeteocielDaily(DailyScrapper):
                                         mois2=self.NUMEROTATIONS[self._month],
                                         annee2=self._year)
 
-    def _update_parameters_from_url(self, url: str):
+    def _update_parameters_from_url(self, url):
 
         base_url, day_part, month_part, year_part = url.split("&")
 

@@ -1,18 +1,15 @@
 from abc import ABC, abstractmethod
 import pandas as pd
 from app.scrappers.exceptions import HtmlPageException, HtmlTableException, ReworkException, ScrapException
-from app.scrappers.interfaces import ScrappingToolsInterface
+from app.scrappers.interfaces import ConfigScrapperInterface
 
-class MeteoScrapper(ABC, ScrappingToolsInterface):
+class MeteoScrapper(ABC, ConfigScrapperInterface):
 
-    '''
+    """
     Scrapper de base.
 
-    Une fois initialisé, appeler scrap_from_config ou scrap_from_url pour récupérer les données.
-
-    Cette classe implémente la ScrappingToolsInterface qui contient les méthodes permettant de
-    scrapper les pages html.
-    '''
+    Une fois instancié, appeler scrap_from_config ou scrap_from_url pour récupérer les données.
+    """
     # Nombre de jours dans chaque mois.
     # Wunderground et Météociel récupèrent le 29ème jour de février s'il existe.
     DAYS = {
@@ -44,9 +41,9 @@ class MeteoScrapper(ABC, ScrappingToolsInterface):
         self._url = ""
 
     # Méthodes publiques
-    def scrap_from_config(self, config: dict) -> pd.DataFrame:
+    def scrap_from_config(self, config):
 
-        '''Récupération de données à partir d'un fichier de configuration.'''
+        """Récupération de données à partir d'un fichier de configuration."""
 
         # (1) Remise à 0 des paramètres du scrapper.
         # (2) Mise à jour des paramètres avec les nouvelles données.
@@ -58,7 +55,7 @@ class MeteoScrapper(ABC, ScrappingToolsInterface):
 
         # (2)
         self._city = config["city"]
-        self._update_specific_parameters(config)
+        self._update_specific_parameters_from_config(config)
 
         try:
             self._waiting = config["waiting"]
@@ -88,11 +85,13 @@ class MeteoScrapper(ABC, ScrappingToolsInterface):
 
         return data
 
-    def scrap_from_url(self, url: str) -> pd.DataFrame:
-        """Récupération de données à l'url fournie.
+    def scrap_from_url(self, url):
+        """
+        Récupération de données à l'url fournie.
 
-        @param url - l'url à lquelle se trouvent les données à récupérer
-        @return le dataframe contenant les données."""
+        @param l'url à lquelle se trouvent les données à récupérer
+        @return le dataframe contenant les données.
+        """
 
         self._reinit()
         self._update_parameters_from_url(url)
@@ -104,69 +103,45 @@ class MeteoScrapper(ABC, ScrappingToolsInterface):
 
         return data
 
-    # Méthodes privées
+    # Utilitaires
     @abstractmethod
     def _update_parameters_from_url(self, url: str) -> None:
-        """Mise à jour des paramètres du scrapper à partir d'une url.
+        """
+        Mise à jour des paramètres du scrapper à partir d'une url.
         Implémentée dans chaque scrapper concrêt.
 
-        @param l'url passée par l'utilisateur."""
+        @param l'url passée par l'utilisateur.
+        """
         pass
 
     @abstractmethod
-    def _create_dates_generator(self, config) -> "tuple[dict]":
-        """Création des combinaisons années / mois (/ jour) à traiter.
-           Implémentée dans les Monthly / Daily Scrapper.
-
-           @return un tuple contenant des dictionnaires dont les clés correspondent
-                   aux parmètres de cette classe relatifs aux dates (année, mois, jour, version numérique et str)."""
-        pass
-
-    @abstractmethod
-    def _update_specific_parameters(self, config: dict) -> None:
-        """Mise à jour des paramètres spécifiques à chaque scrapper concrêt.
+    def _update_specific_parameters_from_config(self, config: dict) -> None:
+        """
+        Mise à jour des paramètres spécifiques à chaque scrapper concrêt.
         Utilisé lors de la récupération de données via un fichier config.
-        Implémentée dans chaque scrapper concrêt."""
+        Implémentée dans chaque scrapper concrêt.
+        """
         pass
 
     @abstractmethod
     def _build_key(self) -> str:
-        """Création de la clé au format city_yyyy_mm_dd pour sauvegarder les erreurs (dict).
-           Implémentée dans les Monthly / Daily Scrapper.
+        """
+        Création de la clé au format city_yyyy_mm_dd pour sauvegarder les erreurs (dict).
+        Implémentée dans les Monthly / Daily Scrapper.
 
-           @return la clé" du dict errors."""
-        pass
-
-    @abstractmethod
-    def _build_url(self) -> str:
-        '''
-        Reconstruction de l'url où se trouvent les données à récupérer.
-        Implémentée dans chaque scrapper concrêt.
-
-        @return l'url complète au format str du tableau de données à récupérer.
-        '''
-        pass
-
-    @abstractmethod
-    def _rework_data(self, values: "list[str]", columns_names: "list[str]") -> pd.DataFrame:
-        '''
-        Mise en forme du tableau de données. Implémentée dans chaque scrapper concrêt.
-
-        @params
-            values - La liste des valeurs contenues dans le tableau.
-            column_names - La liste des noms de colonnes.
-
-        @return le dataframe équivalent au tableau de données html.
-        '''
+        @return la clé" du dict errors.
+        """
         pass
 
     # Méthode principale
     def _scrap(self) -> pd.DataFrame:
 
-        """Récupération des données contenues dans une page html à partir de son url.
+        """
+        Récupération des données contenues dans une page html à partir de son url.
         La variable CRITERIA est créée dans chaque scrapper concrêt.
 
-        @return le dataframe contenant les données."""
+        @return le dataframe contenant les données.
+        """
 
         try:
             html_page = self._load_html_page(self._url, self._waiting)
@@ -194,7 +169,7 @@ class MeteoScrapper(ABC, ScrappingToolsInterface):
 
 
 class MonthlyScrapper(MeteoScrapper):
-    '''Scrapper spécialisé dans la récupération de données mensuelles.'''
+    """Scrapper spécialisé dans la récupération de données mensuelles."""
 
     def __init__(self):
 
@@ -245,7 +220,7 @@ class MonthlyScrapper(MeteoScrapper):
 
 
 class DailyScrapper(MeteoScrapper):
-    '''Scrapper spécialisé dans la récupération de données quotidiennes.'''
+    """Scrapper spécialisé dans la récupération de données quotidiennes."""
 
     def __init__(self):
 

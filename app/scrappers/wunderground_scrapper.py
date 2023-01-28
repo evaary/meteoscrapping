@@ -40,7 +40,7 @@ class WundergroundMonthly(MonthlyScrapper):
         self._country_code = ""
         self._region = ""
 
-    def _update_specific_parameters(self, config):
+    def _update_specific_parameters_from_config(self, config):
         self._country_code = config["country_code"]
         self._region = config["region"]
 
@@ -51,7 +51,7 @@ class WundergroundMonthly(MonthlyScrapper):
                                         year=self._year,
                                         month=self._month)
 
-    def _update_parameters_from_url(self, url: str):
+    def _update_parameters_from_url(self, url):
 
         *_, country_code, city, region, _, year_month = url.split("/")
 

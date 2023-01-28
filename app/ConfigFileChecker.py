@@ -1,9 +1,8 @@
 from app.scrappers.exceptions import ConfigCheckerException
 
-
 class ConfigFilesChecker:
 
-    '''Singleton contrôlant la validité d'un fichier de config.'''
+    """Singleton contrôlant la validité d'un fichier de config."""
 
     EXPECTED_SCRAPPERS = {
         "wunderground": {"country_code", "city", "region", "year", "month"},

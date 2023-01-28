@@ -1,3 +1,4 @@
+import multiprocessing
 from datetime import datetime
 import os
 
@@ -20,20 +21,42 @@ class Runner:
         "errors":  os.path.join(WORKDIR, "errors")
     }
 
-    SCRAPPERS: "dict[str, MeteoScrapper]" = {
-        "ogimet": OgimetMonthly(),
-        "wunderground": WundergroundMonthly(),
-        "meteociel": MeteocielMonthly(),
-        "meteociel_daily": MeteocielDaily()
+    SCRAPPERS = {
+        "ogimet": OgimetMonthly,
+        "wunderground": WundergroundMonthly,
+        "meteociel": MeteocielMonthly,
+        "meteociel_daily": MeteocielDaily
     }
 
     CHECKER = ConfigFilesChecker.instance()
 
     @classmethod
+    def launch_scrapping(cls, scrapper_type: str, config: dict) -> None:
+
+        date = str( int( datetime.now().timestamp() ) )
+
+        datafilename = "_".join([date, config['city'], scrapper_type, ".csv"]).lower()
+        errorsfilename = "_".join([date, config['city'], scrapper_type, "_errors.json"]).lower()
+
+        path_data = os.path.join(cls.PATHS["results"], datafilename)
+        path_errors = os.path.join(cls.PATHS["errors"], errorsfilename)
+
+        scrapper: MeteoScrapper = cls.SCRAPPERS[scrapper_type]()
+        data = scrapper.scrap_from_config(config)
+
+        if not data.empty:
+            to_csv(data, path_data)
+
+        if scrapper.errors:
+            to_json(scrapper.errors, path_errors)
+
+        print("\n")
+
+    @classmethod
     def run(cls):
 
         try:
-            configs = from_json(os.path.join(cls.WORKDIR, "config.json"))
+            configs: dict = from_json(os.path.join(cls.WORKDIR, "config.json"))
             cls.CHECKER.check(configs)
         except FileNotFoundError:
             # from_json ne trouve pas le fichier
@@ -48,9 +71,9 @@ class Runner:
             print(e)
             return
 
-        for scrapper_type in {x for x in configs.keys() if x != "waiting"}:
+        processes: list[multiprocessing.Process] = []
 
-            scrapper = cls.SCRAPPERS[scrapper_type]
+        for scrapper_type in {x for x in configs.keys() if x != "waiting"}:
 
             for config in configs[scrapper_type]:
 
@@ -59,21 +82,9 @@ class Runner:
                 except KeyError:
                     config["waiting"] = 3
 
-                date = str( int( datetime.now().timestamp() ) )
+                process = multiprocessing.Process(target=cls.launch_scrapping, args=[scrapper_type, config] )
+                process.start()
+                processes.append(process)
 
-                datafilename = "_".join([date, config['city'], scrapper_type, ".csv"]).lower()
-                errorsfilename = "_".join([date, config['city'], scrapper_type, "_errors.json"]).lower()
-
-                path_data = os.path.join(cls.PATHS["results"], datafilename)
-                path_errors = os.path.join(cls.PATHS["errors"], errorsfilename)
-
-                data = scrapper.scrap_from_config(config)
-                errors = scrapper.errors
-
-                if not data.empty:
-                    to_csv(data, path_data)
-
-                if errors:
-                    to_json(errors, path_errors)
-
-                print("\n")
+        for process in processes:
+            process.join()

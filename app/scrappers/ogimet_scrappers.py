@@ -35,15 +35,6 @@ class OgimetMonthly(MonthlyScrapper):
         super()._reinit()
         self._ind = ""
 
-    def _update_specific_parameters_from_config(self, config):
-        self._ind = config["ind"]
-
-    def _build_url(self):
-        return self.BASE_URL.substitute(ind=self._ind,
-                                        ano=self._year,
-                                        mes=self.NUMEROTATIONS[self._month],
-                                        ndays=self.DAYS[self._month])
-
     def _update_parameters_from_url(self, url):
 
         _, ind_part, year_part, month_part, *_ = url.split("&")
@@ -55,14 +46,26 @@ class OgimetMonthly(MonthlyScrapper):
 
         month = revert_numerotation[month]
 
+        ind = ind_part.split("=")[1]
+
         self.__dict__.update({
             "_url": url,
-            "_ind": ind_part.split("=")[1],
+            "_city": ind,
             "_year": year,
             "_month": month,
             "_year_str": str(year),
             "_month_str": str(month) if month >= 10 else "0" + str(month),
+            "_ind": ind
         })
+
+    def _update_specific_parameters_from_config(self, config):
+        self._ind = config["ind"]
+
+    def _build_url(self):
+        return self.BASE_URL.substitute(ind=self._ind,
+                                        ano=self._year,
+                                        mes=self.NUMEROTATIONS[self._month],
+                                        ndays=self.DAYS[self._month])
 
     @staticmethod
     def _scrap_columns_names(table):

@@ -5,9 +5,10 @@ from json.decoder import JSONDecodeError
 from app.data_managers import from_json, to_csv, to_json
 from app.scrappers.abcs import MeteoScrapper
 from app.scrappers.meteociel_scrappers import MeteocielDaily, MeteocielMonthly
-from app.scrappers.wunderground_scrapper import WundergroundMonthly
-from app.scrappers.ogimet_scrapper import OgimetMonthly
-from app.ConfigFileChecker import ConfigFilesChecker, ConfigCheckerException
+from app.scrappers.wunderground_scrappers import WundergroundMonthly
+from app.scrappers.ogimet_scrappers import OgimetMonthly
+from app.checkers.ConfigFileChecker import ConfigFilesChecker
+from app.checkers.exceptions import ConfigFileCheckerException
 
 class Runner:
 
@@ -36,13 +37,13 @@ class Runner:
             cls.CHECKER.check(configs)
         except FileNotFoundError:
             # from_json ne trouve pas le fichier
-            print("pas de fichier config.json")
+            print("ERREUR : pas de fichier config.json")
             return
         except JSONDecodeError:
             # from_json n'arrive pas à lire le fichier
-            print("le fichier config est mal formé, impossible de charger un format json.")
+            print("ERREUR : le fichier config est mal formé, impossible de charger un format json.")
             return
-        except ConfigCheckerException as e :
+        except ConfigFileCheckerException as e:
             # le checker a trouvé un problème avec le fichier
             print(e)
             return

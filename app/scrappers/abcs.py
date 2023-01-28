@@ -41,6 +41,24 @@ class MeteoScrapper(ABC, ConfigScrapperInterface):
         self._url = ""
 
     # Méthodes publiques
+    def scrap_from_url(self, url):
+        """
+        Récupération de données à l'url fournie.
+
+        @param l'url à lquelle se trouvent les données à récupérer
+        @return le dataframe contenant les données.
+        """
+
+        self._reinit()
+        self._update_parameters_from_url(url)
+        try:
+            data = self._scrap()
+        except Exception as e:
+            print(str(e))
+            data = pd.DataFrame()
+
+        return data
+
     def scrap_from_config(self, config):
 
         """Récupération de données à partir d'un fichier de configuration."""
@@ -82,24 +100,6 @@ class MeteoScrapper(ABC, ConfigScrapperInterface):
                 print(str(e))
                 self.errors[key] = {"url": self._url, "error": str(e)}
                 continue
-
-        return data
-
-    def scrap_from_url(self, url):
-        """
-        Récupération de données à l'url fournie.
-
-        @param l'url à lquelle se trouvent les données à récupérer
-        @return le dataframe contenant les données.
-        """
-
-        self._reinit()
-        self._update_parameters_from_url(url)
-        try:
-            data = self._scrap()
-        except Exception as e:
-            print(str(e))
-            data = pd.DataFrame()
 
         return data
 

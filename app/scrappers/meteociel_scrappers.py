@@ -26,16 +26,6 @@ class MeteocielMonthly(MonthlyScrapper):
         self._code_num = ""
         self._code = ""
 
-    def _update_specific_parameters_from_config(self, config):
-        self._code_num = config["code_num"]
-        self._code = config["code"]
-
-    def _build_url(self):
-        return self.BASE_URL.substitute(code_num = self._code_num,
-                                        code = self._code,
-                                        mois = self._month,
-                                        annee = self._year)
-
     def _update_parameters_from_url(self, url):
 
         base_url, month_part, year_part = url.split("&")
@@ -49,13 +39,24 @@ class MeteocielMonthly(MonthlyScrapper):
 
         self.__dict__.update({
             "_url": url,
-            "_code": code,
-            "_code_num": code_num,
+            "_city": code_num,
             "_year": year,
             "_month": month,
             "_year_str": str(year),
             "_month_str": str(month) if month >= 10 else "0" + str(month),
+            "_code": code,
+            "_code_num": code_num
         })
+
+    def _update_specific_parameters_from_config(self, config):
+        self._code_num = config["code_num"]
+        self._code = config["code"]
+
+    def _build_url(self):
+        return self.BASE_URL.substitute(code_num = self._code_num,
+                                        code = self._code,
+                                        mois = self._month,
+                                        annee = self._year)
 
     @staticmethod
     def _scrap_columns_names(table):
@@ -182,17 +183,6 @@ class MeteocielDaily(DailyScrapper):
         self._code_num = ""
         self._code = ""
 
-    def _update_specific_parameters_from_config(self, config):
-        self._code_num = config["code_num"]
-        self._code = config["code"]
-
-    def _build_url(self):
-        return self.BASE_URL.substitute(code_num=self._code_num,
-                                        code=self._code,
-                                        jour2=self._day,
-                                        mois2=self.NUMEROTATIONS[self._month],
-                                        annee2=self._year)
-
     def _update_parameters_from_url(self, url):
 
         base_url, day_part, month_part, year_part = url.split("&")
@@ -211,15 +201,27 @@ class MeteocielDaily(DailyScrapper):
 
         self.__dict__.update({
             "_url": url,
-            "_code": code,
-            "_code_num": code_num,
+            "_city": code_num,
             "_year": year,
             "_month": month,
             "_day": day,
             "_year_str": str(year),
             "_month_str": str(month) if month >= 10 else "0" + str(month),
-            "_day_str": str(day) if day >= 10 else "0" + str(day)
+            "_day_str": str(day) if day >= 10 else "0" + str(day),
+            "_code": code,
+            "_code_num": code_num
         })
+
+    def _update_specific_parameters_from_config(self, config):
+        self._code_num = config["code_num"]
+        self._code = config["code"]
+
+    def _build_url(self):
+        return self.BASE_URL.substitute(code_num=self._code_num,
+                                        code=self._code,
+                                        jour2=self._day,
+                                        mois2=self.NUMEROTATIONS[self._month],
+                                        annee2=self._year)
 
     @staticmethod
     def _scrap_columns_names(table):

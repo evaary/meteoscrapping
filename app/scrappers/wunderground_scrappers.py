@@ -40,6 +40,23 @@ class WundergroundMonthly(MonthlyScrapper):
         self._country_code = ""
         self._region = ""
 
+    def _update_parameters_from_url(self, url):
+
+        *_, country_code, city, region, _, year_month = url.split("/")
+
+        year_str, month_str = year_month.split("-")
+
+        self.__dict__.update({
+            "_url": url,
+            "_city": city,
+            "_year": int(year_str),
+            "_year_str": year_str,
+            "_month": int(month_str),
+            "_month_str": month_str,
+            "_country_code": country_code,
+            "_region": region
+        })
+
     def _update_specific_parameters_from_config(self, config):
         self._country_code = config["country_code"]
         self._region = config["region"]
@@ -50,23 +67,6 @@ class WundergroundMonthly(MonthlyScrapper):
                                         region=self._region,
                                         year=self._year,
                                         month=self._month)
-
-    def _update_parameters_from_url(self, url):
-
-        *_, country_code, city, region, _, year_month = url.split("/")
-
-        year_str, month_str = year_month.split("-")
-
-        self.__dict__.update({
-            "_url": url,
-            "_country_code": country_code,
-            "_city": city,
-            "_region": region,
-            "_year": int(year_str),
-            "_year_str": year_str,
-            "_month": int(month_str),
-            "_month_str": month_str,
-        })
 
     @staticmethod
     def _scrap_columns_names(table):

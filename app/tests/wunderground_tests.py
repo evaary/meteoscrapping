@@ -2,7 +2,7 @@ from unittest import TestCase
 import pandas as pd
 import numpy as np
 
-from app.scrappers.wunderground_scrapper import WundergroundMonthly
+from app.scrappers.wunderground_scrappers import WundergroundMonthly
 
 class Wunderground_MonthlyTester(TestCase):
 
@@ -62,6 +62,19 @@ class Wunderground_MonthlyTester(TestCase):
     )
 
     @classmethod
+    def compare_data(cls, data: pd.DataFrame) -> bool:
+
+        converted = [col for col in data.columns if col not in cls.NOT_CONVERTED]
+        converted = [col for col in converted if "°C" not in col]
+
+        difference = np.round((data[converted] - cls.RESULTATS[converted]) * 100 / cls.RESULTATS[converted] , 2)
+        # on exclue les colonnes du vent car les écarts dûs à la conversion peuvent être importants
+        difference = difference[[x for x in list(difference.columns) if "wind" not in x]]
+
+        return difference.max(numeric_only=True).max() <= 0.5 and data[cls.NOT_CONVERTED].equals(cls.RESULTATS[cls.NOT_CONVERTED])
+
+
+    @classmethod
     def setUpClass(cls):
         cls.RESULTATS["date"] = pd.to_datetime(cls.RESULTATS["date"])
         cls.RESULTATS = cls.RESULTATS.set_index("date")
@@ -82,30 +95,10 @@ class Wunderground_MonthlyTester(TestCase):
 
        self.assertEqual(self.URL_REF, self.SCRAPPER._build_url())
 
-    def test_data(self):
-       self.SCRAPPER.__dict__.update(**{"_url": self.URL_REF,
-                                        "_year_str": "2021",
-                                        "_month_str": "01"})
+    def test_scrap_data(self):
 
-       data = self.SCRAPPER._scrap().set_index("date")
-       self.assertTrue(data[self.NOT_CONVERTED].equals(self.RESULTATS[self.NOT_CONVERTED]))
-
-       converted = [col for col in data.columns if col not in self.NOT_CONVERTED]
-       converted = [col for col in converted if "°C" not in col]
-       difference = np.round((data[converted] - self.RESULTATS[converted]) * 100 / self.RESULTATS[converted] , 2)
-       # on exclue les colonnes du vent car les écarts dûs à la conversion peuvent être importants
-       difference = difference[[x for x in list(difference.columns) if "wind" not in x]]
-       self.assertTrue(difference.max(numeric_only=True).max() <= 0.5)
-
-    def test_scrap_from_url(self):
         data = self.SCRAPPER.scrap_from_url(self.URL_REF).set_index("date")
-        difference = (data - self.RESULTATS).sum().sum()
+        self.assertTrue( self.compare_data(data) )
 
-        self.assertTrue(data[self.NOT_CONVERTED].equals(self.RESULTATS[self.NOT_CONVERTED]))
-
-        converted = [col for col in data.columns if col not in self.NOT_CONVERTED]
-        converted = [col for col in converted if "°C" not in col]
-        difference = np.round((data[converted] - self.RESULTATS[converted]) * 100 / self.RESULTATS[converted] , 2)
-        # on exclue les colonnes du vent car les écarts dûs à la conversion peuvent être importants
-        difference = difference[[x for x in list(difference.columns) if "wind" not in x]]
-        self.assertTrue(difference.max(numeric_only=True).max() <= 0.5)
+        data = self.SCRAPPER.scrap_from_config(self.CONFIG).set_index("date")
+        self.assertTrue( self.compare_data(data) )

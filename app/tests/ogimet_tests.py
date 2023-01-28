@@ -2,7 +2,7 @@ from unittest import TestCase
 import pandas as pd
 import numpy as np
 
-from app.scrappers.ogimet_scrapper import OgimetMonthly
+from app.scrappers.ogimet_scrappers import OgimetMonthly
 
 class Ogimet_MonthlyTester(TestCase):
 
@@ -57,6 +57,10 @@ class Ogimet_MonthlyTester(TestCase):
     NUMERICS = RESULTATS.columns.difference(["wind_(km/h)_dir", "date"])
 
     @classmethod
+    def compare_data(cls, data: pd.DataFrame) -> bool:
+        return ( data[cls.NUMERICS] - cls.RESULTATS[cls.NUMERICS] ).sum().sum() == 0
+
+    @classmethod
     def setUpClass(cls):
         cls.RESULTATS["date"] = pd.to_datetime(cls.RESULTATS["date"])
         cls.RESULTATS = cls.RESULTATS.set_index("date")
@@ -75,21 +79,11 @@ class Ogimet_MonthlyTester(TestCase):
 
        self.assertEqual(self.URL_REF, self.SCRAPPER._build_url())
 
-    def test_scrap_from_url(self):
+    def test_scrap_data(self):
+
         data = self.SCRAPPER.scrap_from_url(self.URL_REF).set_index("date")
+        self.assertTrue( self.compare_data(data) )
 
-        difference = data[self.NUMERICS] - self.RESULTATS[self.NUMERICS]
-
-        self.assertTrue( difference.sum().sum() == 0 )
-
-    def test_data(self):
-        self.SCRAPPER.__dict__.update(**{"_url": self.URL_REF,
-                                         "_month": 2,
-                                         "_year_str": "2021",
-                                         "_month_str": "02"})
-
-        data = self.SCRAPPER._scrap().set_index("date")
-        difference = data[self.NUMERICS] - self.RESULTATS[self.NUMERICS]
-
-        self.assertTrue( difference.sum().sum() == 0 )
+        data = self.SCRAPPER.scrap_from_config(self.CONFIG).set_index("date")
+        self.assertTrue( self.compare_data(data) )
 

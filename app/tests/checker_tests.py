@@ -1,6 +1,14 @@
 from unittest import TestCase
 import copy
-from app.ConfigFileChecker import ConfigFilesChecker, ConfigCheckerException
+from app.checkers.ConfigFileChecker import ConfigFilesChecker
+from app.checkers.exceptions import (NoDictException,
+                                     UnknownKeysException,
+                                     UnknownOrMissingParametersException,
+                                     WaitingException,
+                                     DatesException,
+                                     MonthsException,
+                                     DaysException,
+                                     OtherFieldsException)
 
 class CheckerTester(TestCase):
 
@@ -26,125 +34,97 @@ class CheckerTester(TestCase):
         ]
     }
 
-    def test_missing_main_fields(self):
-
-        todo = copy.deepcopy(self.CONFIG)
-        del todo["waiting"]
-
-        with self.assertRaises(ConfigCheckerException) as e:
-            self.CHECKER._check_main_fields(todo)
-
-        self.assertEqual(str(e.exception), self.CHECKER.ERRORS_MSG["main_fields"])
+    def test_no_dict(self):
+        with self.assertRaises(NoDictException):
+            self.CHECKER._check_data_type(["config bidon"])
 
     def test_unknown_main_fields(self):
 
         todo = copy.deepcopy(self.CONFIG)
         todo["bouh"] = ["test"]
 
-        with self.assertRaises(ConfigCheckerException) as e:
+        with self.assertRaises(UnknownKeysException):
             self.CHECKER._check_main_fields(todo)
 
-        self.assertEqual(str(e.exception), self.CHECKER.ERRORS_MSG["main_fields"])
-
-    def test_wrong_fields_ogimet(self):
+    def test_wrong_config_ogimet(self):
 
         todo = copy.deepcopy(self.CONFIG)
         del todo["ogimet"][0]["ind"]
 
-        with self.assertRaises(ConfigCheckerException) as e:
+        with self.assertRaises(UnknownOrMissingParametersException) as e:
             self.CHECKER._check_keys(todo)
-
-        self.assertEqual(str(e.exception), self.CHECKER.ERRORS_MSG["configs"])
 
     def test_wrong_fields_wunderground(self):
 
         todo = copy.deepcopy(self.CONFIG)
         todo["wunderground"][0]["bouh"] = 5
 
-        with self.assertRaises(ConfigCheckerException) as e:
+        with self.assertRaises(UnknownOrMissingParametersException):
             self.CHECKER._check_keys(todo)
-
-        self.assertEqual(str(e.exception), self.CHECKER.ERRORS_MSG["configs"])
 
     def test_wrong_fields_meteociel(self):
 
         todo = copy.deepcopy(self.CONFIG)
         todo["meteociel"][0]["bouh"] = 5
 
-        with self.assertRaises(ConfigCheckerException) as e:
+        with self.assertRaises(UnknownOrMissingParametersException):
             self.CHECKER._check_keys(todo)
-
-        self.assertEqual(str(e.exception), self.CHECKER.ERRORS_MSG["configs"])
 
     def test_year_not_list(self):
 
         todo = copy.deepcopy(self.CONFIG)
         todo["ogimet"][0]["year"] = "bouh"
 
-        with self.assertRaises(ConfigCheckerException) as e:
+        with self.assertRaises(DatesException):
             self.CHECKER._check_values(todo)
-
-        self.assertEqual(str(e.exception), self.CHECKER.ERRORS_MSG["dates"])
 
     def test_month_not_len_1_or_2(self):
 
         todo = copy.deepcopy(self.CONFIG)
         todo["meteociel"][0]["month"] = [1,2,3]
 
-        with self.assertRaises(ConfigCheckerException) as e:
+        with self.assertRaises(DatesException):
             self.CHECKER._check_values(todo)
-
-        self.assertEqual(str(e.exception), self.CHECKER.ERRORS_MSG["dates"])
 
     def test_year_not_ints(self):
 
         todo = copy.deepcopy(self.CONFIG)
         todo["wunderground"][0]["year"] = [1.1, "bouh"]
 
-        with self.assertRaises(ConfigCheckerException) as e:
+        with self.assertRaises(DatesException):
             self.CHECKER._check_values(todo)
-
-        self.assertEqual(str(e.exception), self.CHECKER.ERRORS_MSG["dates"])
 
     def test_day_not_positive(self):
 
         todo = copy.deepcopy(self.CONFIG)
         todo["meteociel_daily"][0]["day"] = [-1, 17]
 
-        with self.assertRaises(ConfigCheckerException) as e:
+        with self.assertRaises(DatesException):
             self.CHECKER._check_values(todo)
-
-        self.assertEqual(str(e.exception), self.CHECKER.ERRORS_MSG["dates"])
 
     def test_days_not_ordered(self):
 
         todo = copy.deepcopy(self.CONFIG)
         todo["meteociel_daily"][0]["day"] = [2,1]
 
-        with self.assertRaises(ConfigCheckerException) as e:
+        with self.assertRaises(DatesException):
             self.CHECKER._check_values(todo)
-
-        self.assertEqual(str(e.exception), self.CHECKER.ERRORS_MSG["dates"])
 
     def test_outbound_month(self):
 
         todo = copy.deepcopy(self.CONFIG)
         todo["ogimet"][0]["month"] = [1,17]
 
-        with self.assertRaises(ConfigCheckerException) as e:
+        with self.assertRaises(MonthsException):
             self.CHECKER._check_values(todo)
-
-        self.assertEqual(str(e.exception), self.CHECKER.ERRORS_MSG["month"])
 
     def test_outbound_day(self):
 
         todo = copy.deepcopy(self.CONFIG)
         todo["meteociel_daily"][0]["day"] = [1,56]
 
-        with self.assertRaises(ConfigCheckerException) as e:
+        with self.assertRaises(DaysException):
             self.CHECKER._check_values(todo)
-
-        self.assertEqual(str(e.exception), self.CHECKER.ERRORS_MSG["day"])
 
     def test_not_str_value(self):
 
@@ -153,10 +133,8 @@ class CheckerTester(TestCase):
         todo = copy.deepcopy(self.CONFIG)
         todo["meteociel"][0]["city"] = 12
 
-        with self.assertRaises(ConfigCheckerException) as e:
+        with self.assertRaises(OtherFieldsException):
             self.CHECKER._check_values(todo)
-
-        self.assertEqual(str(e.exception), self.CHECKER.ERRORS_MSG["other"])
 
     def test_wrong_waiting_value(self):
 
@@ -165,10 +143,8 @@ class CheckerTester(TestCase):
         todo = copy.deepcopy(self.CONFIG)
         todo["waiting"] = "test"
 
-        with self.assertRaises(ConfigCheckerException) as e:
+        with self.assertRaises(WaitingException):
             self.CHECKER._check_values(todo)
-
-        self.assertEqual(str(e.exception), self.CHECKER.ERRORS_MSG["waiting"])
 
     def test_correct_config(self):
 

@@ -53,6 +53,9 @@ class Meteociel_MonthlyTester(TestCase):
         ]
     )
 
+    def compare_data(self, data: pd.DataFrame) -> bool:
+        return (data - self.RESULTATS).sum().sum() == 0
+
     @classmethod
     def setUpClass(cls):
         cls.RESULTATS["date"] = pd.to_datetime(cls.RESULTATS["date"])
@@ -73,19 +76,13 @@ class Meteociel_MonthlyTester(TestCase):
 
         self.assertEqual(self.URL_REF, self.SCRAPPER._build_url())
 
-    def test_data(self):
-        self.SCRAPPER.__dict__.update(**{"_year_str": "2021",
-                                        "_month_str": "01",
-                                        "_url": self.URL_REF})
+    def test_scrap_data(self):
 
-        data = self.SCRAPPER._scrap().set_index("date")
-        difference = (data - self.RESULTATS).sum().sum()
-        self.assertTrue(difference == 0)
-
-    def test_scrap_from_url(self):
         data = self.SCRAPPER.scrap_from_url(self.URL_REF).set_index("date")
-        difference = (data - self.RESULTATS).sum().sum()
-        self.assertTrue(difference == 0)
+        self.assertTrue( self.compare_data(data) )
+
+        data = self.SCRAPPER.scrap_from_config(self.CONFIG).set_index("date")
+        self.assertTrue( self.compare_data(data) )
 
 
 
@@ -133,6 +130,11 @@ class Meteociel_DailyTester(TestCase):
     )
 
     @classmethod
+    def compare_data(cls, data: pd.DataFrame) -> bool:
+        numeric = [x for x in cls.RESULTATS.columns if x not in cls.NOT_NUMERIC]
+        return ( data[numeric] - cls.RESULTATS[numeric] ).sum().sum() == 0
+
+    @classmethod
     def setUpClass(cls):
         cls.RESULTATS["date"] = pd.to_datetime(cls.RESULTATS["date"])
         cls.RESULTATS = cls.RESULTATS.set_index("date")
@@ -155,20 +157,10 @@ class Meteociel_DailyTester(TestCase):
 
         self.assertEqual(self.URL_REF, self.SCRAPPER._build_url())
 
-    def test_data(self):
-        self.SCRAPPER.__dict__.update(**{"_url": self.URL_REF,
-                                         "_year_str": "2020",
-                                         "_month_str": "01",
-                                         "_day_str": "01"})
+    def test_scrap_data(self):
 
-        numeric = [x for x in self.RESULTATS.columns if x not in self.NOT_NUMERIC]
-        data = self.SCRAPPER._scrap().set_index("date")
-        difference = (data[numeric] - self.RESULTATS[numeric]).sum().sum()
-        self.assertTrue(difference == 0)
-
-    def test_scrap_from_url(self):
-
-        numeric = [x for x in self.RESULTATS.columns if x not in self.NOT_NUMERIC]
         data = self.SCRAPPER.scrap_from_url(self.URL_REF).set_index("date")
-        difference = (data[numeric] - self.RESULTATS[numeric]).sum().sum()
-        self.assertTrue(difference == 0)
+        self.assertTrue( self.compare_data(data) )
+
+        data = self.SCRAPPER.scrap_from_config(self.CONFIG).set_index("date")
+        self.assertTrue( self.compare_data(data) )

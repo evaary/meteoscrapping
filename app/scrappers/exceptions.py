@@ -33,12 +33,3 @@ class ReworkException(Exception):
             args = ("Echec du traitement des données récupérées",)
 
         super().__init__(*args, **kwargs)
-
-class ConfigCheckerException(Exception):
-
-    def __init__(self, *args, **kwargs):
-
-        if not args:
-            args = ("Echec de la validation du fichier de configuration",)
-
-        super().__init__(*args, **kwargs)

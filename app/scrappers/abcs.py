@@ -11,7 +11,7 @@ class MeteoScrapper(ABC, ConfigScrapperInterface):
     Une fois instancié, appeler scrap_from_config pour récupérer les données.
     """
     # Nombre de jours dans chaque mois.
-    # Wunderground et Météociel récupèrent le 29ème jour de février s'il existe.
+    # Wunderground et Météociel récupèrent le 29ème jour de février, s'il existe.
     DAYS = {
         1  : 31,
         2  : 28,

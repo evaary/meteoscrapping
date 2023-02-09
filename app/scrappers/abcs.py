@@ -8,7 +8,7 @@ class MeteoScrapper(ABC, ConfigScrapperInterface):
     """
     Scrapper de base.
 
-    Une fois instancié, appeler scrap_from_config ou scrap_from_url pour récupérer les données.
+    Une fois instancié, appeler scrap_from_config pour récupérer les données.
     """
     # Nombre de jours dans chaque mois.
     # Wunderground et Météociel récupèrent le 29ème jour de février s'il existe.

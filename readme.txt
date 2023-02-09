@@ -12,7 +12,7 @@ exemples de tableaux récupérés:
 Utilisation:
 
     télécharger l'exécutable
-        - fichier zip : https://drive.google.com/file/d/1Crco0Wwv2Q5us9mdJbx0KtGAZ1kr525g/view?usp=sharing
+        - fichier zip : https://drive.google.com/file/d/1-MNhfnLiubwOqdWUeeZm2Zyn9bN0TOBV/view?usp=share_link
         - dézipper
 
     créer un fichier "config.json" à côté l'éxecutable (nom config.json impératif)
@@ -27,7 +27,7 @@ Utilisation:
         - les erreurs sont des fichiers json, 1 par job s'il y a eu des erreurs
         - chaque fichier json contient les url à partir desquelles aucune donnée n'a pu être récupérée par le programme.
 
-structure du fichier config.json
+structure du fichier config.json (chaque scrapper est optionnel):
 {
     "waiting": 3,
 

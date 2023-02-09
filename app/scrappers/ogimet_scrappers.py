@@ -1,9 +1,9 @@
 import numpy as np
 import pandas as pd
 from string import Template
-from app.scrappers.abcs import MonthlyScrapper
+from app.scrappers.abcs import MeteoScrapper
 
-class OgimetMonthly(MonthlyScrapper):
+class OgimetMonthly(MeteoScrapper):
 
     # La numérotation des mois sur ogimet est décalée.
     # Ce dictionnaire associe la numérotation usuelle (clés) et celle d'ogimet (valeurs).
@@ -27,45 +27,31 @@ class OgimetMonthly(MonthlyScrapper):
 
     BASE_URL = Template(f"http://www.ogimet.com/cgi-bin/gsynres?lang=en&ind=$ind&ano=$ano&mes=$mes&day=0&hora=0&min=0&ndays=$ndays")
 
-    def __init__(self):
-        super().__init__()
-        self._ind = ""
+    def _build_parameters_generator(self, config):
 
-    def _reinit(self):
-        super()._reinit()
-        self._ind = ""
+        return (
 
-    def _update_parameters_from_url(self, url):
+            {
+                "city": config["city"],
+                "ind": config["ind"],
+                "year": year,
+                "month": month,
+                "year_str": str(year),
+                "month_str": "0" + str(month) if month < 10 else str(month)
+            }
 
-        _, ind_part, year_part, month_part, *_ = url.split("&")
+            for year in range(config["year"][0],
+                              config["year"][-1] + 1)
 
-        year = int(year_part.split("=")[1])
-        month = int(month_part.split("=")[1])
+            for month in range(config["month"][0],
+                               config["month"][-1] + 1)
+        )
 
-        revert_numerotation = { value : key for key, value in self.NUMEROTATIONS.items() }
-
-        month = revert_numerotation[month]
-
-        ind = ind_part.split("=")[1]
-
-        self.__dict__.update({
-            "_url": url,
-            "_city": ind,
-            "_year": year,
-            "_month": month,
-            "_year_str": str(year),
-            "_month_str": str(month) if month >= 10 else "0" + str(month),
-            "_ind": ind
-        })
-
-    def _update_specific_parameters_from_config(self, config):
-        self._ind = config["ind"]
-
-    def _build_url(self):
-        return self.BASE_URL.substitute(ind=self._ind,
-                                        ano=self._year,
-                                        mes=self.NUMEROTATIONS[self._month],
-                                        ndays=self.DAYS[self._month])
+    def _build_url(self, parameters):
+        return self.BASE_URL.substitute(ind=parameters["ind"],
+                                        ano=parameters["year"],
+                                        mes=self.NUMEROTATIONS[parameters["month"]],
+                                        ndays=self.DAYS[parameters["month"]])
 
     @staticmethod
     def _scrap_columns_names(table):
@@ -186,7 +172,7 @@ class OgimetMonthly(MonthlyScrapper):
 
         return done
 
-    def _rework_data(self, values, columns_names):
+    def _rework_data(self, values, columns_names, parameters):
 
         # (1) Dimensions du futur tableau de données et nombre de valeurs collectées. S'il manque des
         #     données dans la liste des valeurs récupérées, on la complète pour avoir 1 valeur par cellule
@@ -202,19 +188,19 @@ class OgimetMonthly(MonthlyScrapper):
 
         # (1)
         n_cols = len(columns_names)
-        n_rows = self.DAYS[self._month]
+        n_rows = self.DAYS[parameters['month']]
         n_expected = n_rows * n_cols          # nombre de valeurs attendu
         n_values = len(values)
 
         if n_values != n_expected:
-            values = self._fill_missing_values(values, n_cols, n_expected, self._month_str)
+            values = self._fill_missing_values(values, n_cols, n_expected, parameters['month_str'])
 
         # (2)
         values = np.array(values).reshape(-1, n_cols)
         df = pd.DataFrame(values, columns=columns_names)
 
         # (3)
-        df["date"] = self._year_str + "/" + df["date"]
+        df["date"] = parameters['year_str'] + "/" + df["date"]
         df["date"] = pd.to_datetime(df["date"])
         df = df.sort_values(by="date")
 

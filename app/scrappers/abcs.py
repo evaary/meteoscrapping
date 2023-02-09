@@ -1,4 +1,4 @@
-from abc import ABC, abstractmethod
+from abc import ABC
 import pandas as pd
 from app.scrappers.exceptions import HtmlPageException, HtmlTableException, ReworkException, ScrapException
 from app.scrappers.interfaces import ConfigScrapperInterface
@@ -29,112 +29,43 @@ class MeteoScrapper(ABC, ConfigScrapperInterface):
 
     def __init__(self):
         self.errors = dict()
-        self._city = ""
-        self._waiting = 3
-        self._url = ""
-
-    def _reinit(self) -> None:
-        """Réinitialise les paramètres du scrapper."""
-        self.errors.clear()
-        self._city = ""
-        self._waiting = 3
-        self._url = ""
-
-    # Méthodes publiques
-    def scrap_from_url(self, url):
-        """
-        Récupération de données à l'url fournie.
-
-        @param l'url à lquelle se trouvent les données à récupérer
-        @return le dataframe contenant les données.
-        """
-
-        self._reinit()
-        self._update_parameters_from_url(url)
-        try:
-            data = self._scrap()
-        except Exception as e:
-            print(str(e))
-            data = pd.DataFrame()
-
-        return data
+        self._waiting = 1
 
     def scrap_from_config(self, config):
 
         """Récupération de données à partir d'un fichier de configuration."""
 
-        # (1) Remise à 0 des paramètres du scrapper.
-        # (2) Mise à jour des paramètres avec les nouvelles données.
-        # (3) Récupération des données.
-        # (4) En cas de problème on signale l'étape qui est en échec et on sauvegarde l'erreur.
-
-        # (1)
-        self._reinit()
-
-        # (2)
-        self._city = config["city"]
-        self._update_specific_parameters_from_config(config)
+        data = pd.DataFrame(columns=["date"])
 
         try:
             self._waiting = config["waiting"]
         except KeyError:
             pass
 
-        data = pd.DataFrame()
+        for parameters in self._build_parameters_generator(config):
 
-        for dates_parameters in self._create_dates_generator(config):
+            url = self._build_url(parameters)
 
-            self.__dict__.update(dates_parameters)
+            try:
+                key = f"{parameters['city']}_{parameters['year_str']}_{parameters['month_str']}_{parameters['day_str']}"
+            except KeyError:
+                key = f"{parameters['city']}_{parameters['year_str']}_{parameters['month_str']}"
 
-            key = self._build_key()
-
-            self._url = self._build_url()
-
-            print(self)
+            print(url)
 
             try:
                 # (3)
-                data = pd.concat([data, self._scrap()])
+                data = pd.concat([data, self._scrap(url, parameters)])
             except Exception as e:
                 # (4)
                 print(str(e))
-                self.errors[key] = {"url": self._url, "error": str(e)}
-                continue
+                self.errors[key] = {"url": url, "error": str(e)}
+
+        data.sort_index()
 
         return data
 
-    # Utilitaires
-    @abstractmethod
-    def _update_parameters_from_url(self, url: str) -> None:
-        """
-        Mise à jour des paramètres du scrapper à partir d'une url.
-        Implémentée dans chaque scrapper concrêt.
-
-        @param l'url passée par l'utilisateur.
-        """
-        pass
-
-    @abstractmethod
-    def _update_specific_parameters_from_config(self, config: dict) -> None:
-        """
-        Mise à jour des paramètres spécifiques à chaque scrapper concrêt.
-        Utilisé lors de la récupération de données via un fichier config.
-        Implémentée dans chaque scrapper concrêt.
-        """
-        pass
-
-    @abstractmethod
-    def _build_key(self) -> str:
-        """
-        Création de la clé au format city_yyyy_mm_dd pour sauvegarder les erreurs (dict).
-        Implémentée dans les Monthly / Daily Scrapper.
-
-        @return la clé" du dict errors.
-        """
-        pass
-
-    # Méthode principale
-    def _scrap(self) -> pd.DataFrame:
+    def _scrap(self, url, parameters) -> pd.DataFrame:
 
         """
         Récupération des données contenues dans une page html à partir de son url.
@@ -144,7 +75,7 @@ class MeteoScrapper(ABC, ConfigScrapperInterface):
         """
 
         try:
-            html_page = self._load_html_page(self._url, self._waiting)
+            html_page = self._load_html_page(url, self._waiting)
         except Exception:
             raise HtmlPageException()
 
@@ -160,122 +91,8 @@ class MeteoScrapper(ABC, ConfigScrapperInterface):
             raise ScrapException()
 
         try:
-            df = self._rework_data(values, col_names)
+            df = self._rework_data(values, col_names, parameters)
         except Exception:
             raise ReworkException()
 
         return df
-
-
-
-class MonthlyScrapper(MeteoScrapper):
-    """Scrapper spécialisé dans la récupération de données mensuelles."""
-
-    def __init__(self):
-
-        super().__init__()
-
-        self._year = -1
-        self._month = -1
-
-        self._year_str = ""
-        self._month_str = ""
-
-    def _reinit(self):
-
-        super().__init__()
-
-        self._year = -1
-        self._month = -1
-
-        self._year_str = ""
-        self._month_str = ""
-
-    def _create_dates_generator(self, config):
-
-        return (
-
-            {
-                "_year": year,
-                "_month": month,
-                "_year_str": str(year),
-                "_month_str": "0" + str(month) if month < 10 else str(month)
-            }
-
-            for year in range(config["year"][0],
-                              config["year"][-1] + 1)
-
-            for month in range(config["month"][0],
-                               config["month"][-1] + 1)
-        )
-
-    def _build_key(self):
-        return f"{self._city}_{self._year_str}_{self._month_str}"
-
-    # Dunder methods
-    def __repr__(self):
-        date = f"{self._month_str}/{self._year_str}"
-        return f"<{self.__class__.__name__} ville: {self._city}, date: {date}, url: {self._url}>"
-
-
-
-class DailyScrapper(MeteoScrapper):
-    """Scrapper spécialisé dans la récupération de données quotidiennes."""
-
-    def __init__(self):
-
-        super().__init__()
-
-        self._year = -1
-        self._month = -1
-        self._day = -1
-
-        self._year_str = ""
-        self._month_str = ""
-        self._day_str = ""
-
-    def _reinit(self):
-
-        super()._reinit()
-
-        self._year = -1
-        self._month = -1
-        self._day = -1
-
-        self._year_str = ""
-        self._month_str = ""
-        self._day_str = ""
-
-    def _create_dates_generator(self, config):
-
-        return (
-
-            {
-                "_year": year,
-                "_month": month,
-                "_day": day,
-
-                "_year_str": str(year),
-                "_month_str": "0" + str(month) if month < 10 else str(month),
-                "_day_str": "0" + str(day) if day < 10 else str(day)
-            }
-
-            for year in range(config["year"][0],
-                              config["year"][-1] + 1)
-
-            for month in range(config["month"][0],
-                               config["month"][-1] + 1)
-
-            for day in range(config["day"][0],
-                             config["day"][-1] + 1)
-
-            if day <= self.DAYS[month]
-        )
-
-    def _build_key(self):
-        return f"{self._city}_{self._year_str}_{self._month_str}_{self._day_str}"
-
-    # Dunder methods
-    def __repr__(self):
-        date = f"{self._day_str}/{self._month_str}/{self._year_str}"
-        return f"<{self.__class__.__name__} ville: {self._city}, date: {date}, url: {self._url}>"

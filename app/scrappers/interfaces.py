@@ -4,7 +4,7 @@ from requests_html import HTMLSession, Element
 from requests import Response
 from requests.exceptions import ConnectionError
 
-class UrlScrapperInterface:
+class ConfigScrapperInterface:
 
     """
     Une interface compilant les méthodes destinées à récupérer une page html,
@@ -12,12 +12,32 @@ class UrlScrapperInterface:
     """
 
     @abstractmethod
-    def scrap_from_url(self, url: str) -> pd.DataFrame:
+    def scrap_from_config(self, config: dict) -> pd.DataFrame:
         """
-        Récupération de données à l'url fournie.
+        Récupération de données à partir d'un fichier de configuration.
 
-        @param l'url à lquelle se trouvent les données à récupérer
-        @return le dataframe contenant les données.
+        @param un dict contenant les paramètres
+        @return le dataframe des données pour toutes les dates contenues dans la config
+        """
+        pass
+
+    @abstractmethod
+    def _build_parameters_generator(self, config: dict) -> "tuple[dict]":
+        """
+        Création du générateur de paramètres.
+
+        @param le dict contenant les paramètres
+        @return un tuple contenant les dates à traiter.
+        """
+        pass
+
+    @abstractmethod
+    def _build_url(self, parameters: dict) -> str:
+        """
+        Reconstruction de l'url où se trouvent les données à récupérer.
+        Implémentée dans chaque scrapper concrêt.
+
+        @return l'url complète au format str du tableau de données à récupérer.
         """
         pass
 
@@ -118,7 +138,7 @@ class UrlScrapperInterface:
         pass
 
     @abstractmethod
-    def _rework_data(self, values: "list[str]", columns_names: "list[str]") -> pd.DataFrame:
+    def _rework_data(self, values: "list[str]", columns_names: "list[str]", parameters: dict) -> pd.DataFrame:
         """
         Mise en forme du tableau de données. Implémentée dans chaque scrapper concrêt.
 
@@ -127,40 +147,5 @@ class UrlScrapperInterface:
             column_names - La liste des noms de colonnes.
 
         @return le dataframe équivalent au tableau de données html.
-        """
-        pass
-
-
-
-class ConfigScrapperInterface(UrlScrapperInterface):
-
-    @abstractmethod
-    def scrap_from_config(self, config: dict) -> pd.DataFrame:
-        """
-        Récupération de données à partir d'un fichier de configuration.
-
-        @param un dict contenant les paramètres
-        @return le dataframe des données pour toutes les dates contenues dans la config
-        """
-        pass
-
-    @abstractmethod
-    def _create_dates_generator(self, config: dict) -> tuple:
-        """
-        Création des combinaisons années / mois (/ jour) à traiter.
-        Implémentée dans les Monthly / Daily Scrapper.
-
-        @param le dict contenant les paramètres
-        @return un tuple contenant les dates à traiter.
-        """
-        pass
-
-    @abstractmethod
-    def _build_url(self) -> str:
-        """
-        Reconstruction de l'url où se trouvent les données à récupérer.
-        Implémentée dans chaque scrapper concrêt.
-
-        @return l'url complète au format str du tableau de données à récupérer.
         """
         pass

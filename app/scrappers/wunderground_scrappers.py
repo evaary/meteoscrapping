@@ -1,9 +1,9 @@
 from string import Template
 import numpy as np
 import pandas as pd
-from app.scrappers.abcs import MonthlyScrapper
+from app.scrappers.abcs import MeteoScrapper
 
-class WundergroundMonthly(MonthlyScrapper):
+class WundergroundMonthly(MeteoScrapper):
 
     UNITS_CONVERSION = {
         "dew" : {"new_name": "dew_point_°C",
@@ -30,43 +30,33 @@ class WundergroundMonthly(MonthlyScrapper):
 
     BASE_URL = Template("https://www.wunderground.com/history/monthly/$country_code/$city/$region/date/$year-$month")
 
-    def __init__(self):
-        super().__init__()
-        self._country_code = ""
-        self._region = ""
+    def _build_parameters_generator(self, config):
 
-    def _reinit(self):
-        super()._reinit()
-        self._country_code = ""
-        self._region = ""
+        return (
 
-    def _update_parameters_from_url(self, url):
+            {
+                "city": config["city"],
+                "country_code" : config["country_code"],
+                "region": config["region"],
+                "year": year,
+                "month": month,
+                "year_str": str(year),
+                "month_str": "0" + str(month) if month < 10 else str(month)
+            }
 
-        *_, country_code, city, region, _, year_month = url.split("/")
+            for year in range(config["year"][0],
+                              config["year"][-1] + 1)
 
-        year_str, month_str = year_month.split("-")
+            for month in range(config["month"][0],
+                               config["month"][-1] + 1)
+        )
 
-        self.__dict__.update({
-            "_url": url,
-            "_city": city,
-            "_year": int(year_str),
-            "_year_str": year_str,
-            "_month": int(month_str),
-            "_month_str": month_str,
-            "_country_code": country_code,
-            "_region": region
-        })
-
-    def _update_specific_parameters_from_config(self, config):
-        self._country_code = config["country_code"]
-        self._region = config["region"]
-
-    def _build_url(self):
-        return self.BASE_URL.substitute(country_code=self._country_code,
-                                        city=self._city,
-                                        region=self._region,
-                                        year=self._year,
-                                        month=self._month)
+    def _build_url(self, parameters):
+        return self.BASE_URL.substitute(country_code=parameters["country_code"],
+                                        city=parameters["city"],
+                                        region=parameters["region"],
+                                        year=parameters["year"],
+                                        month=parameters["month"])
 
     @staticmethod
     def _scrap_columns_names(table):
@@ -88,7 +78,7 @@ class WundergroundMonthly(MonthlyScrapper):
 
         return [ td.text for td in table.find("tbody")[0].find("td") if "\n" in td.text ]
 
-    def _rework_data(self, values, columns_names):
+    def _rework_data(self, values, columns_names, parameters):
 
         # (1) values est une liste de str. Chaque str contient toutes les données d'1 colonne principale
         #     séparées par des \n ("x\nx\nx\nx..."). On convertit ces str en liste de données [x,x,x, ...].
@@ -162,8 +152,8 @@ class WundergroundMonthly(MonthlyScrapper):
 
         # (6)
         df["date"] = [
-            f"{self._year_str}/{self._month_str}/0{day}" if int(day) < 10
-            else f"{self._year_str}/{self._month_str}/{day}"
+            f"{parameters['year_str']}/{parameters['month_str']}/0{day}" if int(day) < 10
+            else f"{parameters['year_str']}/{parameters['month_str']}/{day}"
             for day in df.date
         ]
 

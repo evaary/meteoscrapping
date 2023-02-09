@@ -13,8 +13,6 @@ class Wunderground_MonthlyTester(TestCase):
     # valeurs de référence pour janvier 2021
     URL_REF = "https://www.wunderground.com/history/monthly/it/matera/LIBD/date/2021-1"
 
-    KEY_REF = "matera_2021_01"
-
     # liste des colonnes qui n'ont pas besoin d'être converties dans une nouvelle unité
     NOT_CONVERTED = ["humidity_(%)_max", "humidity_(%)_avg", "humidity_(%)_min"]
 
@@ -68,10 +66,12 @@ class Wunderground_MonthlyTester(TestCase):
         converted = [col for col in converted if "°C" not in col]
 
         difference = np.round((data[converted] - cls.RESULTATS[converted]) * 100 / cls.RESULTATS[converted] , 2)
+
         # on exclue les colonnes du vent car les écarts dûs à la conversion peuvent être importants
         difference = difference[[x for x in list(difference.columns) if "wind" not in x]]
 
-        return difference.max(numeric_only=True).max() <= 0.5 and data[cls.NOT_CONVERTED].equals(cls.RESULTATS[cls.NOT_CONVERTED])
+        return (     difference.max(numeric_only=True).max() <= 0.5
+                 and (data[cls.NOT_CONVERTED] - cls.RESULTATS[cls.NOT_CONVERTED]).sum().sum() == 0 )
 
 
     @classmethod
@@ -79,26 +79,13 @@ class Wunderground_MonthlyTester(TestCase):
         cls.RESULTATS["date"] = pd.to_datetime(cls.RESULTATS["date"])
         cls.RESULTATS = cls.RESULTATS.set_index("date")
 
-    def test_key(self):
-       self.SCRAPPER.__dict__.update(**{"_city": "matera",
-                                        "_year_str": "2021",
-                                        "_month_str": "01"})
-
-       self.assertEqual(self.KEY_REF, self.SCRAPPER._build_key())
-
     def test_url(self):
-       self.SCRAPPER.__dict__.update(**{"_country_code": "it",
-                                        "_city": "matera",
-                                        "_region": "LIBD",
-                                        "_year": 2021,
-                                        "_month": 1})
-
-       self.assertEqual(self.URL_REF, self.SCRAPPER._build_url())
+       self.assertEqual(self.URL_REF, self.SCRAPPER._build_url({"country_code": "it",
+                                                                "city": "matera",
+                                                                "region": "LIBD",
+                                                                "year": 2021,
+                                                                "month": 1}))
 
     def test_scrap_data(self):
-
-        data = self.SCRAPPER.scrap_from_url(self.URL_REF).set_index("date")
-        self.assertTrue( self.compare_data(data) )
-
         data = self.SCRAPPER.scrap_from_config(self.CONFIG).set_index("date")
         self.assertTrue( self.compare_data(data) )

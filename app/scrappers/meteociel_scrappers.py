@@ -2,9 +2,9 @@ from string import Template
 import numpy as np
 import pandas as pd
 import re
-from app.scrappers.abcs import MonthlyScrapper, DailyScrapper
+from app.scrappers.abcs import MeteoScrapper
 
-class MeteocielMonthly(MonthlyScrapper):
+class MeteocielMonthly(MeteoScrapper):
 
     UNITS = {"temperature": "°C", "precipitations": "mm", "ensoleillement": "h"}
 
@@ -16,47 +16,32 @@ class MeteocielMonthly(MonthlyScrapper):
     # Regex pour récupérer uniquement les float d'une string pour la colonne des précipitations.
     TEMPLATE_PRECIPITATION = r'-?\d+\.?\d*'
 
-    def __init__(self):
-        super().__init__()
-        self._code_num = ""
-        self._code = ""
+    def _build_parameters_generator(self, config):
 
-    def _reinit(self):
-        super()._reinit()
-        self._code_num = ""
-        self._code = ""
+        return (
 
-    def _update_parameters_from_url(self, url):
+            {
+                "city": config["city"],
+                "code_num": config["code_num"],
+                "code": config["code"],
+                "year": year,
+                "month": month,
+                "year_str": str(year),
+                "month_str": "0" + str(month) if month < 10 else str(month)
+            }
 
-        base_url, month_part, year_part = url.split("&")
+            for year in range(config["year"][0],
+                              config["year"][-1] + 1)
 
-        year = int(year_part.split("=")[1])
-        month = int(month_part.split("=")[1])
+            for month in range(config["month"][0],
+                               config["month"][-1] + 1)
+        )
 
-        _, code_part = base_url.split("?")
-        code_num, code = code_part.split("=")
-        code_num = code_num[-1]
-
-        self.__dict__.update({
-            "_url": url,
-            "_city": code_num,
-            "_year": year,
-            "_month": month,
-            "_year_str": str(year),
-            "_month_str": str(month) if month >= 10 else "0" + str(month),
-            "_code": code,
-            "_code_num": code_num
-        })
-
-    def _update_specific_parameters_from_config(self, config):
-        self._code_num = config["code_num"]
-        self._code = config["code"]
-
-    def _build_url(self):
-        return self.BASE_URL.substitute(code_num = self._code_num,
-                                        code = self._code,
-                                        mois = self._month,
-                                        annee = self._year)
+    def _build_url(self, parameters):
+        return self.BASE_URL.substitute(code_num = parameters["code_num"],
+                                        code = parameters["code"],
+                                        mois = parameters["month"],
+                                        annee = parameters["year"])
 
     @staticmethod
     def _scrap_columns_names(table):
@@ -84,7 +69,7 @@ class MeteocielMonthly(MonthlyScrapper):
         # sauf la 1ère (noms des colonnes) et la dernière (cumul / moyenne mensuel).
         return [ td.text for tr in table.find("tr")[1:-1] for td in tr.find("td") ]
 
-    def _rework_data(self, values, columns_names):
+    def _rework_data(self, values, columns_names, parameters):
 
         # (0) On ajoute au nom de la colonne son unité.
         # (1) On définit les dimensions du tableau puis on le créé.
@@ -118,8 +103,8 @@ class MeteocielMonthly(MonthlyScrapper):
                                                      else 0 if string in ("aucune", "traces")
                                                      else float(re.findall(self.TEMPLATE_PRECIPITATION, string)[0]))
 
-        f_rework_dates = np.vectorize(lambda day :      f"{self._year_str}-{self._month_str}-0{int(day)}" if day < 10
-                                                   else f"{self._year_str}-{self._month_str}-{int(day)}")
+        f_rework_dates = np.vectorize(lambda day :      f"{parameters['year_str']}-{parameters['month_str']}-0{int(day)}" if day < 10
+                                                   else f"{parameters['year_str']}-{parameters['month_str']}-{int(day)}")
 
         # (4)
         df["date"] = f_num_extract(df["date"])
@@ -136,7 +121,7 @@ class MeteocielMonthly(MonthlyScrapper):
 
 
 
-class MeteocielDaily(DailyScrapper):
+class MeteocielDaily(MeteoScrapper):
 
     UNITS = {
         "visi": "km",
@@ -173,55 +158,40 @@ class MeteocielDaily(DailyScrapper):
     # Regex pour récupérer uniquement les float d'une string pour la colonne des précipitations.
     TEMPLATE_PRECIPITATION = r'-?\d+\.?\d*'
 
-    def __init__(self):
-        super().__init__()
-        self._code_num = ""
-        self._code = ""
+    def _build_parameters_generator(self, config):
 
-    def _reinit(self):
-        super()._reinit()
-        self._code_num = ""
-        self._code = ""
+        return (
 
-    def _update_parameters_from_url(self, url):
+            {
+                "city": config["city"],
+                "code_num": config["code_num"],
+                "code": config["code"],
+                "year": year,
+                "month": month,
+                "day": day,
+                "year_str": str(year),
+                "month_str": "0" + str(month) if month < 10 else str(month),
+                "day_str": "0" + str(day) if day < 10 else str(day)
+            }
 
-        base_url, day_part, month_part, year_part = url.split("&")
+            for year in range(config["year"][0],
+                              config["year"][-1] + 1)
 
-        year = int(year_part.split("=")[1])
-        month = int(month_part.split("=")[1])
-        day = int(day_part.split("=")[1])
+            for month in range(config["month"][0],
+                               config["month"][-1] + 1)
 
-        revert_numerotation = { value : key for key, value in self.NUMEROTATIONS.items() }
+            for day in range(config["day"][0],
+                             config["day"][-1] + 1)
 
-        month = revert_numerotation[month]
+            if day <= self.DAYS[month]
+        )
 
-        _, code_part = base_url.split("?")
-        code_num, code = code_part.split("=")
-        code_num = code_num[-1]
-
-        self.__dict__.update({
-            "_url": url,
-            "_city": code_num,
-            "_year": year,
-            "_month": month,
-            "_day": day,
-            "_year_str": str(year),
-            "_month_str": str(month) if month >= 10 else "0" + str(month),
-            "_day_str": str(day) if day >= 10 else "0" + str(day),
-            "_code": code,
-            "_code_num": code_num
-        })
-
-    def _update_specific_parameters_from_config(self, config):
-        self._code_num = config["code_num"]
-        self._code = config["code"]
-
-    def _build_url(self):
-        return self.BASE_URL.substitute(code_num=self._code_num,
-                                        code=self._code,
-                                        jour2=self._day,
-                                        mois2=self.NUMEROTATIONS[self._month],
-                                        annee2=self._year)
+    def _build_url(self, parameters):
+        return self.BASE_URL.substitute(code_num=parameters["code_num"],
+                                        code=parameters["code"],
+                                        jour2=parameters["day"],
+                                        mois2=self.NUMEROTATIONS[ parameters["month"] ],
+                                        annee2=parameters["year"] )
 
     @staticmethod
     def _scrap_columns_names(table):
@@ -244,7 +214,7 @@ class MeteocielDaily(DailyScrapper):
     def _scrap_columns_values(table):
         return [ td.text for tr in table.find("tr")[1:] for td in tr.find("td") ]
 
-    def _rework_data(self, values, columns_names):
+    def _rework_data(self, values, columns_names, parameters):
 
         # (1) On définit les dimensions du tableau puis on le créé.
         # (2) On met de coté la colonne vent car il faut la séparer en 2.
@@ -273,8 +243,8 @@ class MeteocielDaily(DailyScrapper):
                                                      else 0 if string in ("aucune", "traces")
                                                      else float(re.findall(self.TEMPLATE_PRECIPITATION, string)[0]))
 
-        f_rework_dates = np.vectorize(lambda heure :      f"{self._year_str}-{self._month_str}-{self._day_str} 0{int(heure)}:00:00" if heure < 10
-                                                     else f"{self._year_str}-{self._month_str}-{self._day_str} {int(heure)}:00:00")
+        f_rework_dates = np.vectorize(lambda heure :      f"{parameters['year_str']}-{parameters['month_str']}-{parameters['day_str']} 0{int(heure)}:00:00" if heure < 10
+                                                     else f"{parameters['year_str']}-{parameters['month_str']}-{parameters['day_str']} {int(heure)}:00:00")
 
         df["date"] = f_num_extract(df["heure"])
         df["date"] = f_rework_dates(df["date"])

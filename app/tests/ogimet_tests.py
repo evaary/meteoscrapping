@@ -13,8 +13,6 @@ class Ogimet_MonthlyTester(TestCase):
     # valeurs de référence pour janvier 2021
     URL_REF = "http://www.ogimet.com/cgi-bin/gsynres?lang=en&ind=16138&ano=2021&mes=3&day=0&hora=0&min=0&ndays=28"
 
-    KEY_REF = "Ferrara_2021_02"
-
     RESULTATS = pd.DataFrame(
         [["2021-02-01",   6.8,   5.6,	 6.4,	  4.2,	86.2,	"WNW",	 8.5,	 996.1, 	7.8, 	   7.8,	    3.8],
          ["2021-02-02",   7.6,   1.0,	 4.7,	  2.7,	83.9,	"CAL",	 0.0,	1000.0, 	4.8, 	   4.2,	    9.2],
@@ -65,25 +63,12 @@ class Ogimet_MonthlyTester(TestCase):
         cls.RESULTATS["date"] = pd.to_datetime(cls.RESULTATS["date"])
         cls.RESULTATS = cls.RESULTATS.set_index("date")
 
-    def test_key(self):
-        self.SCRAPPER.__dict__.update(**{"_city": "Ferrara",
-                                         "_year_str": "2021",
-                                         "_month_str": "02"})
-
-        self.assertEqual(self.KEY_REF, self.SCRAPPER._build_key())
-
     def test_url(self):
-       self.SCRAPPER.__dict__.update(**{"_ind": "16138",
-                                        "_year": 2021,
-                                        "_month": 2})
-
-       self.assertEqual(self.URL_REF, self.SCRAPPER._build_url())
+       self.assertEqual(self.URL_REF, self.SCRAPPER._build_url({"ind": "16138",
+                                                                "year": 2021,
+                                                                "month": 2}))
 
     def test_scrap_data(self):
-
-        data = self.SCRAPPER.scrap_from_url(self.URL_REF).set_index("date")
-        self.assertTrue( self.compare_data(data) )
-
         data = self.SCRAPPER.scrap_from_config(self.CONFIG).set_index("date")
         self.assertTrue( self.compare_data(data) )
 

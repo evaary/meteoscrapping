@@ -12,8 +12,6 @@ class Meteociel_MonthlyTester(TestCase):
     # valeurs de référence pour janvier 2021
     URL_REF = "https://www.meteociel.com/climatologie/obs_villes.php?code2=7249&mois=1&annee=2021"
 
-    KEY_REF = "orleans_2021_01"
-
     RESULTATS = pd.DataFrame(
         [["2021-01-01", 2.1 , -3.6, 0.0 , 3.9],
          ["2021-01-02", 4.0 , -2.2, 0.2 , 6.0],
@@ -61,26 +59,13 @@ class Meteociel_MonthlyTester(TestCase):
         cls.RESULTATS["date"] = pd.to_datetime(cls.RESULTATS["date"])
         cls.RESULTATS = cls.RESULTATS.set_index("date")
 
-    def test_key(self):
-        self.SCRAPPER.__dict__.update(**{"_city": "orleans",
-                                        "_year_str": "2021",
-                                        "_month_str": "01"})
-
-        self.assertEqual(self.KEY_REF, self.SCRAPPER._build_key())
-
     def test_url(self):
-        self.SCRAPPER.__dict__.update(**{"_code_num": "2",
-                                        "_code": "7249",
-                                        "_year": 2021,
-                                        "_month": 1})
-
-        self.assertEqual(self.URL_REF, self.SCRAPPER._build_url())
+        self.assertEqual(self.URL_REF, self.SCRAPPER._build_url({"code_num": "2",
+                                                                 "code": "7249",
+                                                                 "year": 2021,
+                                                                 "month": 1}))
 
     def test_scrap_data(self):
-
-        data = self.SCRAPPER.scrap_from_url(self.URL_REF).set_index("date")
-        self.assertTrue( self.compare_data(data) )
-
         data = self.SCRAPPER.scrap_from_config(self.CONFIG).set_index("date")
         self.assertTrue( self.compare_data(data) )
 
@@ -94,8 +79,6 @@ class Meteociel_DailyTester(TestCase):
 
     # valeurs de référence pour janvier 2021
     URL_REF = "https://www.meteociel.com/temps-reel/obs_villes.php?code2=7249&jour2=1&mois2=0&annee2=2020"
-
-    KEY_REF = "orleans_2020_01_01"
 
     NOT_NUMERIC = ["heure", "neb"]
 
@@ -140,27 +123,13 @@ class Meteociel_DailyTester(TestCase):
         cls.RESULTATS = cls.RESULTATS.set_index("date")
         cls.RESULTATS = cls.RESULTATS.sort_values(by="date")
 
-    def test_key(self):
-        self.SCRAPPER.__dict__.update(**{"_city": "orleans",
-                                         "_year_str": "2020",
-                                         "_month_str": "01",
-                                         "_day_str": "01"})
-
-        self.assertEqual(self.KEY_REF, self.SCRAPPER._build_key())
-
     def test_url(self):
-        self.SCRAPPER.__dict__.update(**{"_code_num": "2",
-                                         "_code": "7249",
-                                         "_year": 2020,
-                                         "_month": 1,
-                                         "_day": 1})
-
-        self.assertEqual(self.URL_REF, self.SCRAPPER._build_url())
+        self.assertEqual(self.URL_REF, self.SCRAPPER._build_url({"code_num": "2",
+                                                                 "code": "7249",
+                                                                 "year": 2020,
+                                                                 "month": 1,
+                                                                 "day": 1}))
 
     def test_scrap_data(self):
-
-        data = self.SCRAPPER.scrap_from_url(self.URL_REF).set_index("date")
-        self.assertTrue( self.compare_data(data) )
-
         data = self.SCRAPPER.scrap_from_config(self.CONFIG).set_index("date")
         self.assertTrue( self.compare_data(data) )

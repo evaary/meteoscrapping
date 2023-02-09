@@ -1,7 +1,6 @@
 import multiprocessing
 from datetime import datetime
 import os
-
 from json.decoder import JSONDecodeError
 from app.data_managers import from_json, to_csv, to_json
 from app.scrappers.abcs import MeteoScrapper
@@ -31,28 +30,6 @@ class Runner:
     CHECKER = ConfigFilesChecker.instance()
 
     @classmethod
-    def launch_scrapping(cls, scrapper_type: str, config: dict) -> None:
-
-        date = str( int( datetime.now().timestamp() ) )
-
-        datafilename = "_".join([date, config['city'], scrapper_type, ".csv"]).lower()
-        errorsfilename = "_".join([date, config['city'], scrapper_type, "_errors.json"]).lower()
-
-        path_data = os.path.join(cls.PATHS["results"], datafilename)
-        path_errors = os.path.join(cls.PATHS["errors"], errorsfilename)
-
-        scrapper: MeteoScrapper = cls.SCRAPPERS[scrapper_type]()
-        data = scrapper.scrap_from_config(config)
-
-        if not data.empty:
-            to_csv(data, path_data)
-
-        if scrapper.errors:
-            to_json(scrapper.errors, path_errors)
-
-        print("\n")
-
-    @classmethod
     def run(cls):
 
         try:
@@ -71,9 +48,11 @@ class Runner:
             print(e)
             return
 
-        processes: list[multiprocessing.Process] = []
-
         for scrapper_type in {x for x in configs.keys() if x != "waiting"}:
+
+
+            scrapper: MeteoScrapper = cls.SCRAPPERS[scrapper_type]()
+
 
             for config in configs[scrapper_type]:
 
@@ -82,9 +61,20 @@ class Runner:
                 except KeyError:
                     config["waiting"] = 3
 
-                process = multiprocessing.Process(target=cls.launch_scrapping, args=[scrapper_type, config] )
-                process.start()
-                processes.append(process)
+                date = str( int( datetime.now().timestamp() ) )
 
-        for process in processes:
-            process.join()
+                datafilename = "_".join([date, config['city'], scrapper_type, ".csv"]).lower()
+                errorsfilename = "_".join([date, config['city'], scrapper_type, "_errors.json"]).lower()
+
+                path_data = os.path.join(cls.PATHS["results"], datafilename)
+                path_errors = os.path.join(cls.PATHS["errors"], errorsfilename)
+
+                data = scrapper.scrap_from_config(config)
+
+                if not data.empty:
+                    to_csv(data, path_data)
+
+                if scrapper.errors:
+                    to_json(scrapper.errors, path_errors)
+
+                print("\n")

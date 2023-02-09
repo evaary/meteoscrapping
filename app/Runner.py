@@ -1,4 +1,3 @@
-import multiprocessing
 from datetime import datetime
 import os
 from json.decoder import JSONDecodeError

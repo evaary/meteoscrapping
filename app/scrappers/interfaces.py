@@ -3,6 +3,7 @@ from abc import abstractmethod, abstractstaticmethod
 from requests_html import HTMLSession, Element
 from requests import Response
 from requests.exceptions import ConnectionError
+from app.scrappers.exceptions import HtmlPageException
 
 class ConfigScrapperInterface:
 
@@ -74,6 +75,9 @@ class ConfigScrapperInterface:
 
                 except ConnectionError:
                     html_page = None
+
+        if html_page is None:
+            raise HtmlPageException()
 
         return html_page
 

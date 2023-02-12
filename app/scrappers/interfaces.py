@@ -4,42 +4,12 @@ from requests_html import HTMLSession, Element
 from requests import Response
 from requests.exceptions import ConnectionError
 
-class ConfigScrapperInterface:
+class ScrapperInterface:
 
     """
     Une interface compilant les méthodes destinées à récupérer une page html,
     identifier le tableau de données et scrapper les data.
     """
-
-    @abstractmethod
-    def scrap_from_config(self, config: dict) -> pd.DataFrame:
-        """
-        Récupération de données à partir d'un fichier de configuration.
-
-        @param un dict contenant les paramètres
-        @return le dataframe des données pour toutes les dates contenues dans la config
-        """
-        pass
-
-    @abstractmethod
-    def _build_parameters_generator(self, config: dict) -> "tuple[dict]":
-        """
-        Création du générateur de paramètres.
-
-        @param le dict contenant les paramètres
-        @return un tuple contenant les dates à traiter.
-        """
-        pass
-
-    @abstractmethod
-    def _build_url(self, parameters: dict) -> str:
-        """
-        Reconstruction de l'url où se trouvent les données à récupérer.
-        Implémentée dans chaque scrapper concrêt.
-
-        @return l'url complète au format str du tableau de données à récupérer.
-        """
-        pass
 
     @staticmethod
     def _load_html_page(url: str, waiting: int) -> Response:
@@ -147,5 +117,44 @@ class ConfigScrapperInterface:
             column_names - La liste des noms de colonnes.
 
         @return le dataframe équivalent au tableau de données html.
+        """
+        pass
+
+
+
+class ConfigScrapperInterface:
+
+    """
+    Une interface pour exploiter un fichier de configuration.
+    """
+
+    @abstractmethod
+    def scrap_from_config(self, config: dict) -> pd.DataFrame:
+        """
+        Récupération de données à partir d'un fichier de configuration.
+
+        @param un dict contenant les paramètres
+        @return le dataframe des données pour toutes les dates contenues dans la config
+        """
+        pass
+
+    @abstractmethod
+    def _build_parameters_generator(self, config: dict) -> "tuple[dict]":
+        """
+        Création du générateur de paramètres.
+
+        @param config, le dictionnaire issu d'un fichier config
+        @return un tuple contenant les dates à traiter.
+        """
+        pass
+
+    @abstractmethod
+    def _build_url(self, parameters: dict) -> str:
+        """
+        Reconstruction de l'url où se trouvent les données à récupérer.
+        Implémentée dans chaque scrapper concrêt.
+
+        @param parameters le dictionnaire contenant les paramètres du job.
+        @return l'url complète au format str du tableau de données à récupérer.
         """
         pass

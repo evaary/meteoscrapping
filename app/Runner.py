@@ -50,9 +50,7 @@ class Runner:
 
         for scrapper_type in {x for x in configs.keys() if x != "waiting"}:
 
-
             scrapper: MeteoScrapper = cls.SCRAPPERS[scrapper_type]()
-
 
             for config in configs[scrapper_type]:
 

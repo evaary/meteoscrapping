@@ -1,15 +1,12 @@
 from abc import ABC
 import pandas as pd
 from app.scrappers.exceptions import HtmlPageException, HtmlTableException, ReworkException, ScrapException
-from app.scrappers.interfaces import ConfigScrapperInterface
+from app.scrappers.interfaces import ScrapperInterface, ConfigScrapperInterface
 
-class MeteoScrapper(ABC, ConfigScrapperInterface):
+class MeteoScrapper(ABC,
+                    ScrapperInterface,
+                    ConfigScrapperInterface):
 
-    """
-    Scrapper de base.
-
-    Une fois instancié, appeler scrap_from_config ou scrap_from_url pour récupérer les données.
-    """
     # Nombre de jours dans chaque mois.
     # Wunderground et Météociel récupèrent le 29ème jour de février s'il existe.
     DAYS = {
@@ -44,22 +41,22 @@ class MeteoScrapper(ABC, ConfigScrapperInterface):
 
         for parameters in self._build_parameters_generator(config):
 
-            url = self._build_url(parameters)
+            parameters["url"] = self._build_url(parameters)
 
             try:
                 key = f"{parameters['city']}_{parameters['year_str']}_{parameters['month_str']}_{parameters['day_str']}"
             except KeyError:
                 key = f"{parameters['city']}_{parameters['year_str']}_{parameters['month_str']}"
 
-            print(url)
+            print(parameters["url"])
 
             try:
                 # (3)
-                data = pd.concat([data, self._scrap(url, parameters)])
+                data = pd.concat([data, self._scrap(parameters)])
             except Exception as e:
                 # (4)
                 print(str(e))
-                self.errors[key] = {"url": url, "error": str(e)}
+                self.errors[key] = {"url": parameters["url"], "error": str(e)}
 
         data.sort_index()
 
@@ -70,6 +67,10 @@ class MeteoScrapper(ABC, ConfigScrapperInterface):
         """
         Récupération des données contenues dans une page html à partir de son url.
         La variable CRITERIA est créée dans chaque scrapper concrêt.
+
+        @params
+            url : l'adresse à scrapper
+            parameters : le dictionnaire contenant les paramètres du job
 
         @return le dataframe contenant les données.
         """

@@ -214,6 +214,17 @@ class MeteocielDaily(MeteoScrapper):
     def _scrap_columns_values(table):
         return [ td.text for tr in table.find("tr")[1:] for td in tr.find("td") ]
 
+    @staticmethod
+    def _fill_missing_values(values: "list[str]", n_cols: int):
+
+        hours = [f"{x} h" for x in range(0, 24)]
+        missing_hours = [x for x in hours if x not in values]
+
+        for hour in missing_hours:
+            values += [hour] + ["" for _ in range(n_cols - 1)]
+
+        return values
+
     def _rework_data(self, values, columns_names, parameters):
 
         # (1) On définit les dimensions du tableau puis on le créé.
@@ -228,6 +239,11 @@ class MeteocielDaily(MeteoScrapper):
         # (1)
         n_rows = 24
         n_cols = len(columns_names)
+        n_expected = n_rows * n_cols
+        n_values = len(values)
+
+        if(n_values != n_expected):
+            values = self._fill_missing_values(values, n_cols)
 
         df = pd.DataFrame(np.array(values).reshape(n_rows, n_cols), columns=columns_names)
 

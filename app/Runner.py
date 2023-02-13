@@ -1,6 +1,6 @@
-import multiprocessing
-from datetime import datetime
+from concurrent.futures import ProcessPoolExecutor
 import os
+import random
 from json.decoder import JSONDecodeError
 from app.data_managers import from_json, to_csv, to_json
 from app.scrappers.abcs import MeteoScrapper
@@ -11,6 +11,8 @@ from app.checkers.ConfigFileChecker import ConfigFilesChecker
 from app.checkers.exceptions import ConfigFileCheckerException
 
 class Runner:
+
+    MAX_PROCESSES = 5
 
     WORKDIR = os.getcwd()
 
@@ -28,6 +30,28 @@ class Runner:
     }
 
     CHECKER = ConfigFilesChecker.instance()
+
+    @classmethod
+    def _run_wrapper(cls, config):
+
+        scrapper_type = config["scrapper_type"]
+        scrapper: MeteoScrapper = cls.SCRAPPERS[scrapper_type]()
+
+        id = random.randint(0, 100_000)
+
+        datafilename = "_".join([str(id), config['city'], scrapper_type, ".csv"]).lower()
+        errorsfilename = "_".join([str(id), config['city'], scrapper_type, "_errors.json"]).lower()
+
+        path_data = os.path.join(cls.PATHS["results"], datafilename)
+        path_errors = os.path.join(cls.PATHS["errors"], errorsfilename)
+
+        data = scrapper.scrap_from_config(config)
+
+        if not data.empty:
+            to_csv(data, path_data)
+
+        if scrapper.errors:
+            to_json(scrapper.errors, path_errors)
 
     @classmethod
     def run(cls):
@@ -48,31 +72,20 @@ class Runner:
             print(e)
             return
 
+        all_configs = []
+
         for scrapper_type in {x for x in configs.keys() if x != "waiting"}:
 
-            scrapper: MeteoScrapper = cls.SCRAPPERS[scrapper_type]()
-
             for config in configs[scrapper_type]:
+
+                config["scrapper_type"] = scrapper_type
 
                 try:
                     config["waiting"] = configs["waiting"]
                 except KeyError:
-                    config["waiting"] = 3
+                    config["waiting"] = 2
 
-                date = str( int( datetime.now().timestamp() ) )
+                all_configs.append(config)
 
-                datafilename = "_".join([date, config['city'], scrapper_type, ".csv"]).lower()
-                errorsfilename = "_".join([date, config['city'], scrapper_type, "_errors.json"]).lower()
-
-                path_data = os.path.join(cls.PATHS["results"], datafilename)
-                path_errors = os.path.join(cls.PATHS["errors"], errorsfilename)
-
-                data = scrapper.scrap_from_config(config)
-
-                if not data.empty:
-                    to_csv(data, path_data)
-
-                if scrapper.errors:
-                    to_json(scrapper.errors, path_errors)
-
-                print("\n")
+        with ProcessPoolExecutor(max_workers=cls.MAX_PROCESSES) as executor:
+            executor.map(cls._run_wrapper, all_configs)

@@ -1,5 +1,7 @@
 from abc import ABC
 import pandas as pd
+import os
+import schedule
 from app.scrappers.exceptions import HtmlPageException, HtmlTableException, ReworkException, ScrapException
 from app.scrappers.interfaces import ScrapperInterface, ConfigScrapperInterface
 
@@ -24,9 +26,18 @@ class MeteoScrapper(ABC,
         12 : 31,
     }
 
+    MIN_WAITING = 2
+    PROGRESS_TIMER = 10 # secondes
+
     def __init__(self):
         self.errors = dict()
-        self._waiting = 1
+        self._waiting = 3
+        self._done = 0
+        self._todo = -1
+
+    def _print_progress(self) -> None:
+        print(f"{round(self._done / self._todo) * 100}%")
+        os.system("cls" if os.name == "nt" else "clear")
 
     def scrap_from_config(self, config):
 
@@ -35,28 +46,26 @@ class MeteoScrapper(ABC,
         data = pd.DataFrame(columns=["date"])
 
         try:
-            self._waiting = config["waiting"]
+            self._waiting = config["waiting"] if config["waiting"] >= self.MIN_WAITING else self.MIN_WAITING
         except KeyError:
             pass
 
         for parameters in self._build_parameters_generator(config):
 
-            parameters["url"] = self._build_url(parameters)
+            url = self._build_url(parameters)
+            print(url)
 
             try:
                 key = f"{parameters['city']}_{parameters['year_str']}_{parameters['month_str']}_{parameters['day_str']}"
             except KeyError:
                 key = f"{parameters['city']}_{parameters['year_str']}_{parameters['month_str']}"
 
-            print(parameters["url"])
-
             try:
                 # (3)
-                data = pd.concat([data, self._scrap(parameters)])
+                data = pd.concat([data, self._scrap(url, parameters)])
             except Exception as e:
                 # (4)
-                print(str(e))
-                self.errors[key] = {"url": parameters["url"], "error": str(e)}
+                self.errors[key] = {"url": url, "error": str(e)}
 
         data.sort_index()
 
@@ -95,5 +104,7 @@ class MeteoScrapper(ABC,
             df = self._rework_data(values, col_names, parameters)
         except Exception:
             raise ReworkException()
+
+        self._done += 1
 
         return df

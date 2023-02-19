@@ -1,4 +1,5 @@
 from concurrent.futures import ProcessPoolExecutor
+from multiprocessing import cpu_count
 import os
 import random
 from json.decoder import JSONDecodeError
@@ -12,7 +13,7 @@ from app.checkers.exceptions import ConfigFileCheckerException
 
 class Runner:
 
-    MAX_PROCESSES = 5
+    MAX_PROCESSES = cpu_count() - 1
 
     WORKDIR = os.getcwd()
 
@@ -32,15 +33,42 @@ class Runner:
     CHECKER = ConfigFilesChecker.instance()
 
     @classmethod
-    def _run_wrapper(cls, config):
+    def _rework_configs(cls, configs: dict) -> "list[dict]":
+        """
+        Exploitation du fichier config, transformation en liste de configuration.
+        @param config : Le dict contenu dans un fichier config.
+        @return La liste des configs à traiter.
+        """
+        all_configs = []
 
+        for scrapper_type in {x for x in configs.keys() if x != "waiting"}:
+
+            for config in configs[scrapper_type]:
+
+                config["scrapper_type"] = scrapper_type
+
+                try:
+                    config["waiting"] = configs["waiting"]
+                except KeyError:
+                    config["waiting"] = 3
+
+                all_configs.append(config)
+
+        return all_configs
+
+    @classmethod
+    def _run_one_job(cls, config) -> None:
+        """
+        Traitement réalisé pour chaque job du fichier config.
+        @param config : le contenu du fichier config.
+        """
         scrapper_type = config["scrapper_type"]
         scrapper: MeteoScrapper = cls.SCRAPPERS[scrapper_type]()
 
-        id = random.randint(0, 100_000)
+        id = random.randint(0, 10**6)
 
-        datafilename = "_".join([str(id), config['city'], scrapper_type, ".csv"]).lower()
-        errorsfilename = "_".join([str(id), config['city'], scrapper_type, "_errors.json"]).lower()
+        datafilename = "_".join([str(id), config['city'], scrapper_type]).lower() + ".csv"
+        errorsfilename = "_".join([str(id), config['city'], scrapper_type, "errors.json"]).lower()
 
         path_data = os.path.join(cls.PATHS["results"], datafilename)
         path_errors = os.path.join(cls.PATHS["errors"], errorsfilename)
@@ -54,8 +82,10 @@ class Runner:
             to_json(scrapper.errors, path_errors)
 
     @classmethod
-    def run(cls):
-
+    def run_from_config_in_parallele(cls) -> None:
+        """
+        Lancement de jobs en parallèle.
+        """
         try:
             configs: dict = from_json(os.path.join(cls.WORKDIR, "config.json"))
             cls.CHECKER.check(configs)
@@ -72,20 +102,7 @@ class Runner:
             print(e)
             return
 
-        all_configs = []
-
-        for scrapper_type in {x for x in configs.keys() if x != "waiting"}:
-
-            for config in configs[scrapper_type]:
-
-                config["scrapper_type"] = scrapper_type
-
-                try:
-                    config["waiting"] = configs["waiting"]
-                except KeyError:
-                    config["waiting"] = 2
-
-                all_configs.append(config)
+        configs = cls._rework_configs(configs)
 
         with ProcessPoolExecutor(max_workers=cls.MAX_PROCESSES) as executor:
-            executor.map(cls._run_wrapper, all_configs)
+            executor.map(cls._run_one_job, configs)

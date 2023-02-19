@@ -17,7 +17,7 @@ class MeteocielMonthly(MeteoScrapper):
     TEMPLATE_PRECIPITATION = r'-?\d+\.?\d*'
 
     def _build_parameters_generator(self, config):
-
+        # Implémentation de ConfigScrapperInterface._build_parameters_generator
         return (
 
             {
@@ -38,6 +38,7 @@ class MeteocielMonthly(MeteoScrapper):
         )
 
     def _build_url(self, parameters):
+        # Implémentation de ConfigScrapperInterface._build_url
         return self.BASE_URL.substitute(code_num = parameters["code_num"],
                                         code = parameters["code"],
                                         mois = parameters["month"],
@@ -45,7 +46,7 @@ class MeteocielMonthly(MeteoScrapper):
 
     @staticmethod
     def _scrap_columns_names(table):
-
+        # Implémentation de ScrapperInterface._scrap_columns_names
         # (1) On récupère les noms des colonnes contenus dans la 1ère ligne du tableau.
         # (2) Certains caractères à accents passent mal, on les remplace, et on enlève les . .
         # (3) On remplace les espaces par des _, on renomme la colonne jour en date.
@@ -65,12 +66,13 @@ class MeteocielMonthly(MeteoScrapper):
 
     @staticmethod
     def _scrap_columns_values(table):
+        # Implémentation de ScrapperInterface._scrap_columns_values
         # On récupère les valeurs des cellules de toutes les lignes,
         # sauf la 1ère (noms des colonnes) et la dernière (cumul / moyenne mensuel).
         return [ td.text for tr in table.find("tr")[1:-1] for td in tr.find("td") ]
 
     def _rework_data(self, values, columns_names, parameters):
-
+        # Implémentation de ScrapperInterface._rework_data
         # (0) On ajoute au nom de la colonne son unité.
         # (1) On définit les dimensions du tableau puis on le créé.
         # (2) Si une colonne to_delete existe, on la supprime.
@@ -159,7 +161,7 @@ class MeteocielDaily(MeteoScrapper):
     TEMPLATE_PRECIPITATION = r'-?\d+\.?\d*'
 
     def _build_parameters_generator(self, config):
-
+        # Implémentation de ConfigScrapperInterface._build_parameters_generator
         return (
 
             {
@@ -187,6 +189,7 @@ class MeteocielDaily(MeteoScrapper):
         )
 
     def _build_url(self, parameters):
+        # Implémentation de ConfigScrapperInterface._build_url
         return self.BASE_URL.substitute(code_num=parameters["code_num"],
                                         code=parameters["code"],
                                         jour2=parameters["day"],
@@ -195,7 +198,7 @@ class MeteocielDaily(MeteoScrapper):
 
     @staticmethod
     def _scrap_columns_names(table):
-
+        # Implémentation de ScrapperInterface._scrap_columns_names
         columns_names = [td.text.lower() for td in table.find("tr")[0].find("td")]
 
         columns_names = [col.replace("ã©", "e").replace(".", "") for col in columns_names]
@@ -212,11 +215,18 @@ class MeteocielDaily(MeteoScrapper):
 
     @staticmethod
     def _scrap_columns_values(table):
+        # Implémentation de ScrapperInterface._scrap_columns_values
         return [ td.text for tr in table.find("tr")[1:] for td in tr.find("td") ]
 
     @staticmethod
     def _fill_missing_values(values: "list[str]", n_cols: int):
+        """
+        Des lignes correspondant aux données pour une heure peuvent manquer.
+        On complète les données s'il en manque.
 
+        @param values : La liste des données récupérées.
+        @param n_cols : le nombre de colonnes du tableau.
+        """
         hours = [f"{x} h" for x in range(0, 24)]
         missing_hours = [x for x in hours if x not in values]
 
@@ -226,7 +236,7 @@ class MeteocielDaily(MeteoScrapper):
         return values
 
     def _rework_data(self, values, columns_names, parameters):
-
+        # Implémentation de ScrapperInterface._rework_data
         # (1) On définit les dimensions du tableau puis on le créé.
         # (2) On met de coté la colonne vent car il faut la séparer en 2.
         #     On supprime les colonnes inutiles.

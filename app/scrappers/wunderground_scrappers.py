@@ -31,7 +31,7 @@ class WundergroundMonthly(MeteoScrapper):
     BASE_URL = Template("https://www.wunderground.com/history/monthly/$country_code/$city/$region/date/$year-$month")
 
     def _build_parameters_generator(self, config):
-
+        # Implémentation de ConfigScrapperInterface._build_parameters_generator
         return (
 
             {
@@ -52,6 +52,7 @@ class WundergroundMonthly(MeteoScrapper):
         )
 
     def _build_url(self, parameters):
+        # Implémentation de ConfigScrapperInterface._build_url
         return self.BASE_URL.substitute(country_code=parameters["country_code"],
                                         city=parameters["city"],
                                         region=parameters["region"],
@@ -60,11 +61,12 @@ class WundergroundMonthly(MeteoScrapper):
 
     @staticmethod
     def _scrap_columns_names(table):
+        # Implémentation de ConfigScrapperInterface._build_url
         return [td.text for td in table.find("thead")[0].find("td")]
 
     @staticmethod
     def _scrap_columns_values(table):
-
+        # Implémentation de ScrapperInterface._scrap_columns_values
         # La structure html du tableau est tordue, ce qui conduit à des doublons dans values.
         # Daily Observations compte 7 colonnes principales et 17 sous-colonnes.
         # Elle est donc de dimension (lignes, sous-colonnes).
@@ -79,7 +81,7 @@ class WundergroundMonthly(MeteoScrapper):
         return [ td.text for td in table.find("tbody")[0].find("td") if "\n" in td.text ]
 
     def _rework_data(self, values, columns_names, parameters):
-
+        # Implémentation de ScrapperInterface._rework_data
         # (1) values est une liste de str. Chaque str contient toutes les données d'1 colonne principale
         #     séparées par des \n ("x\nx\nx\nx..."). On convertit ces str en liste de données [x,x,x, ...].
         #     values devient une liste de listes.

@@ -1,8 +1,9 @@
 from abc import ABC
 import pandas as pd
 from multiprocessing import current_process
-from app.scrappers.exceptions import HtmlPageException, HtmlTableException, ReworkException, ScrapException
+import app.scrappers.exceptions as scrapex
 from app.scrappers.interfaces import ScrapperInterface, ConfigScrapperInterface
+from requests.exceptions import RequestException, ConnectionError
 
 class MeteoScrapper(ABC,
                     ScrapperInterface,
@@ -29,10 +30,6 @@ class MeteoScrapper(ABC,
 
     def __init__(self):
         self.errors = dict()
-        try:
-            self._current_process_number = int(current_process().name.split("-")[1])
-        except:
-            self._current_process_number = 1
         self._waiting = self.MIN_WAITING
         # quantité de jobs traités
         self._done = 0
@@ -45,6 +42,7 @@ class MeteoScrapper(ABC,
         """
         Avancement du job, en %.
         """
+        self._done += 1
         progress = round(self._done / self._todo * 100)
 
         if(progress % 10 == 0 and progress != self._progress):
@@ -54,7 +52,7 @@ class MeteoScrapper(ABC,
         return False
 
     def _print_progress(self) -> None:
-        print(f"{self.__class__.__name__} ({self._current_process_number}) - {self._progress}%")
+        print(f"{self.__class__.__name__} ({current_process().pid}) - {self._progress}%\n")
 
     def _scrap(self, url, parameters) -> pd.DataFrame:
         """
@@ -64,27 +62,36 @@ class MeteoScrapper(ABC,
         @param url : L'adresse à scrapper.
         @param parameters : Le dictionnaire contenant les paramètres du job.
         @return Le dataframe contenant les données.
+        @raise HtmlPageException si la page html n'a pas été récupérée.
+        @raise HtmlTableException si la table html n'a pas été trouvée.
+        @raise ScrapException si les valeurs de la tables n'ont pas été récupérées.
+        @raise ReworkException si les données n'ont pas pu être traitées.
         """
         try:
             html_page = self._load_html_page(url, self._waiting)
-        except Exception:
-            raise HtmlPageException()
+        except (RequestException,
+                ConnectionError):
+            raise scrapex.HtmlPageException()
 
         try:
             table = self._find_table_in_html(html_page, self.CRITERIA)
-        except Exception:
-            raise HtmlTableException()
+        except (ValueError,
+                IndexError):
+            raise scrapex.HtmlTableException()
 
         try:
             col_names = self._scrap_columns_names(table)
             values = self._scrap_columns_values(table)
-        except Exception:
-            raise ScrapException()
+        except (AttributeError,
+                IndexError):
+            raise scrapex.ScrapException()
 
         try:
             df = self._rework_data(values, col_names, parameters)
-        except Exception:
-            raise ReworkException()
+        except (AttributeError,
+                IndexError,
+                KeyError):
+            raise scrapex.ReworkException()
 
         return df
 
@@ -129,14 +136,14 @@ class MeteoScrapper(ABC,
             # (6)
             try:
                 data = pd.concat([data, self._scrap(url, parameters)])
-            except Exception as e:
+            except scrapex.ProcessException as e:
                 self.errors[key] = {"url": url, "error": str(e)}
+                self._upate_progress()
+                continue
 
             # (7)
-            self._done += 1
-            has_updated = self._upate_progress()
-
-            if(has_updated):
+            is_updated = self._upate_progress()
+            if(is_updated):
                 self._print_progress()
 
         return data

@@ -18,6 +18,8 @@ class ConfigFilesChecker:
         "meteociel_daily": {"city", "year", "month", "day", "code_num", "code"}
     }
 
+    MAIN_FIELDS = {"wunderground", "ogimet", "meteociel", "meteociel_daily", "waiting"}
+
     _instance = None
 
     def __init__(self) -> None:
@@ -38,10 +40,7 @@ class ConfigFilesChecker:
             raise NoDictException()
 
     def _check_main_fields(self, config: dict) -> None:
-        # un fichier de config contient le champs waiting, il est légal, mais n'est pas
-        # un scrapper et donc pas présent dans EXPECTED_SCRAPPERS. On le rajoute.
-        reference = set(self.EXPECTED_SCRAPPERS.keys()).union({"waiting"})
-        is_legal = set(config.keys()).issubset(reference)
+        is_legal = set(config.keys()).issubset(self.MAIN_FIELDS)
         # On vérifie que les clés du dict sont correctes.
         if not is_legal:
             raise UnknownKeysException()

@@ -1,5 +1,5 @@
 from concurrent.futures import ProcessPoolExecutor
-from multiprocessing import cpu_count
+import multiprocessing as mp
 import os
 import random
 from json.decoder import JSONDecodeError
@@ -13,7 +13,7 @@ from app.checkers.exceptions import ConfigFileCheckerException
 
 class Runner:
 
-    MAX_PROCESSES = cpu_count() - 1
+    MAX_PROCESSES = mp.cpu_count() - 1
 
     WORKDIR = os.getcwd()
 
@@ -33,7 +33,13 @@ class Runner:
     CHECKER = ConfigFilesChecker.instance()
 
     @classmethod
-    def _rework_configs(cls, configs: dict) -> "list[dict]":
+    def stop(cls):
+        print("arrêt du programme sur demande de l'utilisateur")
+        for active_process in mp.active_children():
+            active_process.kill()
+
+    @classmethod
+    def _rework_config(cls, global_config: dict) -> "list[dict]":
         """
         Exploitation du fichier config, transformation en liste de configuration.
         @param config : Le dict contenu dans un fichier config.
@@ -41,18 +47,19 @@ class Runner:
         """
         all_configs = []
 
-        for scrapper_type in {x for x in configs.keys() if x != "waiting"}:
+        try:
+            waiting = global_config["waiting"]
+        except KeyError:
+            waiting = MeteoScrapper.MIN_WAITING
 
-            for config in configs[scrapper_type]:
+        for scrapper_type in {x for x in global_config.keys() if x != "waiting"}:
 
-                config["scrapper_type"] = scrapper_type
+            for job_config in global_config[scrapper_type]:
 
-                try:
-                    config["waiting"] = configs["waiting"]
-                except KeyError:
-                    config["waiting"] = 3
+                job_config["scrapper_type"] = scrapper_type
+                job_config["waiting"] = waiting
 
-                all_configs.append(config)
+                all_configs.append(job_config)
 
         return all_configs
 
@@ -82,13 +89,16 @@ class Runner:
             to_json(scrapper.errors, path_errors)
 
     @classmethod
-    def run_from_config_in_parallele(cls) -> None:
+    def run_from_config(cls) -> None:
         """
         Lancement de jobs en parallèle.
         """
+        mp.freeze_support() # pour ne pas que le main se relance en boucle
+
         try:
-            configs: dict = from_json(os.path.join(cls.WORKDIR, "config.json"))
-            cls.CHECKER.check(configs)
+            print("lecture du fichier config.json...")
+            global_config: dict = from_json(os.path.join(cls.WORKDIR, "config.json"))
+            cls.CHECKER.check(global_config)
         except FileNotFoundError:
             # from_json ne trouve pas le fichier
             print("ERREUR : pas de fichier config.json")
@@ -102,7 +112,9 @@ class Runner:
             print(e)
             return
 
-        configs = cls._rework_configs(configs)
+        print("fichier config.json trouvé, lancement des téléchargements\n")
+
+        configs = cls._rework_config(global_config)
 
         with ProcessPoolExecutor(max_workers=cls.MAX_PROCESSES) as executor:
-            executor.map(cls._run_one_job, configs)
+                executor.map(cls._run_one_job, configs)

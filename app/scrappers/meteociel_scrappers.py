@@ -241,8 +241,12 @@ class MeteocielDaily(MeteoScrapper):
         # (2) On met de coté la colonne vent car il faut la séparer en 2.
         #     On supprime les colonnes inutiles.
         # (3) On convertit les valeurs du format string vers le format qui leur vont.
-        # (4) Ajout des colonnes vent et rafales. Si 1 seule valeur est présente dans la colonne,
-        #     on en rajoute une vide pou bien avoir 2 valeurs, pour les 2 colonnes.
+        # (4) Séparation de la colonne "vent (rafales)" en 2 colonnes "vent" et "rafales".
+        #     Les valeurs contenues dans "vent (rafales)" sont normalement de la forme :
+        #       - x km/h (y km/h)
+        #       - x km/h
+        #     On splite selon la ( pour avoir les 2 valeurs dans 2 str différentes.
+        #     Si le split rend une liste d'1 seule valeur, on rajoute une str vide pour bien avoir 2 valeurs.
         # (5) On réunit les données, on met en forme le tableau.
         # (6) On ajoute au nom de la colonne son unité.
 
@@ -283,8 +287,9 @@ class MeteocielDaily(MeteoScrapper):
         # (4)
         separated = [x.split("(") for x in vent_rafale["vent (rafales)"].values]
 
-        for x in [separated.index(x) for x in separated if len(x) != 2]:
-            separated[x].append("")
+        for x in separated:
+            if(len(x) != 2):
+                x.append("")
 
         separated = np.array(separated)
         separated = f_num_extract(separated)

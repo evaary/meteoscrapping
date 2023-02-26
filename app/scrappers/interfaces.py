@@ -2,7 +2,7 @@ import pandas as pd
 from abc import abstractmethod, abstractstaticmethod
 from requests_html import HTMLSession, Element
 from requests import Response
-from requests.exceptions import ConnectionError
+from requests.exceptions import RequestException
 
 class ScrapperInterface:
     """
@@ -14,30 +14,25 @@ class ScrapperInterface:
         """
         Charge la page html où se trouvent les données à récupérer.
 
-        @param url : L'url de la page contenant le tableau de données
+        @param url : L'url de la page contenant le tableau de données.
         @param waiting : Le temps à attendre pour que les données soient disponibles sur la page (wunderground et ogimet).
-        @return La page html
+        @return La page html.
+        @raise RequestException si la page html à retourner est None.
         """
-        # On tente max 3 fois de charger la page à l'url donnée. Si le chargement réussit, on garde la page.
-        # Sinon, on la déclare inexistante. A l'origine, cela sert à palier de mauvaises connexions internet.
         html_page = None
 
         with HTMLSession() as session:
 
-            for _ in range(3):
+            html_page = session.get(url) # long
 
-                try:
-                    html_page = session.get(url) # long
+            if html_page.status_code == 200:
+                html_page.html.render(sleep=waiting,
+                                      keep_page=True,
+                                      scrolldown=1,
+                                      retries=3)
 
-                    if html_page.status_code == 200:
-                        html_page.html.render(sleep=waiting, keep_page=True, scrolldown=1)
-                        break
-
-                except ConnectionError:
-                    html_page = None
-
-        if(html_page is None):
-            raise ValueError()
+        if html_page is None:
+            raise RequestException()
 
         return html_page
 
@@ -49,6 +44,7 @@ class ScrapperInterface:
         @param html_page : La page html contenant le tableau de données.
         @param criteria : L'attribut css et sa valeur permettant d'identifier la table à récupérer.
         @return La table html contenant les données.
+        @raise ValueError si la table html à retourner est None.
         """
         # (1) Le critère permet d'identifier le tableau que l'on cherche dans la page html.
         #     Il se compose d'un attribut html et de sa valeur.
@@ -62,14 +58,10 @@ class ScrapperInterface:
         attr, val = criteria
 
         # (2)
-        try:
-            table = [
-                tab for tab in html_page.html.find("table")
-                if attr in tab.attrs and tab.attrs[attr] == val
-            ][0]
-        except Exception:
-            table = None
-            return table
+        table = [
+            tab for tab in html_page.html.find("table")
+            if attr in tab.attrs and tab.attrs[attr] == val
+        ][0]
 
         # (3)
         try:
@@ -77,6 +69,9 @@ class ScrapperInterface:
             table = None if condition else table
         except IndexError:
             pass
+
+        if table is None:
+            raise ValueError()
 
         return table
 

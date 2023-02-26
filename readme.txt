@@ -12,7 +12,7 @@ exemples de tableaux récupérés:
 Utilisation:
 
     télécharger l'exécutable
-        - fichier zip : https://drive.google.com/file/d/1Crco0Wwv2Q5us9mdJbx0KtGAZ1kr525g/view?usp=sharing
+        - fichier zip : https://drive.google.com/file/d/1Ll8an1t7oSo4yCIFbNSCRuTWviGgG967/view?usp=share_link
         - dézipper
 
     créer un fichier "config.json" à côté l'éxecutable (nom config.json impératif)
@@ -70,20 +70,20 @@ Pour les jobs ogimet:
     - Le champ city sert juste à nommer le fichier csv.
     - Les colonnes daily weather summary sur ogimet sont ignorées.
     - les mois dans l'url sont numérotés différement. Dans la config, utiliser les numéros usuels.
-    - http://www.ogimet.com/cgi-bin/gsynres?lang=en&ind=<ind>&ano=2017&mes=8&day=0&hora=0&min=0&ndays=31
+    - paramètres : http://www.ogimet.com/cgi-bin/gsynres?lang=en&ind=<ind>&ano=2017&mes=8&day=0&hora=0&min=0&ndays=31
 
 Pour les jobs wunderground:
     - Les unités sont converties : températures (°F -> °C), vitesses (mph -> km/h), précipitations (in -> mm), pressions (inHg -> hPa).
-    - https://www.wunderground.com/history/monthly/<country_code>/<city>/<region>/date/2020-3
+    - paramètres : https://www.wunderground.com/history/monthly/<country_code>/<city>/<region>/date/2020-3
 
 Pour les jobs meteociel:
     - La colonne des images est ignorée.
     - Le champ city sert juste à nommer le fichier csv.
-    - https://www.meteociel.com/climatologie/obs_villes.php?code<code_num>=<code>&mois=1&annee=2021
+    - paramètres : https://www.meteociel.com/climatologie/obs_villes.php?code<code_num>=<code>&mois=1&annee=2021
 
 Pour les jobs meteociel_daily:
     - La colonne temps et les directions du vent sont ignorées.
     - Les colonnes vent et rafales sont récupérées dans des colonnes distinctes.
     - L'heure est convertie en date et heure.
     - Les mois dans l'url sont numérotés différement. Dans la config, utiliser les numéros usuels.
-    - https://www.meteociel.com/temps-reel/obs_villes.php?code<code_num>=<code>&jour2=1&mois2=0&annee2=2020
+    - paramètres : https://www.meteociel.com/temps-reel/obs_villes.php?code<code_num>=<code>&jour2=1&mois2=0&annee2=2020

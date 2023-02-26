@@ -117,4 +117,4 @@ class Runner:
         configs = cls._rework_config(global_config)
 
         with ProcessPoolExecutor(max_workers=cls.MAX_PROCESSES) as executor:
-                executor.map(cls._run_one_job, configs)
+            executor.map(cls._run_one_job, configs)

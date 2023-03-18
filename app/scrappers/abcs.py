@@ -1,6 +1,8 @@
 from abc import ABC
 import pandas as pd
 from multiprocessing import current_process
+import threading
+from time import perf_counter
 import app.scrappers.exceptions as scrapex
 from app.scrappers.interfaces import ScrapperInterface, ConfigScrapperInterface
 from requests.exceptions import RequestException, ConnectionError
@@ -28,31 +30,39 @@ class MeteoScrapper(ABC,
 
     MIN_WAITING = 3
 
+    # péridode d'affichage de l'avancement en s
+    PROGRESS_TIMER_INTERVAL = 5.0
+
     def __init__(self):
         self.errors = dict()
         self._waiting = self.MIN_WAITING
+        # date de départ de lancement des jobs
+        self._start = None
         # quantité de jobs traités
         self._done = 0
         # quantité de jobs à traiter
         self._todo = -1
-        # % de jobs traités (en multiple de 10%)
+        # % de jobs traités
         self._progress = 0
+        # vitesse en % / s
+        self._speed = 0
 
-    def _upate_progress(self) -> bool:
+    def _upate(self):
         """
-        Avancement du job, en %.
+        Mise à jour des paramètres.
         """
         self._done += 1
-        progress = round(self._done / self._todo * 100)
+        self._progress = round(self._done / self._todo * 100, 0)
+        self._speed = round(self._progress / (perf_counter() - self._start), 2)
 
-        if(progress % 10 == 0 and progress != self._progress):
-            self._progress = progress
-            return True
+    def print_progress(self) -> None:
 
-        return False
+        print(f"{self.__class__.__name__} ({current_process().pid}) - {self._progress}% ({self._speed}%/s)\n")
 
-    def _print_progress(self) -> None:
-        print(f"{self.__class__.__name__} ({current_process().pid}) - {self._progress}%\n")
+        if self.PROGRESS_TIMER_INTERVAL * self._speed * 2 < 100 - self._progress:
+            timer = threading.Timer(self.PROGRESS_TIMER_INTERVAL, self.print_progress)
+            timer.daemon = True
+            timer.start()
 
     def _scrap(self, url, parameters) -> pd.DataFrame:
         """
@@ -101,6 +111,7 @@ class MeteoScrapper(ABC,
         # (1) Initialisation du résultat du job.
         # (2) Mise à jour du waiting et de la quantité de jobs à faire.
         # (3) Affichage de l'avancement initial, 0%.
+        #     Démarrage du timer por mesurer la vitesse de téléchargement.
         # (4) La config est convertie en liste de dictionnaires contenant chacun les paramètres
         #     permettant de récupérer les données d'1 adresse url.
         # (5) Reconstruction de l'url à partir des paramètres et création d'une clé pour enregistrer
@@ -120,7 +131,8 @@ class MeteoScrapper(ABC,
         self._todo = sum([1 for _ in self._build_parameters_generator(config)])
 
         # (3)
-        self._print_progress()
+        self.print_progress()
+        self._start = perf_counter()
 
         # (4)
         for parameters in self._build_parameters_generator(config):
@@ -138,12 +150,12 @@ class MeteoScrapper(ABC,
                 data = pd.concat([data, self._scrap(url, parameters)])
             except scrapex.ProcessException as e:
                 self.errors[key] = {"url": url, "error": str(e)}
-                self._upate_progress()
+                self._upate()
                 continue
 
             # (7)
-            is_updated = self._upate_progress()
-            if(is_updated):
-                self._print_progress()
+            self._upate()
+
+        self.print_progress()
 
         return data

@@ -13,7 +13,7 @@ from app.checkers.exceptions import ConfigFileCheckerException
 
 class Runner:
 
-    MAX_PROCESSES = mp.cpu_count() - 1
+    MAX_PROCESSES = 1 if mp.cpu_count() == 1 else mp.cpu_count() - 1
 
     WORKDIR = os.getcwd()
 
@@ -36,7 +36,7 @@ class Runner:
     def stop(cls):
         print("arrêt du programme sur demande de l'utilisateur")
         for active_process in mp.active_children():
-            active_process.kill()
+            active_process.terminate()
 
     @classmethod
     def _rework_config(cls, global_config: dict) -> "list[dict]":

@@ -59,17 +59,24 @@ class ConfigFilesChecker:
 
     def _check_values(self, config: dict) -> None:
 
-        for scrapper in config.keys():
+        # (1) On vérifie que le champs waiting est un entier positif puis on passe aux scrapper
+        # (2) On récupère tous les jobs associés à 1 scrapper
+        # (3) On vérifie que les champs year, month et day sont des listes d'1 à 2 entiers positifs ordonnés
+        # (4) On vérifie que les mois sont dans l'intervalle [1,12]
+        # (5) On vérifie que les jours sont l'intervalle [1,31]
+        # (6) On vérifie que tous les autres champs sont des str
 
+        for scrapper in config.keys():
+            # (1)
             if (    scrapper == "waiting"
                 and (not isinstance(config[scrapper], int) or config[scrapper] < 0 ) ):
                 raise WaitingException()
 
             if scrapper == "waiting":
                 continue
-
+            # (2)
             dicos = config[scrapper]
-
+            # (3)
             for x in ("year", "month", "day"):
 
                 try:
@@ -85,21 +92,22 @@ class ConfigFilesChecker:
                     are_ordered = all( [ dico[x][0] <= dico[x][-1] for dico in dicos ] )
                     if not are_ordered:
                         raise DatesException()
-
+                # si la clé "day" n'existe pas dans les jobs
                 except KeyError:
                     continue
-
+            # (4)
             if not all([    dico["month"][0] in range(1,13)
                         and dico["month"][-1] in range(1,13) for dico in dicos]):
                 raise MonthsException()
-
+            # (5)
             try:
                 if not all([    dico["day"][0] in range(1,32)
                             and dico["day"][-1] in range(1,32) for dico in dicos]):
                     raise DaysException()
+            # si la clé "day" n'existe pas dans les jobs
             except KeyError:
                 pass
-
+            # (6)
             todo = {field for field in self.EXPECTED_SCRAPPERS[scrapper] if field not in ("year", "month", "day")}
 
             if not all( [ isinstance(dico[field], str) for dico in dicos for field in todo ] ):

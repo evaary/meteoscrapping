@@ -1,7 +1,10 @@
 from string import Template
+
 import numpy as np
 import pandas as pd
+
 from app.scrappers.abcs import MeteoScrapper
+
 
 class WundergroundMonthly(MeteoScrapper):
 
@@ -35,13 +38,21 @@ class WundergroundMonthly(MeteoScrapper):
         return (
 
             {
+                "waiting": config["waiting"],
                 "city": config["city"],
                 "country_code" : config["country_code"],
                 "region": config["region"],
                 "year": year,
                 "month": month,
                 "year_str": str(year),
-                "month_str": "0" + str(month) if month < 10 else str(month)
+                "month_str": "0" + str(month) if month < 10 else str(month),
+                "criteria": self.CRITERIA,
+                "key": f"{config['city']}_{str(year)}_{'0' + str(month) if month < 10 else str(month)}",
+                "url": self.BASE_URL.substitute(country_code=config["country_code"],
+                                                city=config["city"],
+                                                region=config["region"],
+                                                year=year,
+                                                month=month)
             }
 
             for year in range(config["year"][0],
@@ -50,14 +61,6 @@ class WundergroundMonthly(MeteoScrapper):
             for month in range(config["month"][0],
                                config["month"][-1] + 1)
         )
-
-    def _build_url(self, parameters):
-        # Implémentation de ConfigScrapperInterface._build_url
-        return self.BASE_URL.substitute(country_code=parameters["country_code"],
-                                        city=parameters["city"],
-                                        region=parameters["region"],
-                                        year=parameters["year"],
-                                        month=parameters["month"])
 
     @staticmethod
     def _scrap_columns_names(table):
@@ -133,9 +136,8 @@ class WundergroundMonthly(MeteoScrapper):
 
             for key in self.UNITS_CONVERSION.keys():
 
-                is_key_in_name = key in main_name.lower().strip()
-
-                if is_key_in_name:
+                if key in main_name.lower()\
+                                   .strip():
                     columns_names[index] = self.UNITS_CONVERSION[key]["new_name"]
                     break
 

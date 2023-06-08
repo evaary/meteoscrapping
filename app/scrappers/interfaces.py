@@ -1,79 +1,61 @@
-import pandas as pd
+import asyncio
 from abc import abstractmethod, abstractstaticmethod
-from requests_html import HTMLSession, Element
+from typing import Any, Generator
+
+import pandas as pd
 from requests import Response
 from requests.exceptions import RequestException
+from requests_html import AsyncHTMLSession, Element
 
-class ScrapperInterface:
+
+class ConfigScrapperInterface:
     """
-    Une interface compilant les méthodes destinées à récupérer une page html,
-    identifier le tableau de données et scrapper les data.
+    Une interface pour exploiter un fichier de configuration.
     """
-    @staticmethod
-    def _load_html_page(url: str, waiting: int) -> Response:
+    WORKERS = 3
+
+    @abstractmethod
+    def _build_parameters_generator(self, config: dict) -> "Generator[dict[str, Any], None, None]":
         """
-        Charge la page html où se trouvent les données à récupérer.
+        Création du générateur de paramètres.
 
-        @param url : L'url de la page contenant le tableau de données.
-        @param waiting : Le temps à attendre pour que les données soient disponibles sur la page (wunderground et ogimet).
-        @return La page html.
-        @raise RequestException si la page html à retourner est None.
+        @param config : Le dictionnaire issu d'un fichier config.
+        @return Un tuple contenant les paramètres des jobs à traiter.
         """
-        html_page = None
+        pass
 
-        with HTMLSession() as session:
+    # @staticmethod
+    # async def _load_html_async(session, parameters: dict):
 
-            html_page = session.get(url) # long
+    #     html_page = await session.get(parameters["url"]) # long
+    #     await html_page.html.arender()
 
-            if html_page.status_code == 200:
-                html_page.html.render(sleep=waiting,
-                                      keep_page=True,
-                                      scrolldown=1,
-                                      retries=3)
+    #     attr, val = parameters["criteria"]
 
-        if html_page is None:
-            raise RequestException()
+    #     # (2)
+    #     table = [
+    #         tab for tab in html_page.html.find("table")
+    #         if attr in tab.attrs and tab.attrs[attr] == val
+    #     ][0]
 
-        return html_page
+        # print(table.find("thead")[0]\
+        #            .find("th")[0]\
+        #            .text\
+        #            .lower()\
+        #            .strip())
 
-    @staticmethod
-    def _find_table_in_html(html_page: Response, criteria: "tuple[str, str]") -> Element:
-        """
-        Extrait la table html contenant les données à récupérer à l'url retournée par _load_html_page.
+        # try:
+        #     condition = "no valid" in table.find("thead")[0]\
+        #                                    .find("th")[0]\
+        #                                    .text\
+        #                                    .lower()\
+        #                                    .strip()
+        #     print(condition)
+        #     table = None if condition else table
+        # except IndexError:
+        #     pass
 
-        @param html_page : La page html contenant le tableau de données.
-        @param criteria : L'attribut css et sa valeur permettant d'identifier la table à récupérer.
-        @return La table html contenant les données.
-        @raise ValueError si la table html à retourner est None.
-        """
-        # (1) Le critère permet d'identifier le tableau que l'on cherche dans la page html.
-        #     Il se compose d'un attribut html et de sa valeur.
-        # (2) On cherche une table html correspondant au critère parmi toutes celles de la page.
-        #     On récupère la 1ère trouvée. Si on ne trouve pas de table, on la déclare inexistante.
-        # (3) On vérifie que la table n'indique pas l'absence de données (spécifique à ogimet).
-        #     Voir http://www.ogimet.com/cgi-bin/gsynres?lang=en&ind=08180&ano=2016&mes=4&day=0&hora=0&min=0&ndays=31
-        #     Si elle l'est, on déclare la table inexistante.
-
-        # (1)
-        attr, val = criteria
-
-        # (2)
-        table = [
-            tab for tab in html_page.html.find("table")
-            if attr in tab.attrs and tab.attrs[attr] == val
-        ][0]
-
-        # (3)
-        try:
-            condition = "no valid" in table.find("thead")[0].find("th")[0].text.lower().strip()
-            table = None if condition else table
-        except IndexError:
-            pass
-
-        if table is None:
-            raise ValueError()
-
-        return table
+        # return table
 
     @abstractstaticmethod
     def _scrap_columns_names(table: Element) -> "list[str]":
@@ -104,41 +86,5 @@ class ScrapperInterface:
         @param column_names : La liste des noms de colonnes retournée par _scrap_columns_names.
         @param parameters : dict contenant les paramètres du job.
         @return Le dataframe équivalent au tableau de données html.
-        """
-        pass
-
-
-
-class ConfigScrapperInterface:
-    """
-    Une interface pour exploiter un fichier de configuration.
-    """
-    @abstractmethod
-    def scrap_from_config(self, config: dict) -> pd.DataFrame:
-        """
-        Récupération de données à partir d'un fichier de configuration.
-
-        @param config : Le dictionnaire issu d'un fichier config.
-        @return Le dataframe des données pour toutes les dates contenues dans la config.
-        """
-        pass
-
-    @abstractmethod
-    def _build_parameters_generator(self, config: dict) -> "tuple[dict]":
-        """
-        Création du générateur de paramètres.
-
-        @param config : Le dictionnaire issu d'un fichier config.
-        @return Un tuple contenant les paramètres des jobs à traiter.
-        """
-        pass
-
-    @abstractmethod
-    def _build_url(self, parameters: dict) -> str:
-        """
-        Reconstruction de l'url où se trouvent les données à récupérer.
-
-        @param parameters : Le dictionnaire contenant les paramètres d'un job.
-        @return L'url complète au format str du tableau de données à récupérer.
         """
         pass

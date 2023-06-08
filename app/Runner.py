@@ -24,10 +24,10 @@ class Runner:
     }
 
     SCRAPPERS = {
-        "ogimet": OgimetMonthly,
+        # "ogimet": OgimetMonthly,
         "wunderground": WundergroundMonthly,
-        "meteociel": MeteocielMonthly,
-        "meteociel_daily": MeteocielDaily
+        # "meteociel": MeteocielMonthly,
+        # "meteociel_daily": MeteocielDaily
     }
 
     CHECKER = ConfigFilesChecker.instance()
@@ -82,8 +82,8 @@ class Runner:
 
         data = scrapper.scrap_from_config(config)
 
-        if not data.empty:
-            to_csv(data, path_data)
+        # if not data.empty:
+        to_csv(data, path_data)
 
         if scrapper.errors:
             to_json(scrapper.errors, path_errors)

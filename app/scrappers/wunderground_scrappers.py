@@ -43,7 +43,7 @@ class WundergroundMonthly(MeteoScrapper):
                                   .add_waiting(waiting_to_add)
                                   .add_year(year)
                                   .add_month(month)
-                                  .buildWundergroundMonthlyParameters()
+                                  .build_wunderground_monthly_parameters()
 
             for year in range(config["year"][0],
                               config["year"][-1] + 1)

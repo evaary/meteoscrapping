@@ -36,7 +36,7 @@ class MeteocielMonthly(MeteoScrapper):
                                   .add_waiting(waiting_to_add)
                                   .add_year(year)
                                   .add_month(month)
-                                  .buildMeteocielMonthlyParameters()
+                                  .build_meteociel_monthly_parameters()
 
             for year in range(config["year"][0],
                               config["year"][-1] + 1)
@@ -157,7 +157,7 @@ class MeteocielDaily(MeteoScrapper):
                                   .add_year(year)
                                   .add_month(month)
                                   .add_day(day)
-                                  .buildMeteocielDaillyParameters()
+                                  .build_meteociel_dailly_parameters()
 
             for year in range(config["year"][0],
                               config["year"][-1] + 1)

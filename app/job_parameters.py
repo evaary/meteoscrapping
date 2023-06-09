@@ -145,16 +145,16 @@ class JobParametersBuilder:
 
         return self
 
-    def buildWundergroundMonthlyParameters(self) -> "WundergroundMonthlyParameters":
+    def build_wunderground_monthly_parameters(self) -> "WundergroundMonthlyParameters":
         return WundergroundMonthlyParameters(self)
 
-    def buildOgimetMonthlyParameters(self) -> "OgimetMonthlyParameters":
+    def build_ogimet_monthly_parameters(self) -> "OgimetMonthlyParameters":
         return OgimetMonthlyParameters(self)
 
-    def buildMeteocielMonthlyParameters(self) -> "MeteocielMonthlyParameters":
+    def build_meteociel_monthly_parameters(self) -> "MeteocielMonthlyParameters":
         return MeteocielMonthlyParameters(self)
 
-    def buildMeteocielDaillyParameters(self) -> "MeteocielDailyParameters":
+    def build_meteociel_dailly_parameters(self) -> "MeteocielDailyParameters":
         return MeteocielDailyParameters(self)
 
 

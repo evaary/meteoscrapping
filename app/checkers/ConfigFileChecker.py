@@ -11,12 +11,29 @@ class ConfigFilesChecker:
 
     """Singleton contrôlant la validité d'un fichier de config."""
 
-    EXPECTED_SCRAPPERS = {
-        "wunderground": {"country_code", "city", "region", "year", "month"},
-        "ogimet": {"ind", "city", "year", "month"},
-        "meteociel": {"city", "year", "month", "code_num", "code"},
-        "meteociel_daily": {"city", "year", "month", "day", "code_num", "code"}
-    }
+    EXPECTED_SCRAPPERS = { "wunderground": {"country_code",
+                                            "city",
+                                            "region",
+                                            "year",
+                                            "month"},
+
+                            "ogimet": { "ind",
+                                        "city",
+                                        "year",
+                                        "month" },
+
+                            "meteociel": {  "city",
+                                            "year",
+                                            "month",
+                                            "code_num",
+                                            "code" },
+
+                            "meteociel_daily": {"city",
+                                                "year",
+                                                "month",
+                                                "day",
+                                                "code_num",
+                                                "code"} }
 
     _instance = None
 
@@ -33,15 +50,6 @@ class ConfigFilesChecker:
 
         return cls._instance
 
-    def _check_wunderground(self, config) -> None:
-
-        try:
-            wunderground_jobs_config = config["wunderground"]
-        except KeyError:
-            return
-
-        WundergroundMonthly._build_parameters_generator(wunderground_jobs_config)
-
     def _check_data_type(self, config) -> None:
         if not isinstance(config, dict):
             raise NoDictException()
@@ -50,8 +58,8 @@ class ConfigFilesChecker:
         # un fichier de config contient le champs waiting, il est légal, mais n'est pas
         # un scrapper et donc pas présent dans EXPECTED_SCRAPPERS. On le rajoute.
         reference = set(self.EXPECTED_SCRAPPERS.keys()).union({"waiting"})
-        is_legal = set(config.keys()).issubset(reference)
         # On vérifie que les clés du dict sont correctes.
+        is_legal = set(config.keys()).issubset(reference)
         if not is_legal:
             raise UnknownKeysException()
 

@@ -25,7 +25,7 @@ class OgimetMonthly(MeteoScrapper):
                                   .add_waiting(waiting_to_add)
                                   .add_year(year)
                                   .add_month(month)
-                                  .buildOgimetMonthlyParameters()
+                                  .build_ogimet_monthly_parameters()
 
             for year in range(config["year"][0],
                               config["year"][-1] + 1)

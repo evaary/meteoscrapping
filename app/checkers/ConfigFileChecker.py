@@ -1,11 +1,11 @@
-from app.checkers.exceptions import (NoDictException,
+from app.checkers.exceptions import (DatesException, DaysException,
+                                     MonthsException, NoDictException,
+                                     OtherFieldsException,
                                      UnknownKeysException,
                                      UnknownOrMissingParametersException,
-                                     WaitingException,
-                                     DatesException,
-                                     MonthsException,
-                                     DaysException,
-                                     OtherFieldsException)
+                                     WaitingException)
+from app.scrappers.wunderground_scrappers import WundergroundMonthly
+
 
 class ConfigFilesChecker:
 
@@ -32,6 +32,15 @@ class ConfigFilesChecker:
         cls._instance = cls.__new__(cls)
 
         return cls._instance
+
+    def _check_wunderground(self, config) -> None:
+
+        try:
+            wunderground_jobs_config = config["wunderground"]
+        except KeyError:
+            return
+
+        WundergroundMonthly._build_parameters_generator(wunderground_jobs_config)
 
     def _check_data_type(self, config) -> None:
         if not isinstance(config, dict):

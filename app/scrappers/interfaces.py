@@ -1,9 +1,13 @@
-import pandas as pd
 from abc import abstractmethod, abstractstaticmethod
-from requests_html import HTMLSession, Element
+
+import pandas as pd
 from requests import Response
 from requests.exceptions import ConnectionError
+from requests_html import Element, HTMLSession
+
+from app.job_parameters import JobParameters
 from app.scrappers.exceptions import HtmlPageException
+
 
 class ConfigScrapperInterface:
 
@@ -23,22 +27,12 @@ class ConfigScrapperInterface:
         pass
 
     @abstractmethod
-    def _build_parameters_generator(self, config: dict) -> "tuple[dict]":
+    def _build_parameters_generator(self, config: dict) -> "tuple[JobParameters]":
         """
         Création du générateur de paramètres.
 
         @param le dict contenant les paramètres
         @return un tuple contenant les dates à traiter.
-        """
-        pass
-
-    @abstractmethod
-    def _build_url(self, parameters: dict) -> str:
-        """
-        Reconstruction de l'url où se trouvent les données à récupérer.
-        Implémentée dans chaque scrapper concrêt.
-
-        @return l'url complète au format str du tableau de données à récupérer.
         """
         pass
 

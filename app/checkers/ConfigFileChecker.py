@@ -4,7 +4,6 @@ from app.checkers.exceptions import (DatesException, DaysException,
                                      UnknownKeysException,
                                      UnknownOrMissingParametersException,
                                      WaitingException)
-from app.scrappers.wunderground_scrappers import WundergroundMonthly
 
 
 class ConfigFilesChecker:
@@ -65,66 +64,89 @@ class ConfigFilesChecker:
 
     def _check_keys(self, config: "dict[dict]") -> None:
 
-        for x in config.keys():
+        # on vérifie que les clés des dictionnaires correspondent aux paramètres attendus pour chaque scrapper
+        is_legal = all( [ set(scrapper_config.keys()) == self.EXPECTED_SCRAPPERS[scrapper]
+                          for scrapper in config.keys() if scrapper != "waiting"
+                          for scrapper_config in config[scrapper] ] )
 
-            if x == "waiting":
-                continue
-            # on vérifie que les clés des dictionnaires correspondent aux paramètres attendus pour chaque scrapper
-            is_legal = all([ set(dico.keys()) == self.EXPECTED_SCRAPPERS[x] for dico in config[x] ])
-
-            if not is_legal:
+        if not is_legal:
                 raise UnknownOrMissingParametersException()
 
-    def _check_values(self, config: dict) -> None:
+    def _check_waiting(self, config) -> None:
 
-        for scrapper in config.keys():
+        try:
+            waiting = config["waiting"]
+        except KeyError:
+            return
 
-            if (    scrapper == "waiting"
-                and (not isinstance(config[scrapper], int) or config[scrapper] < 0 ) ):
-                raise WaitingException()
+        if (   not isinstance(waiting, int)
+            or waiting < 0 ):
+            raise WaitingException()
 
-            if scrapper == "waiting":
-                continue
+    def _check_years_months_days(self, config) -> None:
 
-            dicos = config[scrapper]
+        # les champs year, month et day de chaque config de chaque scrapper doivent être des listes d'1 ou 2 entiers positifs ordonnés
+        is_legal = all( [ self._is_list_of_max_2_positive_ordered_ints_(scrapper_config[time_unit])
 
-            for x in ("year", "month", "day"):
+                          for scrapper in config.keys() if scrapper != "waiting"
+                          for scrapper_config in config[scrapper]
+                          for time_unit in [ key for key in scrapper_config.keys() if key in ("year", "month", "day") ] ] )
+        if not is_legal:
+            raise DatesException()
 
-                try:
+    def _check_months(self, config) -> None:
 
-                    is_list = all( [ isinstance(dico[x], list) and len(dico[x]) in (1,2) for dico in dicos ] )
-                    if not is_list:
-                        raise DatesException()
+        # les champs month de chaque config de chaque scrapper doivent être de valeur max 12
+        is_legal = all( [ max(scrapper_config["month"]) <= 12
 
-                    are_positive_ints = all( [ isinstance(y, int) and y > 0 for dico in dicos for y in dico[x] ] )
-                    if not are_positive_ints:
-                        raise DatesException()
+                          for scrapper in config.keys() if scrapper != "waiting"
+                          for scrapper_config in config[scrapper] ] )
+        if not is_legal:
+            raise MonthsException()
 
-                    are_ordered = all( [ dico[x][0] <= dico[x][-1] for dico in dicos ] )
-                    if not are_ordered:
-                        raise DatesException()
+    def _check_days(self, config) -> None:
 
-                except KeyError:
-                    continue
+        # les champs day de chaque config du scrapper meteociel_daily doivent être de valeur max 31
+        try:
 
-            if not all([    dico["month"][0] in range(1,13)
-                        and dico["month"][-1] in range(1,13) for dico in dicos]):
-                raise MonthsException()
+            is_legal = all( [ max(scrapper_config["day"]) <= 31
+                              for scrapper_config in config["meteociel_daily"] ] )
+            if not is_legal:
+                raise DaysException()
 
-            try:
-                if not all([    dico["day"][0] in range(1,32)
-                            and dico["day"][-1] in range(1,32) for dico in dicos]):
-                    raise DaysException()
-            except KeyError:
-                pass
+        except KeyError:
+            pass
 
-            todo = {field for field in self.EXPECTED_SCRAPPERS[scrapper] if field not in ("year", "month", "day")}
+    def _check_other_fields(self, config: dict) -> None:
 
-            if not all( [ isinstance(dico[field], str) for dico in dicos for field in todo ] ):
-                raise OtherFieldsException()
+        # les champs autres que les dates de chaque config de chaque scrapper doivent être des str
+        is_legal = all( [ isinstance(scrapper_config[key], str)
+
+                          for scrapper in config.keys() if scrapper != "waiting"
+                          for scrapper_config in config[scrapper]
+                          for key in [ key for key in scrapper_config.keys() if key not in ("year", "month", "day") ] ] )
+        if not is_legal:
+            raise OtherFieldsException()
+
+    def _is_list_of_max_2_positive_ordered_ints_(self, data) -> bool:
+
+        is_legal = True
+
+        if(    not isinstance(data, list)
+            or not len(data) in (1,2)
+            or not all( [ isinstance(x, int) and x > 0 for x in data ] )
+            or data[-1] < data[0] ):
+
+            is_legal = False
+
+        return is_legal
 
     def check(self, config: dict) -> None:
         self._check_data_type(config)
         self._check_main_fields(config)
         self._check_keys(config)
-        self._check_values(config)
+        self._check_waiting(config)
+        self._check_years_months_days(config)
+        self._check_months(config)
+        self._check_days(config)
+        self._check_other_fields(config)

@@ -1,30 +1,28 @@
-from datetime import datetime
 import os
+from datetime import datetime
 from json.decoder import JSONDecodeError
+
+from app.checkers.ConfigFileChecker import ConfigFilesChecker
+from app.checkers.exceptions import ConfigFileCheckerException
 from app.data_managers import from_json, to_csv, to_json
 from app.scrappers.abcs import MeteoScrapper
 from app.scrappers.meteociel_scrappers import MeteocielDaily, MeteocielMonthly
-from app.scrappers.wunderground_scrappers import WundergroundMonthly
 from app.scrappers.ogimet_scrappers import OgimetMonthly
-from app.checkers.ConfigFileChecker import ConfigFilesChecker
-from app.checkers.exceptions import ConfigFileCheckerException
+from app.scrappers.wunderground_scrappers import WundergroundMonthly
+
 
 class Runner:
 
     WORKDIR = os.getcwd()
 
     # Emplacements des répertoires d'intérêt.
-    PATHS = {
-        "results": os.path.join(WORKDIR, "results"),
-        "errors":  os.path.join(WORKDIR, "errors")
-    }
+    PATHS = {   "results": os.path.join(WORKDIR, "results"),
+                "errors":  os.path.join(WORKDIR, "errors") }
 
-    SCRAPPERS = {
-        "ogimet": OgimetMonthly,
-        "wunderground": WundergroundMonthly,
-        "meteociel": MeteocielMonthly,
-        "meteociel_daily": MeteocielDaily
-    }
+    SCRAPPERS = {   "ogimet": OgimetMonthly,
+                    "wunderground": WundergroundMonthly,
+                    "meteociel": MeteocielMonthly,
+                    "meteociel_daily": MeteocielDaily }
 
     CHECKER = ConfigFilesChecker.instance()
 

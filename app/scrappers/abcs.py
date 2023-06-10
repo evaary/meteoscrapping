@@ -10,30 +10,14 @@ from requests.exceptions import ConnectionError, RequestException
 from requests_html import AsyncHTMLSession
 
 import app.scrappers.exceptions as scrapex
-from app.scrappers.interfaces import ConfigScrapperInterface
+from app.job_parameters import JobParameters
+from app.scrappers.exceptions import (HtmlPageException, HtmlTableException,
+                                      ReworkException, ScrapException)
+from app.scrappers.interfaces import ConfigScrapperInterface, Scrapper
 
 
-class MeteoScrapper(ABC,
-                    ConfigScrapperInterface):
+class MeteoScrapper(ABC, Scrapper):
 
-    # Nombre de jours dans chaque mois.
-    # Wunderground et Météociel récupèrent le 29ème jour de février s'il existe.
-    DAYS = {
-        1  : 31,
-        2  : 28,
-        3  : 31,
-        4  : 30,
-        5  : 31,
-        6  : 30,
-        7  : 31,
-        8  : 31,
-        9  : 30,
-        11 : 30,
-        10 : 31,
-        12 : 31,
-    }
-
-    MIN_WAITING = 3
     MAX_THREADS = 100
     # péridode d'affichage de l'avancement en s
     PROGRESS_TIMER_INTERVAL = 5
@@ -54,7 +38,7 @@ class MeteoScrapper(ABC,
         self._speed = 0
 
     def _upate(self):
-        self._done += 0.5
+        self._done += 1
         self._progress = round(self._done / self._todo * 100, 0)
         self._speed = round(self._progress / (perf_counter() - self._start), 2)
 

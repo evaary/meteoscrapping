@@ -5,25 +5,44 @@ from typing import Any, Generator
 import pandas as pd
 from requests import Response
 from requests.exceptions import RequestException
-from requests_html import AsyncHTMLSession, Element
+from requests_html import AsyncHTMLSession, Element, HTMLSession
+
+from app.job_parameters import JobParameters
+from app.scrappers.exceptions import HtmlPageException
 
 
-class ConfigScrapperInterface:
+class Scrapper:
+
     """
     Une interface pour exploiter un fichier de configuration.
     """
     WORKERS = 3
 
     @abstractmethod
-    def _build_parameters_generator(self, config: dict) -> "Generator[dict[str, Any], None, None]":
+    def scrap_from_config(self, config: dict) -> pd.DataFrame:
         """
-        Création du générateur de paramètres.
+        Récupération de données à partir d'une config du fichier de configuration.
 
-        @param config : Le dictionnaire issu d'un fichier config.
-        @return Un tuple contenant les paramètres des jobs à traiter.
+        @param
+            config : une config du fichier de configuration
+
+        @return
+            le dataframe des données pour toutes les dates contenues dans la config
         """
         pass
 
+    @abstractmethod
+    def _build_parameters_generator(self, config: dict) -> "tuple[JobParameters]":
+        """
+        Création du générateur de paramètres à partir de la config.
+
+        @param
+            config : une config du fichier de configuration
+
+        @return
+            un tuple contenant les paramètres du job à réaliser
+        """
+        pass
     # @staticmethod
     # async def _load_html_async(session, parameters: dict):
 
@@ -62,18 +81,22 @@ class ConfigScrapperInterface:
         """
         Récupération des noms des colonnes du tableau issu de _find_table_in_html.
 
-        @param table : Le tableau html.
-        @return La liste des noms des colonnes.
+        @param
+            table : le tableau html retourné par _find_table_in_html
+
+        @return
+            la liste des noms des colonnes.
         """
         pass
 
     @abstractstaticmethod
     def _scrap_columns_values(table: Element) -> "list[str]":
         """
-        Récupération des valeurs du tableau sous forme de liste de str.
+        @param
+            table : le tableau html retourné par _find_table_in_html.
 
-        @param table : Le tableau html retourné par _find_table_in_html.
-        @return La liste des valeurs contenues dans la table.
+        @return
+            la liste des valeurs contenues dans la table.
         """
         pass
 
@@ -82,9 +105,11 @@ class ConfigScrapperInterface:
         """
         Mise en forme du tableau de données.
 
-        @param values : La liste des valeurs retournée par _scrap_columns_values.
-        @param column_names : La liste des noms de colonnes retournée par _scrap_columns_names.
-        @param parameters : dict contenant les paramètres du job.
-        @return Le dataframe équivalent au tableau de données html.
+        @param
+            values : La liste des valeurs contenues dans le tableau.
+            column_names : La liste des noms de colonnes.
+
+        @return
+            le dataframe équivalent au tableau de données html.
         """
         pass

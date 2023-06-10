@@ -27,7 +27,7 @@ Utilisation:
         - les erreurs sont des fichiers json, 1 par job s'il y a eu des erreurs
         - chaque fichier json contient les url à partir desquelles aucune donnée n'a pu être récupérée par le programme.
 
-structure du fichier config.json
+structure du fichier config.json (chaque scrapper est optionnel):
 {
     "waiting": 3,
 

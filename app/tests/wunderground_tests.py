@@ -1,14 +1,23 @@
 from unittest import TestCase
-import pandas as pd
-import numpy as np
 
+import numpy as np
+import pandas as pd
+
+from app.job_parameters import (JobParametersBuilder,
+                                WundergroundMonthlyParameters)
 from app.scrappers.wunderground_scrappers import WundergroundMonthly
+
 
 class Wunderground_MonthlyTester(TestCase):
 
     SCRAPPER = WundergroundMonthly()
 
-    CONFIG = { "country_code":"it", "region": "LIBD", "city":"matera", "year":[2021], "month":[1], "waiting": 3}
+    CONFIG = { "country_code"   : "it",
+               "region"         : "LIBD",
+               "city"           : "matera",
+               "year"           : [2021],
+               "month"          : [1],
+               "waiting"        : 3 }
 
     # valeurs de référence pour janvier 2021
     URL_REF = "https://www.wunderground.com/history/monthly/it/matera/LIBD/date/2021-1"
@@ -80,11 +89,8 @@ class Wunderground_MonthlyTester(TestCase):
         cls.RESULTATS = cls.RESULTATS.set_index("date")
 
     def test_url(self):
-       self.assertEqual(self.URL_REF, self.SCRAPPER._build_url({"country_code": "it",
-                                                                "city": "matera",
-                                                                "region": "LIBD",
-                                                                "year": 2021,
-                                                                "month": 1}))
+       parameters: WundergroundMonthlyParameters = next( JobParametersBuilder.build_wunderground_monthly_parameters_generator_from_config(self.CONFIG) )
+       self.assertEqual(self.URL_REF, parameters.url)
 
     def test_scrap_data(self):
         data = self.SCRAPPER.scrap_from_config(self.CONFIG).set_index("date")

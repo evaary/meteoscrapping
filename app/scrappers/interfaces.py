@@ -16,7 +16,6 @@ class Scrapper:
     """
     Une interface pour exploiter un fichier de configuration.
     """
-    WORKERS = 3
 
     @abstractmethod
     def scrap_from_config(self, config: dict) -> pd.DataFrame:
@@ -43,6 +42,7 @@ class Scrapper:
             un tuple contenant les paramètres du job à réaliser
         """
         pass
+
     # @staticmethod
     # async def _load_html_async(session, parameters: dict):
 

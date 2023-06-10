@@ -2,7 +2,6 @@ import multiprocessing as mp
 import os
 import random
 from concurrent.futures import ProcessPoolExecutor
-from datetime import datetime
 from json.decoder import JSONDecodeError
 
 from app.checkers.ConfigFileChecker import ConfigFilesChecker
@@ -135,12 +134,12 @@ class Runner:
 
 
     @classmethod
-    def run(cls):
+    def run_from_config(cls):
 
         try:
             print("lecture du fichier config.json...")
-            global_config: dict = from_json(os.path.join(cls.WORKDIR, "config.json"))
-            cls.CHECKER.check(global_config)
+            config_file: dict = from_json(os.path.join(cls.WORKDIR, "config.json"))
+            cls.CHECKER.check(config_file)
         except FileNotFoundError:
             # from_json ne trouve pas le fichier
             print("ERREUR : pas de fichier config.json")
@@ -156,7 +155,7 @@ class Runner:
 
         print("fichier config.json trouvé, lancement des téléchargements\n")
 
-        configs = cls._get_all_configs(global_config)
+        all_configs = cls._get_all_configs(config_file)
 
         with ProcessPoolExecutor(max_workers=cls.MAX_PROCESSES) as executor:
-            executor.map(cls._run_one_job, configs)
+            executor.map(cls._run_one_job, all_configs)

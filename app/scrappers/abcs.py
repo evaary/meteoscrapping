@@ -13,7 +13,7 @@ import app.scrappers.exceptions as scrapex
 from app.job_parameters import JobParameters
 from app.scrappers.exceptions import (HtmlPageException, HtmlTableException,
                                       ReworkException, ScrapException)
-from app.scrappers.interfaces import ConfigScrapperInterface, Scrapper
+from app.scrappers.interfaces import Scrapper
 
 
 class MeteoScrapper(ABC, Scrapper):

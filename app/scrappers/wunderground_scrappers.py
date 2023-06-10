@@ -1,66 +1,43 @@
-from string import Template
 import numpy as np
 import pandas as pd
+
+from app.job_parameters import (JobParametersBuilder,
+                                WundergroundMonthlyParameters)
 from app.scrappers.abcs import MeteoScrapper
+
 
 class WundergroundMonthly(MeteoScrapper):
 
-    UNITS_CONVERSION = {
-        "dew" : {"new_name": "dew_point_°C",
-                 "func": (lambda x: (x-32)*5/9 )},
+    UNITS_CONVERSION = {    "dew" : {   "new_name"  : "dew_point_°C",
+                                        "func"      : (lambda x: (x - 32) * 5/9 ) },
 
-        "wind": {"new_name": "wind_speed_(km/h)",
-                 "func": (lambda x: x*1.609344)},
+                            "wind": {   "new_name"  : "wind_speed_(km/h)",
+                                        "func"      : (lambda x: x * 1.609344) },
 
-        "pressure": {"new_name": "pressure_(hPa)",
-                     "func": (lambda x: x*33.86388)},
+                            "pressure": {   "new_name"  : "pressure_(hPa)",
+                                            "func"      : (lambda x: x * 33.86388) },
 
-        "humidity": {"new_name": "humidity_(%)",
-                     "func": (lambda x: x)},
+                            "humidity": {   "new_name"  : "humidity_(%)",
+                                            "func"      : (lambda x: x) },
 
-        "temperature": {"new_name": "temperature_°C",
-                        "func": (lambda x: (x-32)*5/9 )},
+                            "temperature": {    "new_name"  : "temperature_°C",
+                                                "func"      : (lambda x: (x - 32) * 5/9 ) },
 
-        "precipitation": {"new_name": "precipitation_(mm)",
-                          "func": (lambda x: x*25.4)}
-    }
-
-    # Critère de sélection qui sert à retrouver le tableau de donner dans la page html
-    CRITERIA = ("aria-labelledby", "History days")
-
-    BASE_URL = Template("https://www.wunderground.com/history/monthly/$country_code/$city/$region/date/$year-$month")
+                            "precipitation": {  "new_name"  : "precipitation_(mm)",
+                                                "func"      : (lambda x: x * 25.4) } }
 
     def _build_parameters_generator(self, config):
+        return JobParametersBuilder.build_wunderground_monthly_parameters_generator_from_config(config)
 
-        return (
 
-            {
-                "city": config["city"],
-                "country_code" : config["country_code"],
-                "region": config["region"],
-                "year": year,
-                "month": month,
-                "year_str": str(year),
-                "month_str": "0" + str(month) if month < 10 else str(month)
-            }
-
-            for year in range(config["year"][0],
-                              config["year"][-1] + 1)
-
-            for month in range(config["month"][0],
-                               config["month"][-1] + 1)
-        )
-
-    def _build_url(self, parameters):
-        return self.BASE_URL.substitute(country_code=parameters["country_code"],
-                                        city=parameters["city"],
-                                        region=parameters["region"],
-                                        year=parameters["year"],
-                                        month=parameters["month"])
 
     @staticmethod
     def _scrap_columns_names(table):
-        return [td.text for td in table.find("thead")[0].find("td")]
+
+        return [ td.text for td in table.find("thead")[0]
+                                        .find("td") ]
+
+
 
     @staticmethod
     def _scrap_columns_values(table):
@@ -76,9 +53,15 @@ class WundergroundMonthly(MeteoScrapper):
         # et donc de toutes ses sous-colonnes.
         # On récupère ces 7 valeurs additionnelles qui contiennent le caractère \n.
 
-        return [ td.text for td in table.find("tbody")[0].find("td") if "\n" in td.text ]
+        return [ td.text for td in table.find("tbody")[0]
+                                        .find("td") if "\n" in td.text ]
 
-    def _rework_data(self, values, columns_names, parameters):
+
+
+    def _rework_data(self,
+                     values,
+                     columns_names,
+                     parameters: WundergroundMonthlyParameters):
 
         # (1) values est une liste de str. Chaque str contient toutes les données d'1 colonne principale
         #     séparées par des \n ("x\nx\nx\nx..."). On convertit ces str en liste de données [x,x,x, ...].
@@ -137,12 +120,9 @@ class WundergroundMonthly(MeteoScrapper):
                     columns_names[index] = self.UNITS_CONVERSION[key]["new_name"]
                     break
 
-        final_col_names = [
-            "_".join( [ main, sub.strip().lower() ] ) if sub else main
-
-            for main, subs in zip(columns_names, sub_names)
-            for sub in subs
-        ]
+        final_col_names = [ "_".join( [ main, sub.strip().lower() ] ) if sub else main
+                            for main, subs in zip(columns_names, sub_names)
+                            for sub in subs ]
 
         final_col_names[0] = "date"
 
@@ -151,11 +131,10 @@ class WundergroundMonthly(MeteoScrapper):
         df = df.drop([0], axis="index")
 
         # (6)
-        df["date"] = [
-            f"{parameters['year_str']}/{parameters['month_str']}/0{day}" if int(day) < 10
-            else f"{parameters['year_str']}/{parameters['month_str']}/{day}"
-            for day in df.date
-        ]
+        df["date"] = [ f"{parameters.year_str}/{parameters.month_str}/0{day}"
+                       if int(day) < 10
+                       else f"{parameters.year_str}/{parameters.month_str}/{day}"
+                       for day in df.date ]
 
         df["date"] = pd.to_datetime(df["date"])
         df = df.sort_values(by="date")
@@ -167,8 +146,8 @@ class WundergroundMonthly(MeteoScrapper):
         # (8)
         for variable, dico in self.UNITS_CONVERSION.items():
 
-            cols_to_convert = [col for col in df.columns if variable in col]
+            cols_to_convert = [ col for col in df.columns if variable in col ]
 
-            df[cols_to_convert] = np.round(dico["func"](df[cols_to_convert]), 1)
+            df[cols_to_convert] = np.round( dico["func"](df[cols_to_convert]), 1 )
 
         return df

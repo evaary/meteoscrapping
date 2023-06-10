@@ -1,13 +1,22 @@
 from unittest import TestCase
+
 import pandas as pd
 
-from app.scrappers.meteociel_scrappers import MeteocielMonthly, MeteocielDaily
+from app.job_parameters import (JobParametersBuilder, MeteocielDailyParameters,
+                                MeteocielMonthlyParameters)
+from app.scrappers.meteociel_scrappers import MeteocielDaily, MeteocielMonthly
+
 
 class Meteociel_MonthlyTester(TestCase):
 
     SCRAPPER = MeteocielMonthly()
 
-    CONFIG = { "code_num":"2", "code": "7249", "city":"orleans", "year":[2021], "month":[1], "waiting": 3 }
+    CONFIG = { "code_num"   : "2",
+               "code"       : "7249",
+               "city"       : "orleans",
+               "year"       : [2021],
+               "month"      : [1],
+               "waiting"    : 3 }
 
     # valeurs de référence pour janvier 2021
     URL_REF = "https://www.meteociel.com/climatologie/obs_villes.php?code2=7249&mois=1&annee=2021"
@@ -60,10 +69,8 @@ class Meteociel_MonthlyTester(TestCase):
         cls.RESULTATS = cls.RESULTATS.set_index("date")
 
     def test_url(self):
-        self.assertEqual(self.URL_REF, self.SCRAPPER._build_url({"code_num": "2",
-                                                                 "code": "7249",
-                                                                 "year": 2021,
-                                                                 "month": 1}))
+        parameters : MeteocielMonthlyParameters = next( JobParametersBuilder.build_meteociel_monthly_parameters_generator_from_config(self.CONFIG) )
+        self.assertEqual( self.URL_REF, parameters.url )
 
     def test_scrap_data(self):
         data = self.SCRAPPER.scrap_from_config(self.CONFIG).set_index("date")
@@ -75,7 +82,12 @@ class Meteociel_DailyTester(TestCase):
 
     SCRAPPER = MeteocielDaily()
 
-    CONFIG = { "code_num":"2", "code": "7249", "city":"orleans", "year":[2020], "month":[1], "day": [1] }
+    CONFIG = { "code_num"   : "2",
+               "code"       : "7249",
+               "city"       : "orleans",
+               "year"       : [2020],
+               "month"      : [1],
+               "day"        : [1] }
 
     # valeurs de référence pour janvier 2021
     URL_REF = "https://www.meteociel.com/temps-reel/obs_villes.php?code2=7249&jour2=1&mois2=0&annee2=2020"
@@ -124,11 +136,8 @@ class Meteociel_DailyTester(TestCase):
         cls.RESULTATS = cls.RESULTATS.sort_values(by="date")
 
     def test_url(self):
-        self.assertEqual(self.URL_REF, self.SCRAPPER._build_url({"code_num": "2",
-                                                                 "code": "7249",
-                                                                 "year": 2020,
-                                                                 "month": 1,
-                                                                 "day": 1}))
+        parameters : MeteocielDailyParameters = next( JobParametersBuilder.build_meteociel_daily_parameters_generator_from_config(self.CONFIG) )
+        self.assertEqual( self.URL_REF, parameters.url )
 
     def test_scrap_data(self):
         data = self.SCRAPPER.scrap_from_config(self.CONFIG).set_index("date")

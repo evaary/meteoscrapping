@@ -1,57 +1,17 @@
 import numpy as np
 import pandas as pd
-from string import Template
+
+from app import utils
+from app.job_parameters import JobParametersBuilder, OgimetMonthlyParameters
 from app.scrappers.abcs import MeteoScrapper
+
 
 class OgimetMonthly(MeteoScrapper):
 
-    # La numérotation des mois sur ogimet est décalée.
-    # Ce dictionnaire associe la numérotation usuelle (clés) et celle d'ogimet (valeurs).
-    NUMEROTATIONS = {
-        1  :  2,
-        2  :  3,
-        3  :  4,
-        4  :  5,
-        5  :  6,
-        6  :  7,
-        7  :  8,
-        8  :  9,
-        9  : 10,
-        11 : 12,
-        10 : 11,
-        12 :  1,
-    }
-
-    # Critère de sélection qui sert à retrouver le tableau de donneées dans la page html.
-    CRITERIA = ("bgcolor", "#d0d0d0")
-
-    BASE_URL = Template(f"http://www.ogimet.com/cgi-bin/gsynres?lang=en&ind=$ind&ano=$ano&mes=$mes&day=0&hora=0&min=0&ndays=$ndays")
-
     def _build_parameters_generator(self, config):
+        return JobParametersBuilder.build_ogimet_monthly_parameters_generator_from_config(config)
 
-        return (
 
-            {
-                "city": config["city"],
-                "ind": config["ind"],
-                "year": year,
-                "month": month,
-                "year_str": str(year),
-                "month_str": "0" + str(month) if month < 10 else str(month)
-            }
-
-            for year in range(config["year"][0],
-                              config["year"][-1] + 1)
-
-            for month in range(config["month"][0],
-                               config["month"][-1] + 1)
-        )
-
-    def _build_url(self, parameters):
-        return self.BASE_URL.substitute(ind=parameters["ind"],
-                                        ano=parameters["year"],
-                                        mes=self.NUMEROTATIONS[parameters["month"]],
-                                        ndays=self.DAYS[parameters["month"]])
 
     @staticmethod
     def _scrap_columns_names(table):
@@ -71,34 +31,35 @@ class OgimetMonthly(MeteoScrapper):
         #     On en rajoute 7.
 
         # (1)
-        trs = table.find("thead")[0].find("tr")
-        main_names = [th.text for th in trs[0].find("th")]
-        sub_values = [th.text for th in trs[1].find("th")]
+        trs = table.find("thead")[0]\
+                   .find("tr")
+        main_names = [ th.text for th in trs[0].find("th") ]
+        sub_values = [ th.text for th in trs[1].find("th") ]
 
         # (2)
         sub_names = [ [""] for _ in range(len(main_names)) ]
 
         try:
-            T_index = main_names.index([x for x in main_names if "Temperature" in x][0])
-            sub_names[T_index] = [x for x in sub_values if x in ["Max", "Min", "Avg", "Max.", "Min.", "Avg."]]
+            T_index = main_names.index( [ x for x in main_names if "Temperature" in x ][0] )
+            sub_names[T_index] = [ x for x in sub_values if x in ["Max", "Min", "Avg", "Max.", "Min.", "Avg."] ]
         except IndexError:
             pass
 
         try:
-            W_index = main_names.index([x for x in main_names if "Wind" in x][0])
-            sub_names[W_index] = [x for x in sub_values if x in ["Dir.", "Int.", "Gust.", "Dir", "Int", "Gust"]]
+            W_index = main_names.index( [ x for x in main_names if "Wind" in x ][0] )
+            sub_names[W_index] = [ x for x in sub_values if x in ["Dir.", "Int.", "Gust.", "Dir", "Int", "Gust"] ]
         except IndexError:
             pass
 
         # (3)
         columns_names = [
-            f"{main.strip()} {sub.strip()}"\
-            .strip()\
-            .lower()\
-            .replace("\n", "_")\
-            .replace(" ", "_")\
-            .replace("(c)", "(°C)")\
-            .replace(".", "")
+
+            f"{main.strip()} {sub.strip()}".strip()
+                                           .lower()
+                                           .replace("\n", "_")
+                                           .replace(" ", "_")
+                                           .replace("(c)", "(°C)")
+                                           .replace(".", "")
 
             for main, subs in zip(main_names, sub_names)
             for sub in subs
@@ -110,13 +71,21 @@ class OgimetMonthly(MeteoScrapper):
 
         return columns_names
 
+
+
     @staticmethod
     def _scrap_columns_values(table):
-        return [td.text for td in table.find("tbody")[0].find("td")]
+
+        return [td.text for td in table.find("tbody")[0]
+                                       .find("td")]
+
+
 
     @staticmethod
-    def _fill_missing_values(values: "list[str]", n_cols: int, n_expected: int, month: str):
-
+    def _fill_missing_values( values: "list[str]",
+                              n_cols: int,
+                              n_values_expected: int,
+                              month: str ):
         """
         Ogimet gère mal les trous dans les données.
         Si certaines valeurs manquent en début ou milieu de ligne,
@@ -128,12 +97,13 @@ class OgimetMonthly(MeteoScrapper):
         Cette fonction comble les manques dans les lignes en ajoutant des "" à la fin.
 
         @param
-            values - la liste des valeurs récupérées dans le tableau.
-            n_cols - nombre de colonnes du tableau.
-            n_expected - nombre de valeurs théoriques si le tableau était complet.
-            month - le numéro du mois au format mm
+            values : la liste des valeurs récupérées dans le tableau.
+            n_cols : nombre de colonnes du tableau.
+            n_values_expected : nombre de valeurs théoriques si le tableau était complet.
+            month : le numéro du mois au format mm
 
-        @return la liste complétée des valeurs du tableau.
+        @return
+            la liste complétée des valeurs du tableau.
         """
         # (1) done contient les valeurs traitées, todo les valeurs à traiter.
         # (2) Tant que done n'est pas complet, on sélectionne l'équivalent
@@ -149,13 +119,13 @@ class OgimetMonthly(MeteoScrapper):
         done = []
         todo = values.copy()
 
-        while len(done) != n_expected :
+        while len(done) != n_values_expected :
 
             # (2)
             row = todo[:n_cols]
 
             # (3)
-            dates = [x for x in row if f"{month}/" in x]
+            dates = [ x for x in row if f"{month}/" in x ]
 
             if len(dates) != 1:
                 index = row.index(dates[1])
@@ -172,7 +142,12 @@ class OgimetMonthly(MeteoScrapper):
 
         return done
 
-    def _rework_data(self, values, columns_names, parameters):
+
+
+    def _rework_data(self,
+                     values,
+                     columns_names,
+                     parameters: OgimetMonthlyParameters):
 
         # (1) Dimensions du futur tableau de données et nombre de valeurs collectées. S'il manque des
         #     données dans la liste des valeurs récupérées, on la complète pour avoir 1 valeur par cellule
@@ -188,24 +163,28 @@ class OgimetMonthly(MeteoScrapper):
 
         # (1)
         n_cols = len(columns_names)
-        n_rows = self.DAYS[parameters['month']]
+        n_rows = utils.DAYS[ parameters.month ]
         n_expected = n_rows * n_cols          # nombre de valeurs attendu
         n_values = len(values)
 
         if n_values != n_expected:
-            values = self._fill_missing_values(values, n_cols, n_expected, parameters['month_str'])
-
+            values = self._fill_missing_values(values,
+                                               n_cols,
+                                               n_expected,
+                                               parameters.month_str)
         # (2)
-        values = np.array(values).reshape(-1, n_cols)
+        values = np.array(values)\
+                   .reshape(-1, n_cols)
+
         df = pd.DataFrame(values, columns=columns_names)
 
         # (3)
-        df["date"] = parameters['year_str'] + "/" + df["date"]
+        df["date"] = parameters.year_str + "/" + df["date"]
         df["date"] = pd.to_datetime(df["date"])
         df = df.sort_values(by="date")
 
         # (4)
-        numeric_cols = [col for col in df.columns if col not in ["date", "wind_(km/h)_dir"]]
+        numeric_cols = [ col for col in df.columns if col not in ["date", "wind_(km/h)_dir"] ]
 
         for col in numeric_cols:
             df[col] = pd.to_numeric(df[col], errors="coerce")
@@ -213,12 +192,12 @@ class OgimetMonthly(MeteoScrapper):
         # (5)
         try:
             col = "wind_(km/h)_dir"
-            indexes = df[df[col].str.contains("-")].index
+            indexes = df[ df[col].str.contains("-") ].index
             df.loc[indexes, col] = ""
         except KeyError:
             pass
 
         # (6)
-        df = df[[col for col in df.columns if "daily_weather_summary" not in col]]
+        df = df[ [ col for col in df.columns if "daily_weather_summary" not in col ] ]
 
         return df

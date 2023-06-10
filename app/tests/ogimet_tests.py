@@ -1,14 +1,21 @@
 from unittest import TestCase
-import pandas as pd
-import numpy as np
 
+import numpy as np
+import pandas as pd
+
+from app.job_parameters import JobParametersBuilder, OgimetMonthlyParameters
 from app.scrappers.ogimet_scrappers import OgimetMonthly
+
 
 class Ogimet_MonthlyTester(TestCase):
 
     SCRAPPER = OgimetMonthly()
 
-    CONFIG = { "ind":"16138", "city":"Ferrara", "year":[2021], "month":[2], "waiting": 3 }
+    CONFIG = { "ind"    : "16138",
+               "city"   : "Ferrara",
+               "year"   : [2021],
+               "month"  : [2],
+               "waiting": 3 }
 
     # valeurs de référence pour janvier 2021
     URL_REF = "http://www.ogimet.com/cgi-bin/gsynres?lang=en&ind=16138&ano=2021&mes=3&day=0&hora=0&min=0&ndays=28"
@@ -64,9 +71,8 @@ class Ogimet_MonthlyTester(TestCase):
         cls.RESULTATS = cls.RESULTATS.set_index("date")
 
     def test_url(self):
-       self.assertEqual(self.URL_REF, self.SCRAPPER._build_url({"ind": "16138",
-                                                                "year": 2021,
-                                                                "month": 2}))
+       parameters : OgimetMonthlyParameters = next( JobParametersBuilder.build_ogimet_monthly_parameters_generator_from_config(self.CONFIG) )
+       self.assertEqual(self.URL_REF, parameters.url)
 
     def test_scrap_data(self):
         data = self.SCRAPPER.scrap_from_config(self.CONFIG).set_index("date")

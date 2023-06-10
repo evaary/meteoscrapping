@@ -1,38 +1,44 @@
-from unittest import TestCase
 import copy
+from unittest import TestCase
+
 from app.checkers.ConfigFileChecker import ConfigFilesChecker
-from app.checkers.exceptions import (NoDictException,
+from app.checkers.exceptions import (DatesException, DaysException,
+                                     MonthsException, NoDictException,
+                                     OtherFieldsException,
                                      UnknownKeysException,
                                      UnknownOrMissingParametersException,
-                                     WaitingException,
-                                     DatesException,
-                                     MonthsException,
-                                     DaysException,
-                                     OtherFieldsException)
+                                     WaitingException)
+
 
 class CheckerTester(TestCase):
 
     CHECKER = ConfigFilesChecker.instance()
 
-    CONFIG = {
-        "waiting": 3,
+    CONFIG = {  "waiting": 3,
 
-        "ogimet":[
-            { "ind":"16138", "city":"Ferrara", "year":[2021], "month":[2] }
-        ],
+                "ogimet":[ { "ind":"16138",
+                            "city":"Ferrara",
+                            "year":[2021],
+                            "month":[2] } ],
 
-        "wunderground":[
-            { "country_code":"it", "region": "LIBD", "city":"matera", "year":[2021], "month":[1] }
-        ],
+                "wunderground":[ { "country_code":"it",
+                                "region": "LIBD",
+                                "city":"matera",
+                                "year":[2021],
+                                "month":[1] } ],
 
-        "meteociel":[
-            { "code_num":"2", "code": "7249", "city":"orleans", "year":[2020], "month":[2] }
-        ],
+                "meteociel":[ { "code_num":"2",
+                                "code": "7249",
+                                "city":"orleans",
+                                "year":[2020],
+                                "month":[2] } ],
 
-        "meteociel_daily":[
-            { "code_num":"2", "code": "7249", "city":"orleans", "year":[2020], "month":[2], "day":[27,31] }
-        ]
-    }
+                "meteociel_daily":[ { "code_num":"2",
+                                    "code": "7249",
+                                    "city":"orleans",
+                                    "year":[2020],
+                                    "month":[2],
+                                    "day":[27,31] } ] }
 
     def test_no_dict(self):
         with self.assertRaises(NoDictException):
@@ -76,7 +82,7 @@ class CheckerTester(TestCase):
         todo["ogimet"][0]["year"] = "bouh"
 
         with self.assertRaises(DatesException):
-            self.CHECKER._check_values(todo)
+            self.CHECKER._check_years_months_days(todo)
 
     def test_month_not_len_1_or_2(self):
 
@@ -84,7 +90,7 @@ class CheckerTester(TestCase):
         todo["meteociel"][0]["month"] = [1,2,3]
 
         with self.assertRaises(DatesException):
-            self.CHECKER._check_values(todo)
+            self.CHECKER._check_years_months_days(todo)
 
     def test_year_not_ints(self):
 
@@ -92,7 +98,7 @@ class CheckerTester(TestCase):
         todo["wunderground"][0]["year"] = [1.1, "bouh"]
 
         with self.assertRaises(DatesException):
-            self.CHECKER._check_values(todo)
+            self.CHECKER._check_years_months_days(todo)
 
     def test_day_not_positive(self):
 
@@ -100,7 +106,7 @@ class CheckerTester(TestCase):
         todo["meteociel_daily"][0]["day"] = [-1, 17]
 
         with self.assertRaises(DatesException):
-            self.CHECKER._check_values(todo)
+            self.CHECKER._check_years_months_days(todo)
 
     def test_days_not_ordered(self):
 
@@ -108,7 +114,7 @@ class CheckerTester(TestCase):
         todo["meteociel_daily"][0]["day"] = [2,1]
 
         with self.assertRaises(DatesException):
-            self.CHECKER._check_values(todo)
+            self.CHECKER._check_years_months_days(todo)
 
     def test_outbound_month(self):
 
@@ -116,7 +122,7 @@ class CheckerTester(TestCase):
         todo["ogimet"][0]["month"] = [1,17]
 
         with self.assertRaises(MonthsException):
-            self.CHECKER._check_values(todo)
+            self.CHECKER._check_months(todo)
 
     def test_outbound_day(self):
 
@@ -124,7 +130,7 @@ class CheckerTester(TestCase):
         todo["meteociel_daily"][0]["day"] = [1,56]
 
         with self.assertRaises(DaysException):
-            self.CHECKER._check_values(todo)
+            self.CHECKER._check_days(todo)
 
     def test_not_str_value(self):
 
@@ -134,7 +140,7 @@ class CheckerTester(TestCase):
         todo["meteociel"][0]["city"] = 12
 
         with self.assertRaises(OtherFieldsException):
-            self.CHECKER._check_values(todo)
+            self.CHECKER._check_other_fields(todo)
 
     def test_wrong_waiting_value(self):
 
@@ -144,7 +150,7 @@ class CheckerTester(TestCase):
         todo["waiting"] = "test"
 
         with self.assertRaises(WaitingException):
-            self.CHECKER._check_values(todo)
+            self.CHECKER._check_waiting(todo)
 
     def test_correct_config(self):
 
@@ -152,4 +158,3 @@ class CheckerTester(TestCase):
             self.CHECKER.check(self.CONFIG)
         except:
             self.fail("exception dans le cas où tout va bien")
-

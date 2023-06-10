@@ -5,26 +5,15 @@ import pandas as pd
 from app.job_parameters import JobParameters
 from app.scrappers.exceptions import (HtmlPageException, HtmlTableException,
                                       ReworkException, ScrapException)
-from app.scrappers.interfaces import ConfigScrapperInterface
+from app.scrappers.interfaces import Scrapper
 
 
-class MeteoScrapper(ABC, ConfigScrapperInterface):
-
-    """
-    Scrapper de base.
-
-    Une fois instancié, appeler scrap_from_config pour récupérer les données.
-    """
-
-    # pour attendre l'éxecution du javascript lors du téléchargement du html
-    DEFAULT_WAITING = 3
+class MeteoScrapper(ABC, Scrapper):
 
     def __init__(self):
         self.errors = dict()
 
-    def scrap_from_config(self, config):
-
-        """Récupération de données à partir d'un fichier de configuration."""
+    def scrap_from_config(self, config: dict) -> pd.DataFrame:
 
         data = pd.DataFrame(columns=["date"])
 
@@ -39,6 +28,7 @@ class MeteoScrapper(ABC, ConfigScrapperInterface):
                 # (4)
                 print(str(e))
                 self.errors[parameters.key] = {"url": parameters.url, "error": str(e)}
+                continue
 
         data.sort_index()
 
@@ -48,7 +38,6 @@ class MeteoScrapper(ABC, ConfigScrapperInterface):
 
         """
         Récupération des données contenues dans une page html à partir de son url.
-        La variable CRITERIA est créée dans chaque scrapper concrêt.
 
         @return le dataframe contenant les données.
         """

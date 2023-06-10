@@ -1,8 +1,7 @@
-from string import Template
-
 import numpy as np
 import pandas as pd
 
+from app import utils
 from app.job_parameters import JobParametersBuilder, OgimetMonthlyParameters
 from app.scrappers.abcs import MeteoScrapper
 
@@ -10,29 +9,9 @@ from app.scrappers.abcs import MeteoScrapper
 class OgimetMonthly(MeteoScrapper):
 
     def _build_parameters_generator(self, config):
+        return JobParametersBuilder.build_ogimet_monthly_parameters_generator_from_config(config)
 
-        waiting_to_add = self.DEFAULT_WAITING
 
-        try:
-            waiting_to_add = config["waiting"]
-        except KeyError:
-            pass
-
-        return (
-
-            JobParametersBuilder().add_city( config["city"] )
-                                  .add_ind( config["ind"] )
-                                  .add_waiting(waiting_to_add)
-                                  .add_year(year)
-                                  .add_month(month)
-                                  .build_ogimet_monthly_parameters()
-
-            for year in range(config["year"][0],
-                              config["year"][-1] + 1)
-
-            for month in range(config["month"][0],
-                               config["month"][-1] + 1)
-        )
 
     @staticmethod
     def _scrap_columns_names(table):
@@ -92,18 +71,21 @@ class OgimetMonthly(MeteoScrapper):
 
         return columns_names
 
+
+
     @staticmethod
     def _scrap_columns_values(table):
 
         return [td.text for td in table.find("tbody")[0]
                                        .find("td")]
 
+
+
     @staticmethod
     def _fill_missing_values( values: "list[str]",
                               n_cols: int,
-                              n_expected: int,
+                              n_values_expected: int,
                               month: str ):
-
         """
         Ogimet gère mal les trous dans les données.
         Si certaines valeurs manquent en début ou milieu de ligne,
@@ -115,12 +97,13 @@ class OgimetMonthly(MeteoScrapper):
         Cette fonction comble les manques dans les lignes en ajoutant des "" à la fin.
 
         @param
-            values - la liste des valeurs récupérées dans le tableau.
-            n_cols - nombre de colonnes du tableau.
-            n_expected - nombre de valeurs théoriques si le tableau était complet.
-            month - le numéro du mois au format mm
+            values : la liste des valeurs récupérées dans le tableau.
+            n_cols : nombre de colonnes du tableau.
+            n_values_expected : nombre de valeurs théoriques si le tableau était complet.
+            month : le numéro du mois au format mm
 
-        @return la liste complétée des valeurs du tableau.
+        @return
+            la liste complétée des valeurs du tableau.
         """
         # (1) done contient les valeurs traitées, todo les valeurs à traiter.
         # (2) Tant que done n'est pas complet, on sélectionne l'équivalent
@@ -136,7 +119,7 @@ class OgimetMonthly(MeteoScrapper):
         done = []
         todo = values.copy()
 
-        while len(done) != n_expected :
+        while len(done) != n_values_expected :
 
             # (2)
             row = todo[:n_cols]
@@ -159,6 +142,8 @@ class OgimetMonthly(MeteoScrapper):
 
         return done
 
+
+
     def _rework_data(self,
                      values,
                      columns_names,
@@ -178,7 +163,7 @@ class OgimetMonthly(MeteoScrapper):
 
         # (1)
         n_cols = len(columns_names)
-        n_rows = self.DAYS[ parameters.month ]
+        n_rows = utils.DAYS[ parameters.month ]
         n_expected = n_rows * n_cols          # nombre de valeurs attendu
         n_values = len(values)
 

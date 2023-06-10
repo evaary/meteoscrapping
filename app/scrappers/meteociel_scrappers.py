@@ -1,10 +1,8 @@
 import re
-from string import Template
 
 import numpy as np
 import pandas as pd
 
-from app import utils
 from app.job_parameters import (JobParametersBuilder, MeteocielDailyParameters,
                                 MeteocielMonthlyParameters)
 from app.scrappers.abcs import MeteoScrapper
@@ -12,38 +10,17 @@ from app.scrappers.abcs import MeteoScrapper
 
 class MeteocielMonthly(MeteoScrapper):
 
-    UNITS = { "temperature": "°C",
-              "precipitations": "mm",
-              "ensoleillement": "h" }
+    UNITS = {   "temperature"   : "°C",
+                "precipitations": "mm",
+                "ensoleillement": "h" }
 
     # Regex pour récupérer uniquement les float d'une string pour la colonne des précipitations.
     TEMPLATE_PRECIPITATION = r'-?\d+\.?\d*'
 
     def _build_parameters_generator(self, config):
+        return JobParametersBuilder.build_meteociel_monthly_parameters_generator_from_config(config)
 
-        waiting_to_add = self.DEFAULT_WAITING
 
-        try:
-            waiting_to_add = config["waiting"]
-        except KeyError:
-            pass
-
-        return (
-
-            JobParametersBuilder().add_city( config["city"] )
-                                  .add_code_num( config["code_num"] )
-                                  .add_code( config["code"] )
-                                  .add_waiting(waiting_to_add)
-                                  .add_year(year)
-                                  .add_month(month)
-                                  .build_meteociel_monthly_parameters()
-
-            for year in range(config["year"][0],
-                              config["year"][-1] + 1)
-
-            for month in range(config["month"][0],
-                               config["month"][-1] + 1)
-        )
 
     @staticmethod
     def _scrap_columns_names(table):
@@ -65,11 +42,15 @@ class MeteocielMonthly(MeteoScrapper):
 
         return columns_names
 
+
+
     @staticmethod
     def _scrap_columns_values(table):
         # On récupère les valeurs des cellules de toutes les lignes,
         # sauf la 1ère (noms des colonnes) et la dernière (cumul / moyenne mensuel).
         return [ td.text for tr in table.find("tr")[1:-1] for td in tr.find("td") ]
+
+
 
     def _rework_data(self,
                      values,
@@ -128,48 +109,21 @@ class MeteocielMonthly(MeteoScrapper):
 
 class MeteocielDaily(MeteoScrapper):
 
-    UNITS = { "visi": "km",
-              "temperature": "°C",
-              "humidite": "%",
-              "vent": "km/h",
-              "rafales": "km/h",
-              "pression": "hPa",
-              "precip": "mm" }
+    UNITS = { "visi"        : "km",
+              "temperature" : "°C",
+              "humidite"    : "%",
+              "vent"        : "km/h",
+              "rafales"     : "km/h",
+              "pression"    : "hPa",
+              "precip"      : "mm" }
 
     # Regex pour récupérer uniquement les float d'une string pour la colonne des précipitations.
     TEMPLATE_PRECIPITATION = r'-?\d+\.?\d*'
 
     def _build_parameters_generator(self, config):
+        return JobParametersBuilder.build_meteociel_daily_parameters_generator_from_config(config)
 
-        waiting_to_add = self.DEFAULT_WAITING
 
-        try:
-            waiting_to_add = config["waiting"]
-        except KeyError:
-            pass
-
-        return (
-
-            JobParametersBuilder().add_city( config["city"] )
-                                  .add_code_num( config["code_num"] )
-                                  .add_code( config["code"] )
-                                  .add_waiting(waiting_to_add)
-                                  .add_year(year)
-                                  .add_month(month)
-                                  .add_day(day)
-                                  .build_meteociel_dailly_parameters()
-
-            for year in range(config["year"][0],
-                              config["year"][-1] + 1)
-
-            for month in range(config["month"][0],
-                               config["month"][-1] + 1)
-
-            for day in range(config["day"][0],
-                             config["day"][-1] + 1)
-
-            if day <= utils.DAYS[month]
-        )
 
     @staticmethod
     def _scrap_columns_names(table):
@@ -188,9 +142,13 @@ class MeteocielDaily(MeteoScrapper):
 
         return columns_names
 
+
+
     @staticmethod
     def _scrap_columns_values(table):
         return [ td.text for tr in table.find("tr")[1:] for td in tr.find("td") ]
+
+
 
     def _rework_data(self,
                      values,

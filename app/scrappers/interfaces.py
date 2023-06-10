@@ -9,7 +9,7 @@ from app.job_parameters import JobParameters
 from app.scrappers.exceptions import HtmlPageException
 
 
-class ConfigScrapperInterface:
+class Scrapper:
 
     """
     Une interface compilant les méthodes destinées à récupérer une page html,
@@ -19,20 +19,26 @@ class ConfigScrapperInterface:
     @abstractmethod
     def scrap_from_config(self, config: dict) -> pd.DataFrame:
         """
-        Récupération de données à partir d'un fichier de configuration.
+        Récupération de données à partir d'une config du fichier de configuration.
 
-        @param un dict contenant les paramètres
-        @return le dataframe des données pour toutes les dates contenues dans la config
+        @param
+            config : une config du fichier de configuration
+
+        @return
+            le dataframe des données pour toutes les dates contenues dans la config
         """
         pass
 
     @abstractmethod
     def _build_parameters_generator(self, config: dict) -> "tuple[JobParameters]":
         """
-        Création du générateur de paramètres.
+        Création du générateur de paramètres à partir de la config.
 
-        @param le dict contenant les paramètres
-        @return un tuple contenant les dates à traiter.
+        @param
+            config : une config du fichier de configuration
+
+        @return
+            un tuple contenant les paramètres du job à réaliser
         """
         pass
 
@@ -43,12 +49,14 @@ class ConfigScrapperInterface:
         Charge la page html où se trouvent les données à récupérer
 
         @param
-            url - l'url de la page contenant le tableau de données
-            waiting - le temps que l'on doit attendre pour que le javascript s'éxecute
+            url : l'url de la page contenant le tableau de données
+            waiting : le temps que l'on doit attendre pour que le javascript s'éxecute
                       et que les données soient disponibles sur la page (wunderground et ogimet).
 
-        @return la page html, ou None
+        @return
+            la page html, ou None
         """
+
         # On tente max 3 fois de charger la page à l'url donnée. Si le chargement réussit, on garde la page.
         # Sinon, on la déclare inexistante. A l'origine, cela sert à palier de mauvaises connexions internet.
         html_page = None
@@ -82,10 +90,11 @@ class ConfigScrapperInterface:
         Extrait la table html contenant les données à récupérer.
 
         @param
-            html_page - la page html contenant le tableau de données retourée par _load_html_page.
-            criteria - l'attribut css et sa valeur permettant d'identifier la table à récupérer.
+            html_page : la page html contenant le tableau de données retourée par _load_html_page.
+            criteria : l'attribut css et sa valeur permettant d'identifier la table à récupérer.
 
-        @return la table html contenant les données.
+        @return
+            la table html contenant les données.
         """
         # (1) Le critère permet d'identifier le tableau que l'on cherche dans la page html.
         #     Il se compose d'un attribut html et de sa valeur.
@@ -122,16 +131,22 @@ class ConfigScrapperInterface:
         """
         récupération des noms des colonnes
 
-        @param le tableau html retourné par _find_table_in_html
-        @return la liste des noms des colonnes.
+        @param
+            table : le tableau html retourné par _find_table_in_html
+
+        @return
+            la liste des noms des colonnes.
         """
         pass
 
     @abstractstaticmethod
     def _scrap_columns_values(table: Element) -> "list[str]":
         """
-        @param le tableau html retourné par _find_table_in_html.
-        @return la liste des valeurs contenues dans la table.
+        @param
+            table : le tableau html retourné par _find_table_in_html.
+
+        @return
+            la liste des valeurs contenues dans la table.
         """
         pass
 
@@ -141,9 +156,10 @@ class ConfigScrapperInterface:
         Mise en forme du tableau de données. Implémentée dans chaque scrapper concrêt.
 
         @param
-            values - La liste des valeurs contenues dans le tableau.
-            column_names - La liste des noms de colonnes.
+            values : La liste des valeurs contenues dans le tableau.
+            column_names : La liste des noms de colonnes.
 
-        @return le dataframe équivalent au tableau de données html.
+        @return
+            le dataframe équivalent au tableau de données html.
         """
         pass

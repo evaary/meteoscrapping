@@ -8,55 +8,36 @@ from app.scrappers.abcs import MeteoScrapper
 
 class WundergroundMonthly(MeteoScrapper):
 
-    UNITS_CONVERSION = { "dew" : { "new_name": "dew_point_°C",
-                                   "func": (lambda x: (x - 32) * 5/9 ) },
+    UNITS_CONVERSION = {    "dew" : {   "new_name"  : "dew_point_°C",
+                                        "func"      : (lambda x: (x - 32) * 5/9 ) },
 
-                         "wind": { "new_name": "wind_speed_(km/h)",
-                                   "func": (lambda x: x * 1.609344) },
+                            "wind": {   "new_name"  : "wind_speed_(km/h)",
+                                        "func"      : (lambda x: x * 1.609344) },
 
-                         "pressure": { "new_name": "pressure_(hPa)",
-                                       "func": (lambda x: x * 33.86388) },
+                            "pressure": {   "new_name"  : "pressure_(hPa)",
+                                            "func"      : (lambda x: x * 33.86388) },
 
-                         "humidity": { "new_name": "humidity_(%)",
-                                       "func": (lambda x: x) },
+                            "humidity": {   "new_name"  : "humidity_(%)",
+                                            "func"      : (lambda x: x) },
 
-                         "temperature": { "new_name": "temperature_°C",
-                                         "func": (lambda x: (x - 32) * 5/9 ) },
+                            "temperature": {    "new_name"  : "temperature_°C",
+                                                "func"      : (lambda x: (x - 32) * 5/9 ) },
 
-                         "precipitation": { "new_name": "precipitation_(mm)",
-                                            "func": (lambda x: x * 25.4) } }
+                            "precipitation": {  "new_name"  : "precipitation_(mm)",
+                                                "func"      : (lambda x: x * 25.4) } }
 
     def _build_parameters_generator(self, config):
+        return JobParametersBuilder.build_wunderground_monthly_parameters_generator_from_config(config)
 
-        waiting_to_add = self.DEFAULT_WAITING
 
-        try:
-            waiting_to_add = config["waiting"]
-        except KeyError:
-            pass
-
-        return (
-
-            JobParametersBuilder().add_city( config["city"] )
-                                  .add_country_code( config["country_code"] )
-                                  .add_region( config["region"] )
-                                  .add_waiting(waiting_to_add)
-                                  .add_year(year)
-                                  .add_month(month)
-                                  .build_wunderground_monthly_parameters()
-
-            for year in range(config["year"][0],
-                              config["year"][-1] + 1)
-
-            for month in range(config["month"][0],
-                               config["month"][-1] + 1)
-        )
 
     @staticmethod
     def _scrap_columns_names(table):
 
         return [ td.text for td in table.find("thead")[0]
                                         .find("td") ]
+
+
 
     @staticmethod
     def _scrap_columns_values(table):
@@ -74,6 +55,8 @@ class WundergroundMonthly(MeteoScrapper):
 
         return [ td.text for td in table.find("tbody")[0]
                                         .find("td") if "\n" in td.text ]
+
+
 
     def _rework_data(self,
                      values,

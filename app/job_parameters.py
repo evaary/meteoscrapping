@@ -1,8 +1,7 @@
-from abc import ABC, abstractmethod
+from abc import ABC, abstractclassmethod
 from string import Template
 
 from app import utils
-from app.job_parameters import JobParametersBuilder
 
 
 class JobParametersBuilder:
@@ -16,6 +15,7 @@ class JobParametersBuilder:
     MAX_DAY = 31
 
     MIN_WAITING = 0
+    DEFAULT_WAITING = 3
 
     def __init__(self) -> None:
 
@@ -78,7 +78,7 @@ class JobParametersBuilder:
 
     def add_day(self, day: int) -> "JobParametersBuilder":
 
-        if (not isinstance(day, int)
+        if (   not isinstance(day, int)
             or day < self.MIN_DAY
             or day > self.MAX_DAY):
 
@@ -154,8 +154,121 @@ class JobParametersBuilder:
     def build_meteociel_monthly_parameters(self) -> "MeteocielMonthlyParameters":
         return MeteocielMonthlyParameters(self)
 
-    def build_meteociel_dailly_parameters(self) -> "MeteocielDailyParameters":
+    def build_meteociel_daily_parameters(self) -> "MeteocielDailyParameters":
         return MeteocielDailyParameters(self)
+
+    @classmethod
+    def build_wunderground_monthly_parameters_generator_from_config(cls, config) -> "tuple[WundergroundMonthlyParameters]":
+
+        waiting_to_add = cls.DEFAULT_WAITING
+
+        try:
+            waiting_to_add = config["waiting"]
+        except KeyError:
+            pass
+
+        return (
+
+            JobParametersBuilder().add_city( config["city"] )
+                                  .add_country_code( config["country_code"] )
+                                  .add_region( config["region"] )
+                                  .add_waiting(waiting_to_add)
+                                  .add_year(year)
+                                  .add_month(month)
+                                  .build_wunderground_monthly_parameters()
+
+            for year in range(config["year"][0],
+                            config["year"][-1] + 1)
+
+            for month in range(config["month"][0],
+                            config["month"][-1] + 1)
+        )
+
+    @classmethod
+    def build_ogimet_monthly_parameters_generator_from_config(cls, config) -> "tuple[OgimetMonthlyParameters]":
+
+        waiting_to_add = cls.DEFAULT_WAITING
+
+        try:
+            waiting_to_add = config["waiting"]
+        except KeyError:
+            pass
+
+        return (
+
+            JobParametersBuilder().add_city( config["city"] )
+                                  .add_ind( config["ind"] )
+                                  .add_waiting(waiting_to_add)
+                                  .add_year(year)
+                                  .add_month(month)
+                                  .build_ogimet_monthly_parameters()
+
+            for year in range(config["year"][0],
+                              config["year"][-1] + 1)
+
+            for month in range(config["month"][0],
+                               config["month"][-1] + 1)
+        )
+
+    @classmethod
+    def build_meteociel_monthly_parameters_generator_from_config(cls, config) -> "tuple[MeteocielMonthlyParameters]":
+
+        waiting_to_add = cls.DEFAULT_WAITING
+
+        try:
+            waiting_to_add = config["waiting"]
+        except KeyError:
+            pass
+
+        return (
+
+            JobParametersBuilder().add_city( config["city"] )
+                                  .add_code_num( config["code_num"] )
+                                  .add_code( config["code"] )
+                                  .add_waiting(waiting_to_add)
+                                  .add_year(year)
+                                  .add_month(month)
+                                  .build_meteociel_monthly_parameters()
+
+            for year in range(config["year"][0],
+                              config["year"][-1] + 1)
+
+            for month in range(config["month"][0],
+                               config["month"][-1] + 1)
+        )
+
+    @classmethod
+    def build_meteociel_daily_parameters_generator_from_config(cls, config) -> "tuple[MeteocielDailyParameters]":
+
+        waiting_to_add = cls.DEFAULT_WAITING
+
+        try:
+            waiting_to_add = config["waiting"]
+        except KeyError:
+            pass
+
+        return (
+
+            JobParametersBuilder().add_city( config["city"] )
+                                  .add_code_num( config["code_num"] )
+                                  .add_code( config["code"] )
+                                  .add_waiting(waiting_to_add)
+                                  .add_year(year)
+                                  .add_month(month)
+                                  .add_day(day)
+                                  .build_meteociel_daily_parameters()
+
+            for year in range(config["year"][0],
+                              config["year"][-1] + 1)
+
+            for month in range(config["month"][0],
+                               config["month"][-1] + 1)
+
+            for day in range(config["day"][0],
+                             config["day"][-1] + 1)
+
+            if day <= utils.DAYS[month]
+        )
 
 
 
@@ -172,13 +285,11 @@ class JobParameters(ABC):
         self.criteria = self._get_criteria()
         self.key = self._get_key(builder)
 
-    @abstractmethod
-    @classmethod
+    @abstractclassmethod
     def _build_url(cls, builder: JobParametersBuilder):
         pass
 
-    @abstractmethod
-    @classmethod
+    @abstractclassmethod
     def _get_criteria(cls):
         pass
 
@@ -302,7 +413,7 @@ class MeteocielDailyParameters(JobParameters):
         self.code_num = builder.code_num
         self.code = builder.code
         self.day = builder.day
-        self.day_str: builder.day_str
+        self.day_str = builder.day_str
 
     def _build_url(cls, buidler: JobParametersBuilder):
 
@@ -316,5 +427,6 @@ class MeteocielDailyParameters(JobParameters):
         return cls.CRITERIA
 
     # override
+    @staticmethod
     def _get_key(builder):
         return f"{builder.city}_{builder.year_str}_{builder.month_str}_{builder.day_str}"

@@ -1,8 +1,10 @@
 import multiprocessing as mp
 import os
 import random
+import threading as mt
 from concurrent.futures import ProcessPoolExecutor
 from json.decoder import JSONDecodeError
+from multiprocessing import current_process
 
 from app.checkers.ConfigFileChecker import ConfigFilesChecker
 from app.checkers.exceptions import ConfigFileCheckerException
@@ -15,8 +17,9 @@ from app.scrappers.wunderground_scrappers import WundergroundMonthly
 
 class Runner:
 
-    MAX_PROCESSES = 1 if mp.cpu_count() == 1 else mp.cpu_count() - 1
-
+    # MAX_PROCESSES = 1 if mp.cpu_count() == 1 else mp.cpu_count() - 1
+    MAX_PROCESSES = 5
+    PROGRESS_TIMER_INTERVAL = 10
     WORKDIR = os.getcwd()
 
     # Emplacements des répertoires d'intérêt.
@@ -29,6 +32,8 @@ class Runner:
                     "meteociel_daily": MeteocielDaily }
 
     CHECKER = ConfigFilesChecker.instance()
+
+
 
     @classmethod
     def _create_data_and_errors_filenames(cls, config: dict) -> "tuple[str]":

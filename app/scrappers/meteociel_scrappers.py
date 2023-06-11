@@ -6,6 +6,7 @@ import pandas as pd
 from app.job_parameters import (JobParametersBuilder, MeteocielDailyParameters,
                                 MeteocielMonthlyParameters)
 from app.scrappers.abcs import MeteoScrapper
+from app.scrappers.exceptions import ReworkException, ScrapException
 
 
 class MeteocielMonthly(MeteoScrapper):
@@ -17,13 +18,15 @@ class MeteocielMonthly(MeteoScrapper):
     # Regex pour récupérer uniquement les float d'une string pour la colonne des précipitations.
     TEMPLATE_PRECIPITATION = r'-?\d+\.?\d*'
 
-    def _build_parameters_generator(self, config):
+    @staticmethod
+    def _build_parameters_generator(config):
         return JobParametersBuilder.build_meteociel_monthly_parameters_generator_from_config(config)
 
 
 
     @staticmethod
     def _scrap_columns_names(table):
+
         # Implémentation de ScrapperInterface._scrap_columns_names
         # (1) On récupère les noms des colonnes contenus dans la 1ère ligne du tableau.
         # (2) Certains caractères à accents passent mal, on les remplace, et on enlève les . .
@@ -31,14 +34,20 @@ class MeteocielMonthly(MeteoScrapper):
         # (4) La dernière colonne contient des images et n'a pas de noms. On la supprimera,
         #     on la nomme to_delete.
 
-        # (1)
-        columns_names = [ td.text.lower() for td in table.find("tr")[0].find("td") ]
-        # (2)
-        columns_names = [ col.replace("ã©", "e").replace(".", "") for col in columns_names ]
-        # (3)
-        columns_names = [ "date" if col == "jour" else "_".join(col.split(" ")) for col in columns_names ]
-        # (4)
-        columns_names = [ "to_delete" if col == "" else col for col in columns_names ]
+        try:
+
+            # (1)
+            columns_names = [ td.text.lower() for td in table.find("tr")[0].find("td") ]
+            # (2)
+            columns_names = [ col.replace("ã©", "e").replace(".", "") for col in columns_names ]
+            # (3)
+            columns_names = [ "date" if col == "jour" else "_".join(col.split(" ")) for col in columns_names ]
+            # (4)
+            columns_names = [ "to_delete" if col == "" else col for col in columns_names ]
+
+        except ( AttributeError,
+                 IndexError ):
+            raise ScrapException()
 
         return columns_names
 
@@ -46,10 +55,18 @@ class MeteocielMonthly(MeteoScrapper):
 
     @staticmethod
     def _scrap_columns_values(table):
+
         # Implémentation de ScrapperInterface._scrap_columns_values
         # On récupère les valeurs des cellules de toutes les lignes,
         # sauf la 1ère (noms des colonnes) et la dernière (cumul / moyenne mensuel).
-        return [ td.text for tr in table.find("tr")[1:-1] for td in tr.find("td") ]
+
+        try:
+
+            return [ td.text for tr in table.find("tr")[1:-1] for td in tr.find("td") ]
+
+        except ( AttributeError,
+                 IndexError ):
+            raise ScrapException()
 
 
 
@@ -121,25 +138,33 @@ class MeteocielDaily(MeteoScrapper):
     # Regex pour récupérer uniquement les float d'une string pour la colonne des précipitations.
     TEMPLATE_PRECIPITATION = r'-?\d+\.?\d*'
 
-    def _build_parameters_generator(self, config):
+    @staticmethod
+    def _build_parameters_generator(config):
         return JobParametersBuilder.build_meteociel_daily_parameters_generator_from_config(config)
 
 
 
     @staticmethod
     def _scrap_columns_names(table):
-        # Implémentation de ScrapperInterface._scrap_columns_names
-        columns_names = [td.text.lower() for td in table.find("tr")[0].find("td")]
 
-        columns_names = [ col.replace("ã©", "e").replace(".", "") for col in columns_names ]
+        try:
 
-        columns_names = [ col.split("\n")[0] if "\n" in col else col for col in columns_names ]
+            # Implémentation de ScrapperInterface._scrap_columns_names
+            columns_names = [td.text.lower() for td in table.find("tr")[0].find("td")]
 
-        # La colonne vent est composée de 2 sous colonnes: direction et vitesse.
-        # Le tableau compte donc n colonnes mais n-1 noms de colonnes.
-        # On rajoute donc un nom pour la colonne de la direction du vent.
-        indexe = columns_names.index("vent (rafales)")
-        columns_names.insert(indexe, "winddir")
+            columns_names = [ col.replace("ã©", "e").replace(".", "") for col in columns_names ]
+
+            columns_names = [ col.split("\n")[0] if "\n" in col else col for col in columns_names ]
+
+            # La colonne vent est composée de 2 sous colonnes: direction et vitesse.
+            # Le tableau compte donc n colonnes mais n-1 noms de colonnes.
+            # On rajoute donc un nom pour la colonne de la direction du vent.
+            indexe = columns_names.index("vent (rafales)")
+            columns_names.insert(indexe, "winddir")
+
+        except ( AttributeError,
+                 IndexError ):
+            raise ScrapException()
 
         return columns_names
 
@@ -147,8 +172,15 @@ class MeteocielDaily(MeteoScrapper):
 
     @staticmethod
     def _scrap_columns_values(table):
+
         # Implémentation de ScrapperInterface._scrap_columns_values
-        return [ td.text for tr in table.find("tr")[1:] for td in tr.find("td") ]
+        try:
+
+            return [ td.text for tr in table.find("tr")[1:] for td in tr.find("td") ]
+
+        except ( AttributeError,
+                 IndexError ):
+            raise ScrapException()
 
 
 
@@ -165,7 +197,8 @@ class MeteocielDaily(MeteoScrapper):
         missing_hours = [x for x in hours if x not in values]
 
         for hour in missing_hours:
-            values += [hour] + ["" for _ in range(n_cols - 1)]
+            line_to_add = [hour].extend( [ "" for _ in range(n_cols - 1) ] )
+            values.extend(line_to_add)
 
         return values
 
@@ -175,6 +208,7 @@ class MeteocielDaily(MeteoScrapper):
                      values,
                      columns_names,
                      parameters: MeteocielDailyParameters):
+
         # Implémentation de ScrapperInterface._rework_data
         # (1) On définit les dimensions du tableau puis on le créé.
         # (2) On met de coté la colonne vent car il faut la séparer en 2.
@@ -198,9 +232,14 @@ class MeteocielDaily(MeteoScrapper):
         if(n_values != n_expected):
             values = self._fill_missing_values(values, n_cols)
 
-        df = pd.DataFrame( np.array(values)
-                             .reshape(n_rows, n_cols),
-                          columns=columns_names )
+        try:
+
+            df = pd.DataFrame( np.array(values)
+                                 .reshape(n_rows, n_cols),
+                            columns=columns_names )
+
+        except ValueError:
+            raise ReworkException()
 
         # (2)
         vent_rafale = df[["heure", "vent (rafales)"]].copy(deep=True)
@@ -217,11 +256,15 @@ class MeteocielDaily(MeteoScrapper):
         f_rework_dates = np.vectorize(lambda heure :      f"{parameters.year_str}-{parameters.month_str}-{parameters.day_str} 0{int(heure)}:00:00" if heure < 10
                                                      else f"{parameters.year_str}-{parameters.month_str}-{parameters.day_str} {int(heure)}:00:00")
 
-        df["date"] = f_num_extract(df["heure"])
-        df["date"] = f_rework_dates(df["date"])
-        df["date"] = pd.to_datetime(df["date"])
+        try:
 
-        df[numerics] = f_num_extract(df[numerics])
+            df["date"] = f_num_extract(df["heure"])
+            df["date"] = f_rework_dates(df["date"])
+            df["date"] = pd.to_datetime(df["date"])
+            df[numerics] = f_num_extract(df[numerics])
+
+        except ValueError:
+            raise ReworkException()
 
         df = df[not_numeric + numerics] # juste pour l'ordre des colonne, avoir la date en 1er
 
@@ -232,10 +275,15 @@ class MeteocielDaily(MeteoScrapper):
             if(len(x) != 2):
                 x.append("")
 
-        separated = np.array(separated)
-        separated = f_num_extract(separated)
-        separated = pd.DataFrame(separated, columns=["vent", "rafales"])
-        separated["heure"] = vent_rafale["heure"]
+        try:
+
+            separated = np.array(separated)
+            separated = f_num_extract(separated)
+            separated = pd.DataFrame(separated, columns=["vent", "rafales"])
+            separated["heure"] = vent_rafale["heure"]
+
+        except ValueError:
+            raise ReworkException()
 
         # (5)
         df = pd.merge(df,

@@ -4,17 +4,20 @@ import pandas as pd
 from app import utils
 from app.job_parameters import JobParametersBuilder, OgimetMonthlyParameters
 from app.scrappers.abcs import MeteoScrapper
+from app.scrappers.exceptions import ScrapException
 
 
 class OgimetMonthly(MeteoScrapper):
 
-    def _build_parameters_generator(self, config):
+    @staticmethod
+    def _build_parameters_generator(config):
         return JobParametersBuilder.build_ogimet_monthly_parameters_generator_from_config(config)
 
 
 
     @staticmethod
     def _scrap_columns_names(table):
+
         # Implémentation de ConfigScrapperInterface._build_url
         # (1) On récupère les 2 tr du thead de la table de données sur ogimet dans trs.
         #     Le 1er contient les noms principaux des colonnes, le 2ème 6 compléments.
@@ -31,10 +34,16 @@ class OgimetMonthly(MeteoScrapper):
         #     On en rajoute 7.
 
         # (1)
-        trs = table.find("thead")[0]\
-                   .find("tr")
-        main_names = [ th.text for th in trs[0].find("th") ]
-        sub_values = [ th.text for th in trs[1].find("th") ]
+        try:
+
+            trs = table.find("thead")[0]\
+                    .find("tr")
+            main_names = [ th.text for th in trs[0].find("th") ]
+            sub_values = [ th.text for th in trs[1].find("th") ]
+
+        except ( AttributeError,
+                 IndexError ):
+            raise ScrapException()
 
         # (2)
         sub_names = [ [""] for _ in range(len(main_names)) ]
@@ -76,8 +85,13 @@ class OgimetMonthly(MeteoScrapper):
     @staticmethod
     def _scrap_columns_values(table):
 
-        return [td.text for td in table.find("tbody")[0]
-                                       .find("td")]
+        try:
+
+            return [td.text for td in table.find("tbody")[0]
+                                           .find("td")]
+        except ( AttributeError,
+                 IndexError ):
+            raise ScrapException()
 
 
 

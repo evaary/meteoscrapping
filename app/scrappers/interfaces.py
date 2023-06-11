@@ -1,21 +1,13 @@
-import asyncio
 from abc import abstractmethod, abstractstaticmethod
-from typing import Any, Generator
 
 import pandas as pd
-from requests import Response
-from requests.exceptions import RequestException
-from requests_html import AsyncHTMLSession, Element, HTMLSession
+from requests_html import Element, HTMLSession
 
 from app.job_parameters import JobParameters
 from app.scrappers.exceptions import HtmlPageException
 
 
 class Scrapper:
-
-    """
-    Une interface pour exploiter un fichier de configuration.
-    """
 
     @abstractmethod
     def scrap_from_config(self, config: dict) -> pd.DataFrame:
@@ -30,8 +22,8 @@ class Scrapper:
         """
         pass
 
-    @abstractmethod
-    def _build_parameters_generator(self, config: dict) -> "tuple[JobParameters]":
+    @abstractstaticmethod
+    def _build_parameters_generator(config: dict) -> "tuple[JobParameters]":
         """
         Création du générateur de paramètres à partir de la config.
 
@@ -43,38 +35,46 @@ class Scrapper:
         """
         pass
 
-    # @staticmethod
-    # async def _load_html_async(session, parameters: dict):
+    @staticmethod
+    def _load_html(parameters: JobParameters):
 
-    #     html_page = await session.get(parameters["url"]) # long
-    #     await html_page.html.arender()
+        try:
 
-    #     attr, val = parameters["criteria"]
+            with HTMLSession() as session:
 
-    #     # (2)
-    #     table = [
-    #         tab for tab in html_page.html.find("table")
-    #         if attr in tab.attrs and tab.attrs[attr] == val
-    #     ][0]
+                html_page = session.get(parameters.url)
+                html_page.html.render( sleep=parameters.waiting,
+                                       keep_page=True,
+                                       scrolldown=1 )
 
-        # print(table.find("thead")[0]\
-        #            .find("th")[0]\
-        #            .text\
-        #            .lower()\
-        #            .strip())
+            if html_page.status_code != 200:
+                raise HtmlPageException()
 
-        # try:
-        #     condition = "no valid" in table.find("thead")[0]\
-        #                                    .find("th")[0]\
-        #                                    .text\
-        #                                    .lower()\
-        #                                    .strip()
-        #     print(condition)
-        #     table = None if condition else table
-        # except IndexError:
-        #     pass
+        except Exception:
+            raise HtmlPageException()
 
-        # return table
+        attr, val = parameters.criteria
+
+        # (2)
+        table: Element = [ tab for tab in html_page.html.find("table")
+                           if attr in tab.attrs and tab.attrs[attr] == val ][0]
+        try:
+
+            condition = "no valid" in table.find("thead")[0]\
+                                           .find("th")[0]\
+                                           .text\
+                                           .lower()\
+                                           .strip()
+
+            table = None if condition else table
+
+        except IndexError:
+            pass
+
+        if table is None:
+            raise HtmlPageException()
+
+        return table
 
     @abstractstaticmethod
     def _scrap_columns_names(table: Element) -> "list[str]":
@@ -101,13 +101,17 @@ class Scrapper:
         pass
 
     @abstractmethod
-    def _rework_data(self, values: "list[str]", columns_names: "list[str]", parameters: dict) -> pd.DataFrame:
+    def _rework_data( self,
+                      values: "list[str]",
+                      columns_names: "list[str]",
+                      parameters: JobParameters ) -> pd.DataFrame:
         """
         Mise en forme du tableau de données.
 
         @param
             values : La liste des valeurs contenues dans le tableau.
             column_names : La liste des noms de colonnes.
+            parameters : les paramètres du job.
 
         @return
             le dataframe équivalent au tableau de données html.

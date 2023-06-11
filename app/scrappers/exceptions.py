@@ -9,14 +9,7 @@ class ProcessException(Exception):
 
 class HtmlPageException(ProcessException):
 
-    MESSAGE = "Echec de récupération de la page html"
-
-    def __init__(self):
-        super().__init__(self.MESSAGE)
-
-class HtmlTableException(ProcessException):
-
-    MESSAGE = "Echec de récupération de la table dans la page html"
+    MESSAGE = "Echec de récupération du html"
 
     def __init__(self):
         super().__init__(self.MESSAGE)

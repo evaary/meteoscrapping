@@ -37,6 +37,7 @@ class WundergroundMonthly(MeteoScrapper):
     def _scrap_columns_names(table):
 
         try:
+
             return [ td.text for td in table.find("thead")[0]
                                             .find("td") ]
         except ( AttributeError,

@@ -17,9 +17,7 @@ from app.scrappers.wunderground_scrappers import WundergroundMonthly
 
 class Runner:
 
-    # MAX_PROCESSES = 1 if mp.cpu_count() == 1 else mp.cpu_count() - 1
-    MAX_PROCESSES = 5
-    PROGRESS_TIMER_INTERVAL = 10
+    MAX_PROCESSES = 1 if mp.cpu_count() == 1 else (mp.cpu_count() - 1) * 2
     WORKDIR = os.getcwd()
 
     # Emplacements des répertoires d'intérêt.

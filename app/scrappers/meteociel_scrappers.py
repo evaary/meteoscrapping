@@ -147,9 +147,9 @@ class MeteocielDaily(MeteoScrapper):
     @staticmethod
     def _scrap_columns_names(table):
 
+        # Implémentation de ScrapperInterface._scrap_columns_names
         try:
 
-            # Implémentation de ScrapperInterface._scrap_columns_names
             columns_names = [td.text.lower() for td in table.find("tr")[0].find("td")]
 
             columns_names = [ col.replace("ã©", "e").replace(".", "") for col in columns_names ]
@@ -190,8 +190,12 @@ class MeteocielDaily(MeteoScrapper):
         Des lignes correspondant aux données pour une heure peuvent manquer.
         On complète les données s'il en manque.
 
-        @param values : La liste des données récupérées.
-        @param n_cols : le nombre de colonnes du tableau.
+        @param
+            values : La liste des données récupérées.
+            n_cols : le nombre de colonnes du tableau.
+
+        @return
+            la liste des valeurs, complétée.
         """
         hours = [f"{x} h" for x in range(0, 24)]
         missing_hours = [x for x in hours if x not in values]
@@ -236,8 +240,7 @@ class MeteocielDaily(MeteoScrapper):
 
             df = pd.DataFrame( np.array(values)
                                  .reshape(n_rows, n_cols),
-                            columns=columns_names )
-
+                               columns=columns_names )
         except ValueError:
             raise ReworkException()
 
@@ -255,7 +258,6 @@ class MeteocielDaily(MeteoScrapper):
 
         f_rework_dates = np.vectorize(lambda heure :      f"{parameters.year_str}-{parameters.month_str}-{parameters.day_str} 0{int(heure)}:00:00" if heure < 10
                                                      else f"{parameters.year_str}-{parameters.month_str}-{parameters.day_str} {int(heure)}:00:00")
-
         try:
 
             df["date"] = f_num_extract(df["heure"])

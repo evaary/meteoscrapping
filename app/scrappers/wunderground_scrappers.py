@@ -27,12 +27,14 @@ class WundergroundMonthly(MeteoScrapper):
                             "precipitation": {  "new_name"  : "precipitation_(mm)",
                                                 "func"      : (lambda x: x * 25.4) } }
 
+    # override
     @staticmethod
     def _build_parameters_generator(config):
         return JobParametersBuilder.build_wunderground_monthly_parameters_generator_from_config(config)
 
 
 
+    # override
     @staticmethod
     def _scrap_columns_names(table):
 
@@ -46,10 +48,10 @@ class WundergroundMonthly(MeteoScrapper):
 
 
 
+    # override
     @staticmethod
     def _scrap_columns_values(table):
 
-        # Implémentation de ScrapperInterface._scrap_columns_values
         # La structure html du tableau est tordue, ce qui conduit à des doublons dans values.
         # Daily Observations compte 7 colonnes principales et 17 sous-colonnes.
         # Elle est donc de dimension (lignes, sous-colonnes).
@@ -71,6 +73,7 @@ class WundergroundMonthly(MeteoScrapper):
 
 
 
+    # override
     def _rework_data(self,
                      values,
                      columns_names,

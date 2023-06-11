@@ -18,16 +18,17 @@ class MeteocielMonthly(MeteoScrapper):
     # Regex pour récupérer uniquement les float d'une string pour la colonne des précipitations.
     TEMPLATE_PRECIPITATION = r'-?\d+\.?\d*'
 
+    # override
     @staticmethod
     def _build_parameters_generator(config):
         return JobParametersBuilder.build_meteociel_monthly_parameters_generator_from_config(config)
 
 
 
+    # override
     @staticmethod
     def _scrap_columns_names(table):
 
-        # Implémentation de ScrapperInterface._scrap_columns_names
         # (1) On récupère les noms des colonnes contenus dans la 1ère ligne du tableau.
         # (2) Certains caractères à accents passent mal, on les remplace, et on enlève les . .
         # (3) On remplace les espaces par des _, on renomme la colonne jour en date.
@@ -53,10 +54,10 @@ class MeteocielMonthly(MeteoScrapper):
 
 
 
+    # override
     @staticmethod
     def _scrap_columns_values(table):
 
-        # Implémentation de ScrapperInterface._scrap_columns_values
         # On récupère les valeurs des cellules de toutes les lignes,
         # sauf la 1ère (noms des colonnes) et la dernière (cumul / moyenne mensuel).
 
@@ -70,6 +71,7 @@ class MeteocielMonthly(MeteoScrapper):
 
 
 
+    # override
     def _rework_data(self,
                      values,
                      columns_names,
@@ -89,13 +91,12 @@ class MeteocielMonthly(MeteoScrapper):
         columns_names = [ f"{col}_{self.UNITS[col.split('_')[0]]}"
                           if col not in ("date", "to_delete") else col
                           for col in columns_names ]
-
         # (1)
         n_rows = len(values) // len(columns_names)
         n_cols = len(columns_names)
-        df = pd.DataFrame(np.array(values).reshape(n_rows, n_cols),
+        df = pd.DataFrame(np.array(values)
+                            .reshape(n_rows, n_cols),
                           columns=columns_names)
-
         # (2)
         try:
             df = df.drop("to_delete", axis=1)
@@ -109,14 +110,17 @@ class MeteocielMonthly(MeteoScrapper):
 
         f_rework_dates = np.vectorize(lambda day :      f"{parameters.year_str}-{parameters.month_str}-0{int(day)}" if day < 10
                                                    else f"{parameters.year_str}-{parameters.month_str}-{int(day)}")
+        try:
+            # (4)
+            df["date"] = f_num_extract(df["date"])
+            df["date"] = f_rework_dates(df["date"])
+            df["date"] = pd.to_datetime(df["date"])
 
-        # (4)
-        df["date"] = f_num_extract(df["date"])
-        df["date"] = f_rework_dates(df["date"])
-        df["date"] = pd.to_datetime(df["date"])
+            # (5)
+            df.iloc[:, 1:] = f_num_extract(df.iloc[:, 1:])
 
-        # (5)
-        df.iloc[:, 1:] = f_num_extract(df.iloc[:, 1:])
+        except ValueError:
+            raise ReworkException()
 
         # (6)
         df = df.sort_values(by="date")
@@ -138,16 +142,17 @@ class MeteocielDaily(MeteoScrapper):
     # Regex pour récupérer uniquement les float d'une string pour la colonne des précipitations.
     TEMPLATE_PRECIPITATION = r'-?\d+\.?\d*'
 
+    # override
     @staticmethod
     def _build_parameters_generator(config):
         return JobParametersBuilder.build_meteociel_daily_parameters_generator_from_config(config)
 
 
 
+    # override
     @staticmethod
     def _scrap_columns_names(table):
 
-        # Implémentation de ScrapperInterface._scrap_columns_names
         try:
 
             columns_names = [td.text.lower() for td in table.find("tr")[0].find("td")]
@@ -170,10 +175,10 @@ class MeteocielDaily(MeteoScrapper):
 
 
 
+    # override
     @staticmethod
     def _scrap_columns_values(table):
 
-        # Implémentation de ScrapperInterface._scrap_columns_values
         try:
 
             return [ td.text for tr in table.find("tr")[1:] for td in tr.find("td") ]
@@ -208,12 +213,12 @@ class MeteocielDaily(MeteoScrapper):
 
 
 
+    # override
     def _rework_data(self,
                      values,
                      columns_names,
                      parameters: MeteocielDailyParameters):
 
-        # Implémentation de ScrapperInterface._rework_data
         # (1) On définit les dimensions du tableau puis on le créé.
         # (2) On met de coté la colonne vent car il faut la séparer en 2.
         #     On supprime les colonnes inutiles.

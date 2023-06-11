@@ -51,8 +51,7 @@ class Runner:
         datafilename = "_".join( [ str(id),
                                    config["city"],
                                    config["scrapper"] ] )\
-                          .lower()
-        datafilename += ".csv"
+                          .lower() + ".csv"
 
         errorsfilename = "_".join( [ str(id),
                                      config["city"],
@@ -108,7 +107,7 @@ class Runner:
 
 
     @classmethod
-    def stop(cls):
+    def stop(cls) -> None:
         print("arrêt du programme sur demande de l'utilisateur")
         for active_process in mp.active_children():
             active_process.terminate()
@@ -119,7 +118,8 @@ class Runner:
     def _run_one_job(cls, config) -> None:
         """
         Traitement réalisé pour chaque job du fichier config.
-        @param config : le contenu du fichier config.
+        @params
+            config : le contenu du fichier config.
         """
 
         scrapper: MeteoScrapper = cls.SCRAPPERS[ config["scrapper"] ]()
@@ -137,7 +137,7 @@ class Runner:
 
 
     @classmethod
-    def run_from_config(cls):
+    def run_from_config(cls) -> None:
 
         try:
             print("lecture du fichier config.json...")

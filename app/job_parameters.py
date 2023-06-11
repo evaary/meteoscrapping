@@ -178,10 +178,10 @@ class JobParametersBuilder:
                                   .build_wunderground_monthly_parameters()
 
             for year in range(config["year"][0],
-                            config["year"][-1] + 1)
+                              config["year"][-1] + 1)
 
             for month in range(config["month"][0],
-                            config["month"][-1] + 1)
+                               config["month"][-1] + 1)
         )
 
     @classmethod
@@ -311,6 +311,8 @@ class WundergroundMonthlyParameters(JobParameters):
         self.country_code = builder.country_code
         self.region = builder.region
 
+    # override
+    @classmethod
     def _build_url(cls, builder: JobParametersBuilder):
 
         return cls.BASE_URL.substitute( country_code=builder.country_code,
@@ -319,6 +321,8 @@ class WundergroundMonthlyParameters(JobParameters):
                                         year=builder.year,
                                         month=builder.month )
 
+    # override
+    @classmethod
     def _get_criteria(cls):
         return cls.CRITERIA
 
@@ -350,6 +354,8 @@ class OgimetMonthlyParameters(JobParameters):
         super().__init__(builder)
         self.ind = builder.ind
 
+    # override
+    @classmethod
     def _build_url(cls, builder: JobParametersBuilder):
 
         return cls.BASE_URL.substitute( ind=builder.ind,
@@ -357,6 +363,8 @@ class OgimetMonthlyParameters(JobParameters):
                                         mes=cls.NUMEROTATIONS[builder.month],
                                         ndays=utils.DAYS[builder.month] )
 
+    # override
+    @classmethod
     def _get_criteria(cls):
         return cls.CRITERIA
 
@@ -374,6 +382,8 @@ class MeteocielMonthlyParameters(JobParameters):
         self.code_num = builder.code_num
         self.code = builder.code
 
+    # override
+    @classmethod
     def _build_url(cls, builder: JobParametersBuilder):
 
         return cls.BASE_URL.substitute( code_num = builder.code_num,
@@ -381,6 +391,8 @@ class MeteocielMonthlyParameters(JobParameters):
                                         mois = builder.month,
                                         annee = builder.year )
 
+    # override
+    @classmethod
     def _get_criteria(cls):
         return cls.CRITERIA
 
@@ -415,6 +427,8 @@ class MeteocielDailyParameters(JobParameters):
         self.day = builder.day
         self.day_str = builder.day_str
 
+    # override
+    @classmethod
     def _build_url(cls, buidler: JobParametersBuilder):
 
         return cls.BASE_URL.substitute( code_num=buidler.code_num,
@@ -423,6 +437,8 @@ class MeteocielDailyParameters(JobParameters):
                                         mois2=cls.NUMEROTATIONS[buidler.month],
                                         annee2=buidler.year )
 
+    # override
+    @classmethod
     def _get_criteria(cls):
         return cls.CRITERIA
 

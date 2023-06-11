@@ -9,16 +9,17 @@ from app.scrappers.exceptions import ScrapException
 
 class OgimetMonthly(MeteoScrapper):
 
+    # override
     @staticmethod
     def _build_parameters_generator(config):
         return JobParametersBuilder.build_ogimet_monthly_parameters_generator_from_config(config)
 
 
 
+    # override
     @staticmethod
     def _scrap_columns_names(table):
 
-        # Implémentation de ConfigScrapperInterface._build_url
         # (1) On récupère les 2 tr du thead de la table de données sur ogimet dans trs.
         #     Le 1er contient les noms principaux des colonnes, le 2ème 6 compléments.
         #     Les 3 premiers compléments sont pour la température, les 3 suivants pour le vent.
@@ -37,7 +38,7 @@ class OgimetMonthly(MeteoScrapper):
         try:
 
             trs = table.find("thead")[0]\
-                    .find("tr")
+                       .find("tr")
             main_names = [ th.text for th in trs[0].find("th") ]
             sub_values = [ th.text for th in trs[1].find("th") ]
 
@@ -82,6 +83,7 @@ class OgimetMonthly(MeteoScrapper):
 
 
 
+    # override
     @staticmethod
     def _scrap_columns_values(table):
 
@@ -110,7 +112,7 @@ class OgimetMonthly(MeteoScrapper):
 
         Cette fonction comble les manques dans les lignes en ajoutant des "" à la fin.
 
-        @param
+        @params
             values : la liste des valeurs récupérées dans le tableau.
             n_cols : nombre de colonnes du tableau.
             n_values_expected : nombre de valeurs théoriques si le tableau était complet.
@@ -118,11 +120,6 @@ class OgimetMonthly(MeteoScrapper):
 
         @return
             la liste complétée des valeurs du tableau.
-        @param values : La liste des valeurs récupérées dans le tableau.
-        @param n_cols : Le nombre de colonnes du tableau.
-        @param n_expected : Le nombre de valeurs théoriques si le tableau était complet.
-        @param month : Le numéro du mois au format mm
-        @return La liste complétée des valeurs du tableau.
         """
         # (1) done contient les valeurs traitées, todo les valeurs à traiter.
         # (2) Tant que done n'est pas complet, on sélectionne l'équivalent
@@ -163,6 +160,7 @@ class OgimetMonthly(MeteoScrapper):
 
 
 
+    # override
     def _rework_data(self,
                      values,
                      columns_names,

@@ -1,4 +1,5 @@
 from abc import abstractmethod, abstractstaticmethod
+from typing import Generator
 
 import pandas as pd
 from requests_html import Element, HTMLSession
@@ -14,7 +15,7 @@ class Scrapper:
         """
         Récupération de données à partir d'une config du fichier de configuration.
 
-        @param
+        @params
             config : une config du fichier de configuration
 
         @return
@@ -23,15 +24,15 @@ class Scrapper:
         pass
 
     @abstractstaticmethod
-    def _build_parameters_generator(config: dict) -> "tuple[JobParameters]":
+    def _build_parameters_generator(config: dict) -> "Generator[JobParameters]":
         """
         Création du générateur de paramètres à partir de la config.
 
-        @param
+        @params
             config : une config du fichier de configuration
 
         @return
-            un tuple contenant les paramètres du job à réaliser
+            un générateur contenant les paramètres du job à réaliser
         """
         pass
 
@@ -79,10 +80,10 @@ class Scrapper:
     @abstractstaticmethod
     def _scrap_columns_names(table: Element) -> "list[str]":
         """
-        Récupération des noms des colonnes du tableau issu de _find_table_in_html.
+        Récupération des noms des colonnes du tableau issu de _load_html.
 
-        @param
-            table : le tableau html retourné par _find_table_in_html
+        @params
+            table : le tableau html retourné par _load_html
 
         @return
             la liste des noms des colonnes.
@@ -92,8 +93,8 @@ class Scrapper:
     @abstractstaticmethod
     def _scrap_columns_values(table: Element) -> "list[str]":
         """
-        @param
-            table : le tableau html retourné par _find_table_in_html.
+        @params
+            table : le tableau html retourné par _load_html.
 
         @return
             la liste des valeurs contenues dans la table.
@@ -108,7 +109,7 @@ class Scrapper:
         """
         Mise en forme du tableau de données.
 
-        @param
+        @params
             values : La liste des valeurs contenues dans le tableau.
             column_names : La liste des noms de colonnes.
             parameters : les paramètres du job.

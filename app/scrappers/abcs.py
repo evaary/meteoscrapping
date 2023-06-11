@@ -17,26 +17,27 @@ class MeteoScrapper(ABC, Scrapper):
 
         self.errors = dict()
         # date de départ de lancement des jobs
-        self._start = None
+        self._start = 0
         # quantité de jobs traités
         self._done = 0
         # quantité de jobs à traiter
-        self._todo = -1
+        self._todo = 0
         # % de jobs traités
         self._progress = 0
         # vitesse en % / s
         self._speed = 0
 
     def _upate(self):
+
         self._done += 1
         self._progress = round(self._done / self._todo * 100, 0)
-        self._speed = round(self._progress / perf_counter(), 0)
+        self._speed = round(self._progress / perf_counter() - self._start, 0)
 
 
 
     def _print_progress(self) -> None:
 
-        print(f"{self.__class__.__name__} ({current_process().pid}) - {self._progress}% - {round(perf_counter(), 0)}s \n")
+        print(f"{self.__class__.__name__} ({current_process().pid}) - {self._progress}% - {round(perf_counter()  - self._start, 0)}s \n")
 
         if self.PROGRESS_TIMER_INTERVAL * self._speed * 2 < 100 - self._progress:
             timer = mt.Timer(self.PROGRESS_TIMER_INTERVAL, self._print_progress)
@@ -44,15 +45,16 @@ class MeteoScrapper(ABC, Scrapper):
             timer.start()
 
 
-
+    # override
     def scrap_from_config(self, config):
 
         self._todo = sum([ 1 for _ in self._build_parameters_generator(config) ])
-        parameters_generator = self._build_parameters_generator(config)
-
-        global_df = pd.DataFrame()
-        self._print_progress()
         self._start = perf_counter()
+
+        parameters_generator = self._build_parameters_generator(config)
+        global_df = pd.DataFrame()
+
+        self._print_progress()
 
         for parameters in parameters_generator:
 

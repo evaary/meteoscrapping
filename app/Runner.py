@@ -139,6 +139,8 @@ class Runner:
     @classmethod
     def run_from_config(cls) -> None:
 
+        mp.freeze_support() # pour ne pas que le main se relance en boucle
+
         try:
             print("lecture du fichier config.json...")
             config_file: dict = from_json(os.path.join(cls.WORKDIR, "config.json"))
@@ -159,6 +161,9 @@ class Runner:
         print("fichier config.json trouvé, lancement des téléchargements\n")
 
         all_configs = cls._get_all_configs(config_file)
+
+        # for config in all_configs:
+        #     cls._run_one_job(config)
 
         with ProcessPoolExecutor(max_workers=cls.MAX_PROCESSES) as executor:
             executor.map(cls._run_one_job, all_configs)

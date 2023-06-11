@@ -35,14 +35,15 @@ class MeteoScrapper(ABC, Scrapper):
 
 
 
-    def _print_progress(self) -> None:
+    def _print_progress(self, should_stop=False) -> None:
 
         print(f"{self.__class__.__name__} ({current_process().pid}) - {self._progress}% - {round(perf_counter()  - self._start, 0)}s \n")
 
-        if self.PROGRESS_TIMER_INTERVAL * self._speed * 2 < 100 - self._progress:
+        if not should_stop:
             timer = mt.Timer(self.PROGRESS_TIMER_INTERVAL, self._print_progress)
             timer.daemon = True
             timer.start()
+
 
 
     # override
@@ -78,6 +79,6 @@ class MeteoScrapper(ABC, Scrapper):
 
         global_df.sort_values(by="date")
 
-        self._print_progress()
+        self._print_progress(should_stop=True)
 
         return global_df

@@ -16,29 +16,29 @@ class CheckerTester(TestCase):
 
     CONFIG = {  "waiting": 3,
 
-                "ogimet":[ { "ind":"16138",
-                            "city":"Ferrara",
-                            "year":[2021],
-                            "month":[2] } ],
+                "ogimet":[ {"ind"   : "16138",
+                            "city"  : "Ferrara",
+                            "year"  : [2021],
+                            "month" : [2] } ],
 
-                "wunderground":[ { "country_code":"it",
-                                "region": "LIBD",
-                                "city":"matera",
-                                "year":[2021],
-                                "month":[1] } ],
+                "wunderground":[ {  "country_code"  : "it",
+                                    "region"        : "LIBD",
+                                    "city"          : "matera",
+                                    "year"          : [2021],
+                                    "month"         : [1] } ],
 
-                "meteociel":[ { "code_num":"2",
-                                "code": "7249",
-                                "city":"orleans",
-                                "year":[2020],
-                                "month":[2] } ],
+                "meteociel":[ { "code_num"  : "2",
+                                "code"      : "7249",
+                                "city"      : "orleans",
+                                "year"      : [2020],
+                                "month"     : [2] } ],
 
-                "meteociel_daily":[ { "code_num":"2",
-                                    "code": "7249",
-                                    "city":"orleans",
-                                    "year":[2020],
-                                    "month":[2],
-                                    "day":[27,31] } ] }
+                "meteociel_daily":[ {   "code_num"  : "2",
+                                        "code"      : "7249",
+                                        "city"      : "orleans",
+                                        "year"      : [2020],
+                                        "month"     : [2],
+                                        "day"       : [27,31] } ] }
 
     def test_no_dict(self):
         with self.assertRaises(NoDictException):

@@ -4,6 +4,7 @@ import pandas as pd
 from app.job_parameters import (JobParametersBuilder,
                                 WundergroundMonthlyParameters)
 from app.scrappers.abcs import MeteoScrapper
+from app.scrappers.exceptions import ScrapException
 
 
 class WundergroundMonthly(MeteoScrapper):
@@ -26,7 +27,8 @@ class WundergroundMonthly(MeteoScrapper):
                             "precipitation": {  "new_name"  : "precipitation_(mm)",
                                                 "func"      : (lambda x: x * 25.4) } }
 
-    def _build_parameters_generator(self, config):
+    @staticmethod
+    def _build_parameters_generator(config):
         return JobParametersBuilder.build_wunderground_monthly_parameters_generator_from_config(config)
 
 
@@ -34,14 +36,20 @@ class WundergroundMonthly(MeteoScrapper):
     @staticmethod
     def _scrap_columns_names(table):
 
-        return [ td.text for td in table.find("thead")[0]
-                                        .find("td") ]
+        try:
+
+            return [ td.text for td in table.find("thead")[0]
+                                            .find("td") ]
+        except ( AttributeError,
+                 IndexError ):
+            raise ScrapException()
 
 
 
     @staticmethod
     def _scrap_columns_values(table):
 
+        # Implémentation de ScrapperInterface._scrap_columns_values
         # La structure html du tableau est tordue, ce qui conduit à des doublons dans values.
         # Daily Observations compte 7 colonnes principales et 17 sous-colonnes.
         # Elle est donc de dimension (lignes, sous-colonnes).
@@ -53,8 +61,13 @@ class WundergroundMonthly(MeteoScrapper):
         # et donc de toutes ses sous-colonnes.
         # On récupère ces 7 valeurs additionnelles qui contiennent le caractère \n.
 
-        return [ td.text for td in table.find("tbody")[0]
-                                        .find("td") if "\n" in td.text ]
+        try:
+
+            return [ td.text for td in table.find("tbody")[0]
+                                            .find("td") if "\n" in td.text ]
+        except ( AttributeError,
+                 IndexError ):
+            raise ScrapException()
 
 
 
@@ -114,9 +127,8 @@ class WundergroundMonthly(MeteoScrapper):
 
             for key in self.UNITS_CONVERSION.keys():
 
-                is_key_in_name = key in main_name.lower().strip()
-
-                if is_key_in_name:
+                if key in main_name.lower()\
+                                   .strip():
                     columns_names[index] = self.UNITS_CONVERSION[key]["new_name"]
                     break
 

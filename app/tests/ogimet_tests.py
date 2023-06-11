@@ -77,4 +77,3 @@ class Ogimet_MonthlyTester(TestCase):
     def test_scrap_data(self):
         data = self.SCRAPPER.scrap_from_config(self.CONFIG).set_index("date")
         self.assertTrue( self.compare_data(data) )
-

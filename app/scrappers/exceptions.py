@@ -1,35 +1,29 @@
-class HtmlPageException(Exception):
+class ProcessException(Exception):
 
     def __init__(self, *args, **kwargs):
 
         if not args:
-            args = ("Echec de récupération de la page html",)
+            args = ("Echec du job",)
 
         super().__init__(*args, **kwargs)
 
-class HtmlTableException(Exception):
+class HtmlPageException(ProcessException):
 
-    def __init__(self, *args, **kwargs):
+    MESSAGE = "Echec de récupération du html"
 
-        if not args:
-            args = ("Echec de récupération de la table dans la page html",)
+    def __init__(self):
+        super().__init__(self.MESSAGE)
 
-        super().__init__(*args, **kwargs)
+class ScrapException(ProcessException):
 
-class ScrapException(Exception):
+    MESSAGE = "Echec de récupération des données de la table html"
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self):
+        super().__init__(self.MESSAGE)
 
-        if not args:
-            args = ("Echec de récupération des données de la table html",)
+class ReworkException(ProcessException):
 
-        super().__init__(*args, **kwargs)
+    MESSAGE = "Echec du traitement des données récupérées"
 
-class ReworkException(Exception):
-
-    def __init__(self, *args, **kwargs):
-
-        if not args:
-            args = ("Echec du traitement des données récupérées",)
-
-        super().__init__(*args, **kwargs)
+    def __init__(self):
+        super().__init__(self.MESSAGE)

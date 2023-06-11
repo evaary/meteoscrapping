@@ -1,6 +1,10 @@
+import multiprocessing as mp
 import os
-from datetime import datetime
+import random
+import threading as mt
+from concurrent.futures import ProcessPoolExecutor
 from json.decoder import JSONDecodeError
+from multiprocessing import current_process
 
 from app.checkers.ConfigFileChecker import ConfigFilesChecker
 from app.checkers.exceptions import ConfigFileCheckerException
@@ -13,6 +17,7 @@ from app.scrappers.wunderground_scrappers import WundergroundMonthly
 
 class Runner:
 
+    MAX_PROCESSES = 1 if mp.cpu_count() == 1 else (mp.cpu_count() - 1) * 2
     WORKDIR = os.getcwd()
 
     # Emplacements des répertoires d'intérêt.
@@ -25,6 +30,8 @@ class Runner:
                     "meteociel_daily": MeteocielDaily }
 
     CHECKER = ConfigFilesChecker.instance()
+
+
 
     @classmethod
     def _create_data_and_errors_filenames(cls, config: dict) -> "tuple[str]":
@@ -39,25 +46,25 @@ class Runner:
             le tuple contenant les noms du fichiers de données et celui des erreurs
         """
 
-        date = str( int( datetime.now().timestamp() ) )
+        id = random.randint(0, 10**6)
 
-        datafilename = "_".join( [ date,
+        datafilename = "_".join( [ str(id),
                                    config["city"],
-                                   config["scrapper"],
-                                   ".csv" ] )\
-                                .lower()
+                                   config["scrapper"] ] )\
+                          .lower()
+        datafilename += ".csv"
 
-        errorsfilename = "_".join( [ date,
+        errorsfilename = "_".join( [ str(id),
                                      config["city"],
                                      config["scrapper"],
-                                     "_errors.json" ] )\
+                                     "errors.json" ] )\
                             .lower()
 
-        path_data = os.path.join(cls.PATHS["results"],
-                                    datafilename)
+        path_data = os.path.join( cls.PATHS["results"],
+                                  datafilename )
 
-        path_errors = os.path.join(cls.PATHS["errors"],
-                                    errorsfilename)
+        path_errors = os.path.join( cls.PATHS["errors"],
+                                    errorsfilename )
 
         return (path_data, path_errors)
 
@@ -86,7 +93,9 @@ class Runner:
             all_scrapper_configs = config_file[scrapper_type]
 
             for one_config in all_scrapper_configs:
+
                 one_config["scrapper"] = scrapper_type
+
                 try:
                     one_config["waiting"] = config_file["waiting"]
                 except KeyError:
@@ -99,18 +108,39 @@ class Runner:
 
 
     @classmethod
-    def run(cls):
+    def stop(cls):
+        print("arrêt du programme sur demande de l'utilisateur")
+        for active_process in mp.active_children():
+            active_process.terminate()
 
-        # (1) Lecture et contôle du fichier config.
-        # (2) le fichier config contient 1 champs waiting et les autres champs sont des noms de
-        #     scrappers, associés à des listes. Ces listes contiennent les configs.
-        #     Pour chaque config de chaque liste, on ajoute le waiting et le type de scrapper.
-        #     Puis toutes les listes sont réunies en 1, all_configs.
-        # (3) Pour chaque config, on instancie le scrapper correspondant et on lance la récupération de données.
-        #     On enregistre les données récuéprées si elles existent et les erreurs rencontrées.
 
-        # (1)
+
+    @classmethod
+    def _run_one_job(cls, config) -> None:
+        """
+        Traitement réalisé pour chaque job du fichier config.
+        @param config : le contenu du fichier config.
+        """
+
+        scrapper: MeteoScrapper = cls.SCRAPPERS[ config["scrapper"] ]()
+
+        path_data, path_errors = cls._create_data_and_errors_filenames(config)
+
+        data = scrapper.scrap_from_config(config)
+
+        # if not data.empty:
+        to_csv(data, path_data)
+
+        if scrapper.errors:
+            to_json(scrapper.errors, path_errors)
+
+
+
+    @classmethod
+    def run_from_config(cls):
+
         try:
+            print("lecture du fichier config.json...")
             config_file: dict = from_json(os.path.join(cls.WORKDIR, "config.json"))
             cls.CHECKER.check(config_file)
         except FileNotFoundError:
@@ -126,20 +156,9 @@ class Runner:
             print(e)
             return
 
-        # (2)
-        # (3)
-        for config in cls._get_all_configs(config_file):
+        print("fichier config.json trouvé, lancement des téléchargements\n")
 
-            scrapper: MeteoScrapper = cls.SCRAPPERS[ config["scrapper"] ]()
+        all_configs = cls._get_all_configs(config_file)
 
-            path_data, path_errors = cls._create_data_and_errors_filenames(config)
-
-            data = scrapper.scrap_from_config(config)
-
-            if not data.empty:
-                to_csv(data, path_data)
-
-            if scrapper.errors:
-                to_json(scrapper.errors, path_errors)
-
-            print("\n")
+        with ProcessPoolExecutor(max_workers=cls.MAX_PROCESSES) as executor:
+            executor.map(cls._run_one_job, all_configs)

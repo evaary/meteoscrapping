@@ -14,8 +14,8 @@ class MonthEnum:
     JUILLET = __MonthEnumMember(7, 31)
     AOUT = __MonthEnumMember(8, 31)
     SEPTEMBRE = __MonthEnumMember(9, 30)
-    OCTOBRE = __MonthEnumMember(10, 30)
-    NOVEMBRE = __MonthEnumMember(11, 31)
+    OCTOBRE = __MonthEnumMember(10, 31)
+    NOVEMBRE = __MonthEnumMember(11, 30)
     DECEMBRE = __MonthEnumMember(12, 31)
 
     @classmethod

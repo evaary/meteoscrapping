@@ -4,6 +4,7 @@ class UCFParameter:
         def __init__(self, name: str):
             self.name = name
 
+    UCF = __UCFParameterEnumMember("config.json")
     GENERAL_PARAMETERS = __UCFParameterEnumMember("parametres_generaux")
     WAITING = __UCFParameterEnumMember("delaiJS")
     OGIMET = __UCFParameterEnumMember("ogimet")
@@ -18,7 +19,6 @@ class UCFParameter:
     IND = __UCFParameterEnumMember("ind")
     REGION = __UCFParameterEnumMember("region")
     COUNTRY_CODE = __UCFParameterEnumMember("code_pays")
-
 
     MAX_WAITING = 5
     MIN_WAITING = 1

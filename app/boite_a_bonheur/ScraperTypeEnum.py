@@ -1,6 +1,3 @@
-
-
-
 class ScrapperType:
 
     class __ScrapperTypeEnumMember:

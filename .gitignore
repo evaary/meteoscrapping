@@ -8,5 +8,6 @@ errors/
 output/
 config/
 env/
+.idea/
 
 config.json

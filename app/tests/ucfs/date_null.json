@@ -1,0 +1,5 @@
+{
+    "wunderground":[
+        { "code_pays":"it", "region": "LIBD", "ville":"matera", "annees":[null], "mois":[1,6] }
+    ]
+}

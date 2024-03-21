@@ -1,0 +1,9 @@
+{
+    "parametres_generaux":{
+        "delaiJS": 2
+    },
+
+    "wunderground":[
+        { "code_pays":"it", "region": "LIBD", "ville": null, "annees":[2021], "mois":[1,6] }
+    ]
+}

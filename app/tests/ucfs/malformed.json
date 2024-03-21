@@ -1,0 +1,19 @@
+{
+    "parametres_generaux":{
+        "delaiJS": 2
+    },
+
+    
+        { "ind":"16138", "ville":"Ferrara", "annees":[2021], "mois":[2] },
+        { "ind":"16288", "ville":"Caserta", "annees":[2020, 2021], "mois":[1,2] }
+    ],
+
+    "wunderground":[
+        { "code_pays":"it", "region": "LIBD", "ville":"matera", "annees":[2021], "mois":[1,6] }
+    ],
+
+    "meteociel":[
+        { "code_num":"2", "code": "7249", "ville":"orleans", "annees":[2020, 2021], "mois":[2] },
+        { "code_num":"2", "code": "7249", "ville":"orleans", "annees":[2020], "mois":[2], "jours":[27,31] }
+    ]
+}

@@ -6,8 +6,8 @@ from concurrent.futures import ProcessPoolExecutor
 from json.decoder import JSONDecodeError
 from multiprocessing import current_process
 
-from app.checkers.ConfigFileChecker import ConfigFilesChecker
-from app.checkers.exceptions import ConfigFileCheckerException
+from app.ucs.ConfigFileChecker import ConfigFilesChecker
+from app.ucs.ucfchecker_exceptions import ConfigFileCheckerException
 from app.data_managers import from_json, to_csv, to_json
 from app.scrappers.abcs import MeteoScrapper
 from app.scrappers.meteociel_scrappers import MeteocielDaily, MeteocielMonthly

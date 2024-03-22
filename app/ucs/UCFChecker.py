@@ -3,21 +3,21 @@ from json import JSONDecodeError
 
 from app.boite_a_bonheur.UCFParameterEnum import UCFParameter, UCFParameterEnumMember
 from app.boite_a_bonheur.utils import from_json
-from app.checkers.exceptions import (DateFieldException,
-                                     DaysDateException,
-                                     MonthsDateException,
-                                     NoSuchDateFieldException,
-                                     UnavailableScrapperException,
-                                     WaitingException,
-                                     NoConfigFoundException,
-                                     NotAJsonFileException,
-                                     NotAJsonObjectException,
-                                     NotAJsonListException,
-                                     EmptyConfigFileException,
-                                     ScrapperUCException,
-                                     CommonStrFieldException,
-                                     SpecificStrFieldException,
-                                     YearsDateException)
+from app.ucs.ucfchecker_exceptions import (DateFieldException,
+                                           DaysDateException,
+                                           MonthsDateException,
+                                           NoSuchDateFieldException,
+                                           UnavailableScrapperException,
+                                           WaitingException,
+                                           NoConfigFoundException,
+                                           NotAJsonFileException,
+                                           NotAJsonObjectException,
+                                           NotAJsonListException,
+                                           EmptyConfigFileException,
+                                           ScrapperUCException,
+                                           CommonStrFieldException,
+                                           SpecificStrFieldException,
+                                           YearsDateException)
 
 
 class UCFChecker:

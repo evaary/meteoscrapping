@@ -1,21 +1,21 @@
 from unittest import TestCase
 
-from app.checkers.UCFChecker import UCFChecker
-from app.checkers.exceptions import (DateFieldException,
-                                     DaysDateException,
-                                     MonthsDateException,
-                                     NoSuchDateFieldException,
-                                     UnavailableScrapperException,
-                                     WaitingException,
-                                     NoConfigFoundException,
-                                     NotAJsonFileException,
-                                     NotAJsonObjectException,
-                                     NotAJsonListException,
-                                     EmptyConfigFileException,
-                                     ScrapperUCException,
-                                     CommonStrFieldException,
-                                     SpecificStrFieldException,
-                                     YearsDateException)
+from app.ucs.UCFChecker import UCFChecker
+from app.ucs.ucfchecker_exceptions import (DateFieldException,
+                                           DaysDateException,
+                                           MonthsDateException,
+                                           NoSuchDateFieldException,
+                                           UnavailableScrapperException,
+                                           WaitingException,
+                                           NoConfigFoundException,
+                                           NotAJsonFileException,
+                                           NotAJsonObjectException,
+                                           NotAJsonListException,
+                                           EmptyConfigFileException,
+                                           ScrapperUCException,
+                                           CommonStrFieldException,
+                                           SpecificStrFieldException,
+                                           YearsDateException)
 
 
 class UCFCheckerTester(TestCase):
@@ -26,7 +26,7 @@ class UCFCheckerTester(TestCase):
         try:
             UCFChecker.check(f"{self.BASE_PATH}/correct.json")
         except Exception:
-            self.fail("le cas nominal ne fonctionne pas")
+            self.fail("UCFCheckerTester : le cas nominal ne fonctionne pas")
 
     def test_broken_configs(self):
         with self.assertRaises(NoConfigFoundException):

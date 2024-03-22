@@ -1,25 +1,26 @@
+class MonthEnumMember:
+    def __init__(self, numero: int, ndays: int):
+        self.numero = numero
+        self.ndays = ndays
+        
+        
 class MonthEnum:
 
-    class __MonthEnumMember:
-        def __init__(self, numero: int, ndays: int):
-            self.numero = numero
-            self.ndays = ndays
-
-    JANVIER = __MonthEnumMember(1, 31)
-    FEVRIER = __MonthEnumMember(2, 28)
-    MARS = __MonthEnumMember(3, 31)
-    AVRIL = __MonthEnumMember(4, 30)
-    MAI = __MonthEnumMember(5, 31)
-    JUIN = __MonthEnumMember(6, 30)
-    JUILLET = __MonthEnumMember(7, 31)
-    AOUT = __MonthEnumMember(8, 31)
-    SEPTEMBRE = __MonthEnumMember(9, 30)
-    OCTOBRE = __MonthEnumMember(10, 31)
-    NOVEMBRE = __MonthEnumMember(11, 30)
-    DECEMBRE = __MonthEnumMember(12, 31)
+    JANVIER = MonthEnumMember(1, 31)
+    FEVRIER = MonthEnumMember(2, 28)
+    MARS = MonthEnumMember(3, 31)
+    AVRIL = MonthEnumMember(4, 30)
+    MAI = MonthEnumMember(5, 31)
+    JUIN = MonthEnumMember(6, 30)
+    JUILLET = MonthEnumMember(7, 31)
+    AOUT = MonthEnumMember(8, 31)
+    SEPTEMBRE = MonthEnumMember(9, 30)
+    OCTOBRE = MonthEnumMember(10, 31)
+    NOVEMBRE = MonthEnumMember(11, 30)
+    DECEMBRE = MonthEnumMember(12, 31)
 
     @classmethod
-    def values(cls) -> list[__MonthEnumMember]:
+    def values(cls) -> list[MonthEnumMember]:
         return [cls.JANVIER,
                 cls.FEVRIER,
                 cls.MARS,
@@ -34,11 +35,11 @@ class MonthEnum:
                 cls.DECEMBRE]
 
     @classmethod
-    def from_id(cls, numero: int) -> __MonthEnumMember:
+    def from_id(cls, numero: int) -> MonthEnumMember:
         return [x for x in cls.values() if x.numero == numero][0]
 
     @classmethod
-    def meteociel_hourly_numero(cls, x: __MonthEnumMember) -> int:
+    def meteociel_hourly_numero(cls, x: MonthEnumMember) -> int:
         """
         La numérotation des mois sur météociel (données heure par heure) est décalée.
         Cette méthode associe la numérotation usuelle à gauche de la flèche et celle de météociel, à droite.
@@ -49,7 +50,7 @@ class MonthEnum:
         return x.numero - 1
 
     @classmethod
-    def ogimet_daily_numero(cls, x: __MonthEnumMember) -> int:
+    def ogimet_daily_numero(cls, x: MonthEnumMember) -> int:
         """
         La numérotation des mois sur ogimet (données jour par jour) est décalée.
         Cette méthode associe la numérotation usuelle à gauche de la flèche et celle d'ogimet, à droite.

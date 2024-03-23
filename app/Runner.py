@@ -1,13 +1,11 @@
 import multiprocessing as mp
 import os
 import random
-import threading as mt
 from concurrent.futures import ProcessPoolExecutor
 from json.decoder import JSONDecodeError
-from multiprocessing import current_process
 
-from app.ucs.ConfigFileChecker import ConfigFilesChecker
-from app.ucs.ucfchecker_exceptions import ConfigFileCheckerException
+from app.ucs.ucs_module import ConfigFilesChecker
+from app.ucs.ucs_module import ConfigFileCheckerException
 from app.data_managers import from_json, to_csv, to_json
 from app.scrappers.abcs import MeteoScrapper
 from app.scrappers.meteociel_scrappers import MeteocielDaily, MeteocielMonthly
@@ -49,12 +47,12 @@ class Runner:
         id = random.randint(0, 10**6)
 
         datafilename = "_".join( [ str(id),
-                                   config["city"],
+                                   config["__city"],
                                    config["scrapper"] ] )\
                           .lower() + ".csv"
 
         errorsfilename = "_".join( [ str(id),
-                                     config["city"],
+                                     config["__city"],
                                      config["scrapper"],
                                      "errors.json" ] )\
                             .lower()

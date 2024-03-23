@@ -1,23 +1,23 @@
 import os
 from json import JSONDecodeError
-
-from app.boite_a_bonheur.UCFParameterEnum import UCFParameter, UCFParameterEnumMember
 from app.boite_a_bonheur.utils import from_json
-from app.ucs.ucfchecker_exceptions import (DateFieldException,
-                                           DaysDateException,
-                                           MonthsDateException,
-                                           NoSuchDateFieldException,
-                                           UnavailableScrapperException,
-                                           WaitingException,
-                                           NoConfigFoundException,
-                                           NotAJsonFileException,
-                                           NotAJsonObjectException,
-                                           NotAJsonListException,
-                                           EmptyConfigFileException,
-                                           ScrapperUCException,
-                                           CommonStrFieldException,
-                                           SpecificStrFieldException,
-                                           YearsDateException)
+from app.boite_a_bonheur.UCFParameterEnum import (UCFParameter,
+                                                  UCFParameterEnumMember)
+from app.ucs.ucf_checker_exceptions import (DateFieldException,
+                                            DaysDateException,
+                                            MonthsDateException,
+                                            NoSuchDateFieldException,
+                                            UnavailableScrapperException,
+                                            WaitingException,
+                                            NoConfigFoundException,
+                                            NotAJsonFileException,
+                                            NotAJsonObjectException,
+                                            NotAJsonListException,
+                                            EmptyConfigFileException,
+                                            ScrapperUCException,
+                                            CommonStrFieldException,
+                                            SpecificStrFieldException,
+                                            YearsDateException)
 
 
 class UCFChecker:
@@ -56,21 +56,21 @@ class UCFChecker:
         if len(obj) not in (1, UCFParameter.MAX_DATE_FIELD_SIZE):
             raise DateFieldException()
 
-        if not all([ isinstance(x, int) for x in obj ]):
+        if not all([isinstance(x, int) for x in obj]):
             raise DateFieldException()
 
         if obj[0] > obj[-1]:
             raise DateFieldException()
 
-        if is_year and obj[0] < UCFParameter.MIN_YEARS_VALUE:
+        if is_year and obj[0] < UCFParameter.MIN_YEARS:
             raise YearsDateException()
 
-        if is_month and any([ x not in range(UCFParameter.MIN_MONTHS_DAYS_VALUE,
-                                             UCFParameter.MAX_MONTHS_VALUE + 1) for x in obj ]):
+        if is_month and any([x not in range(UCFParameter.MIN_MONTHS_DAYS_VALUE,
+                                            UCFParameter.MAX_MONTHS + 1) for x in obj]):
             raise MonthsDateException()
 
-        if is_day and any([ x not in range( UCFParameter.MIN_MONTHS_DAYS_VALUE,
-                                            UCFParameter.MAX_DAYS_VALUE + 1) for x in obj ]):
+        if is_day and any([x not in range(UCFParameter.MIN_MONTHS_DAYS_VALUE,
+                                          UCFParameter.MAX_DAYS + 1) for x in obj]):
             raise DaysDateException()
 
     @staticmethod
@@ -240,14 +240,12 @@ class UCFChecker:
         except KeyError:
             raise SpecificStrFieldException(scrapper_name)
 
-
         common_str_fields = [UCFParameter.CITY]
         try:
             if not all([cls.is_valid_str(uc[x.name]) for x in common_str_fields]):
                 raise CommonStrFieldException()
         except KeyError:
             raise CommonStrFieldException()
-
 
         date_fields = [UCFParameter.YEARS,
                        UCFParameter.MONTHS,

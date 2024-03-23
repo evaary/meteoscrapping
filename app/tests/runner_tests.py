@@ -8,25 +8,25 @@ class RunnerTester(TestCase):
     CONFIG = {  "waiting": 3,
 
                 "ogimet":[ {"ind"   : "16138",
-                            "city"  : "Ferrara",
+                            "__city"  : "Ferrara",
                             "year"  : [2021],
                             "month" : [2] } ],
 
                 "wunderground":[ {  "country_code"  : "it",
                                     "region"        : "LIBD",
-                                    "city"          : "matera",
+                                    "__city"          : "matera",
                                     "year"          : [2021],
                                     "month"         : [1] } ],
 
                 "meteociel":[ { "code_num"  : "2",
                                 "code"      : "7249",
-                                "city"      : "orleans",
+                                "__city"      : "orleans",
                                 "year"      : [2020],
                                 "month"     : [2] } ],
 
                 "meteociel_daily":[ {   "code_num"  : "2",
                                         "code"      : "7249",
-                                        "city"      : "orleans",
+                                        "__city"      : "orleans",
                                         "year"      : [2020],
                                         "month"     : [2],
                                         "day"       : [27,31] } ] }
@@ -47,8 +47,8 @@ class RunnerTester(TestCase):
         ogimet_config = list( filter( lambda config: config["scrapper"] == "ogimet" ,  all_configs) )[0]
 
         data, errors = Runner._create_data_and_errors_filenames(ogimet_config)
-        ref_data = f"{ogimet_config['city']}_ogimet.csv".lower()
-        ref_errors = f"{ogimet_config['city']}_ogimet_errors.json".lower()
+        ref_data = f"{ogimet_config['__city']}_ogimet.csv".lower()
+        ref_errors = f"{ogimet_config['__city']}_ogimet_errors.json".lower()
 
         data: str
         errors: str

@@ -13,7 +13,7 @@ class Meteociel_MonthlyTester(TestCase):
 
     CONFIG = { "code_num"   : "2",
                "code"       : "7249",
-               "city"       : "orleans",
+               "__city"       : "orleans",
                "year"       : [2021],
                "month"      : [1],
                "waiting"    : 3 }
@@ -84,7 +84,7 @@ class Meteociel_DailyTester(TestCase):
 
     CONFIG = { "code_num"   : "2",
                "code"       : "7249",
-               "city"       : "orleans",
+               "__city"       : "orleans",
                "year"       : [2020],
                "month"      : [1],
                "day"        : [1] }

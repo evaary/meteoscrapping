@@ -1,7 +1,8 @@
 import unittest
 
-from app.tests.checker_tests import UCFCheckerTester
-from app.tests.scrapper_ucs_tests import ScrapperUCsTester
+from app.tests.ucf_checker_tests import UCFCheckerTester
+from app.tests.ucs_tests import UCsTester
+from app.tests.tps_tests import TPsTester
 #from app.tests.meteociel_tests import (Meteociel_DailyTester,
 #                                       Meteociel_MonthlyTester)
 #from app.tests.ogimet_tests import Ogimet_MonthlyTester

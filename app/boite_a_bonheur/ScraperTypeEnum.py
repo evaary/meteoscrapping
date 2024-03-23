@@ -1,34 +1,31 @@
 class ScrapperTypeEnumMember:
 
-    ENUM_INSTANCES_COUNTER = 0
-
-    def __init__(self):
-        self.id = self.ENUM_INSTANCES_COUNTER
-        self.ENUM_INSTANCES_COUNTER += 1
+    def __init__(self, numero: int):
+        self.numero = numero
 
     def __eq__(self, other):
-        return self.id == other.id
+        return self.numero == other.numero
 
     def __hash__(self):
-        return hash(self.id)
+        return hash(self.numero)
 
     def __repr__(self):
-        return str(self.id)
+        return str(self.numero)
 
 
 class ScrapperType:
 
-    METEOCIEL = ScrapperTypeEnumMember()
-    METEOCIEL_DAILY = ScrapperTypeEnumMember()
-    METEOCIEL_HOURLY = ScrapperTypeEnumMember()
+    METEOCIEL = ScrapperTypeEnumMember(0)
+    METEOCIEL_DAILY = ScrapperTypeEnumMember(1)
+    METEOCIEL_HOURLY = ScrapperTypeEnumMember(2)
 
-    OGIMET = ScrapperTypeEnumMember()
-    OGIMET_DAILY = ScrapperTypeEnumMember()
-    OGIMET_HOURLY = ScrapperTypeEnumMember()
+    OGIMET = ScrapperTypeEnumMember(3)
+    OGIMET_DAILY = ScrapperTypeEnumMember(4)
+    OGIMET_HOURLY = ScrapperTypeEnumMember(5)
 
-    WUNDERGROUND = ScrapperTypeEnumMember()
-    WUNDERGROUND_DAILY = ScrapperTypeEnumMember()
-    WUNDERGROUND_HOURLY = ScrapperTypeEnumMember()
+    WUNDERGROUND = ScrapperTypeEnumMember(6)
+    WUNDERGROUND_DAILY = ScrapperTypeEnumMember(7)
+    WUNDERGROUND_HOURLY = ScrapperTypeEnumMember(9)
 
     @classmethod
     def values(cls):

@@ -45,7 +45,7 @@ class JobParametersBuilder:
     def add_city(self, city: str) -> "JobParametersBuilder":
 
         if not isinstance(city, str):
-            raise ValueError("city doit être une str")
+            raise ValueError("__city doit être une str")
 
         self.city = city
 
@@ -169,7 +169,7 @@ class JobParametersBuilder:
 
         return (
 
-            JobParametersBuilder().add_city( config["city"] )
+            JobParametersBuilder().add_city( config["__city"] )
                                   .add_country_code( config["country_code"] )
                                   .add_region( config["region"] )
                                   .add_waiting(waiting_to_add)
@@ -196,7 +196,7 @@ class JobParametersBuilder:
 
         return (
 
-            JobParametersBuilder().add_city( config["city"] )
+            JobParametersBuilder().add_city( config["__city"] )
                                   .add_ind( config["ind"] )
                                   .add_waiting(waiting_to_add)
                                   .add_year(year)
@@ -222,7 +222,7 @@ class JobParametersBuilder:
 
         return (
 
-            JobParametersBuilder().add_city( config["city"] )
+            JobParametersBuilder().add_city( config["__city"] )
                                   .add_code_num( config["code_num"] )
                                   .add_code( config["code"] )
                                   .add_waiting(waiting_to_add)
@@ -249,7 +249,7 @@ class JobParametersBuilder:
 
         return (
 
-            JobParametersBuilder().add_city( config["city"] )
+            JobParametersBuilder().add_city( config["__city"] )
                                   .add_code_num( config["code_num"] )
                                   .add_code( config["code"] )
                                   .add_waiting(waiting_to_add)
@@ -304,7 +304,7 @@ class WundergroundMonthlyParameters(JobParameters):
     BASE_URL = Template("https://www.wunderground.com/history/monthly/$country_code/$city/$region/date/$year-$month")
 
     # Critère de sélection qui sert à retrouver le tableau de donner dans la page html
-    CRITERIA = ("aria-labelledby", "History days")
+    CRITERIA = ("aria-labelledby", "History __days")
 
     def __init__(self, builder: JobParametersBuilder) -> None:
         super().__init__(builder)

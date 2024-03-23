@@ -1,9 +1,8 @@
 import copy
-
 from app.boite_a_bonheur.UCFParameterEnum import UCFParameter
-from app.ucs.GeneralParametersUC import GeneralParametersUC
-from app.ucs.ucs_module import ScrapperUC
 from app.ucs.UCFChecker import UCFChecker
+from app.ucs.ucs_module import (GeneralParametersUC,
+                                ScrapperUC)
 
 
 class UserConfigFile:
@@ -13,13 +12,11 @@ class UserConfigFile:
         self.meteociel_ucs = []
         self.wunderground_ucs = []
 
-        raise Exception("UserConfigFile : utiliser from_json")
-
     @classmethod
     def from_json(cls, path_to_ucf):
 
         config_file = UCFChecker.check(path_to_ucf)
-        ucf = UserConfigFile.__new__(cls)
+        ucf = UserConfigFile()
 
         try:
             GeneralParametersUC.from_json_object(config_file[UCFParameter.GENERAL_PARAMETERS.name])
@@ -34,29 +31,27 @@ class UserConfigFile:
 
         try:
             mucs = config_file[UCFParameter.METEOCIEL.name]
-            ucf.meteociel_ucs = list(set([  ScrapperUC.from_json_object(muc, UCFParameter.METEOCIEL)
-                                            for muc in mucs]))
+            ucf.meteociel_ucs = list(set([ScrapperUC.from_json_object(muc, UCFParameter.METEOCIEL)
+                                          for muc in mucs]))
         except KeyError:
             pass
 
         try:
             wucs = config_file[UCFParameter.WUNDERGROUND.name]
-            wucs = [ScrapperUC.from_json_object(wuc, UCFParameter.WUNDERGROUND) for wuc in wucs]
-            wucs = set(wucs)
-            wucs = list(wucs)
-            ucf.wunderground_ucs = wucs
+            ucf.wunderground_ucs = list(set([ScrapperUC.from_json_object(wuc, UCFParameter.WUNDERGROUND)
+                                             for wuc in wucs]))
         except KeyError:
             pass
 
         return ucf
 
-    def get_ogimet_ucs(self):
+    def get_ogimet_ucs(self) -> "list[ScrapperUC]":
         return [copy.deepcopy(uc) for uc in self.ogimet_ucs]
 
-    def get_meteociel_ucs(self):
+    def get_meteociel_ucs(self) -> "list[ScrapperUC]":
         return [copy.deepcopy(uc) for uc in self.meteociel_ucs]
 
-    def get_wunderground_ucs(self):
+    def get_wunderground_ucs(self) -> "list[ScrapperUC]":
         return [copy.deepcopy(uc) for uc in self.wunderground_ucs]
 
     def __repr__(self):

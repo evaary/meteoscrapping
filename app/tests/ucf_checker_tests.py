@@ -1,21 +1,21 @@
 from unittest import TestCase
 
 from app.ucs.UCFChecker import UCFChecker
-from app.ucs.ucfchecker_exceptions import (DateFieldException,
-                                           DaysDateException,
-                                           MonthsDateException,
-                                           NoSuchDateFieldException,
-                                           UnavailableScrapperException,
-                                           WaitingException,
-                                           NoConfigFoundException,
-                                           NotAJsonFileException,
-                                           NotAJsonObjectException,
-                                           NotAJsonListException,
-                                           EmptyConfigFileException,
-                                           ScrapperUCException,
-                                           CommonStrFieldException,
-                                           SpecificStrFieldException,
-                                           YearsDateException)
+from app.ucs.ucf_checker_exceptions import (DateFieldException,
+                                            DaysDateException,
+                                            MonthsDateException,
+                                            NoSuchDateFieldException,
+                                            UnavailableScrapperException,
+                                            WaitingException,
+                                            NoConfigFoundException,
+                                            NotAJsonFileException,
+                                            NotAJsonObjectException,
+                                            NotAJsonListException,
+                                            EmptyConfigFileException,
+                                            ScrapperUCException,
+                                            CommonStrFieldException,
+                                            SpecificStrFieldException,
+                                            YearsDateException)
 
 
 class UCFCheckerTester(TestCase):

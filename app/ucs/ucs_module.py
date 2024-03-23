@@ -3,7 +3,38 @@ from abc import ABC
 
 from app.boite_a_bonheur.ScraperTypeEnum import ScrapperType
 from app.boite_a_bonheur.UCFParameterEnum import UCFParameterEnumMember, UCFParameter
+from app.tps.tps_module import (TPBuilder,
+                                TaskParameters)
 from app.ucs.UCFChecker import UCFChecker
+
+
+class GeneralParametersUC:
+
+    __INSTANCE = None
+
+    def __init__(self):
+        self.waiting = UCFParameter.MIN_WAITING
+        raise Exception("GeneralParametersUC : utiliser GeneralParametersUC.get_instance")
+
+    @classmethod
+    def get_instance(cls):
+
+        if cls.__INSTANCE is None:
+            cls.__INSTANCE = cls.__new__(cls)
+            cls.__INSTANCE.waiting = UCFParameter.MIN_WAITING
+
+        return cls.__INSTANCE
+
+    @classmethod
+    def from_json_object(cls, jsono):
+
+        __INSTANCE = cls.get_instance()
+        try:
+            __INSTANCE.waiting = jsono[UCFParameter.WAITING.name]
+        except KeyError:
+            pass
+
+        return __INSTANCE
 
 
 class ScrapperUC(ABC):
@@ -32,8 +63,30 @@ class ScrapperUC(ABC):
 
         return suc
 
+    def _uc_to_dates(self):
+        all_dates_as_str = [f"{annee}-{mois}"
+                            for annee in range(self.years[0],
+                                               self.years[-1] + 1)
+
+                            for mois in range(self.months[0],
+                                              self.months[-1] + 1)]
+        try:
+            all_dates_as_str = [f"{annee_mois}-{jour}"
+                                for annee_mois in all_dates_as_str
+
+                                for jour in range(self.days[0],
+                                                  self.days[-1] + 1)]
+        except IndexError:
+            pass
+
+        return all_dates_as_str
+
     @abc.abstractmethod
-    def get_parameters(self) -> dict[UCFParameterEnumMember, str]:
+    def to_tps(self) -> "list[TaskParameters]":
+        pass
+
+    @abc.abstractmethod
+    def _get_parameters(self) -> dict[UCFParameterEnumMember, str]:
         pass
 
     def __repr__(self):
@@ -41,7 +94,7 @@ class ScrapperUC(ABC):
 
     def __hash__(self):
         x = 7
-        for param in self.get_parameters().values():
+        for param in self._get_parameters().values():
 
             field_value = self.__dict__[param]
             if isinstance(field_value, list):
@@ -60,7 +113,7 @@ class ScrapperUC(ABC):
         if not isinstance(other, self.__class__):
             return False
 
-        for param in self.get_parameters().values():
+        for param in self._get_parameters().values():
             try:
                 if self.__dict__[param] != other.__dict__[param]:
                     return False
@@ -110,7 +163,27 @@ class MeteocielUC(ScrapperUC):
         return muc
 
     # override
-    def get_parameters(self):
+    def to_tps(self):
+        tps = []
+        for ymd in self._uc_to_dates():
+            splitted = [int(x) for x in ymd.split("-")]
+            builder = TPBuilder(self.scrapper_type).with_code(self.code)\
+                                                   .with_code_num(self.code_num)\
+                                                   .with_city(self.city)\
+                                                   .with_year(splitted[0])\
+                                                   .with_month(splitted[1])\
+                                                   .with_waiting(GeneralParametersUC.get_instance().waiting)
+            if self.scrapper_type in ScrapperType.hourly_scrapper_types():
+                builder.with_day(splitted[2])
+            builder.legality()
+
+            if builder.is_legal:
+                tps.append(builder.build())
+
+        return tps
+
+    # override
+    def _get_parameters(self):
         return self.__PARAMETERS
 
     def __repr__(self):
@@ -151,7 +224,27 @@ class OgimetUC(ScrapperUC):
 
         return ouc
 
-    def get_parameters(self):
+    # override
+    def to_tps(self):
+        tps = []
+        for ymd in self._uc_to_dates():
+            splitted = [int(x) for x in ymd.split("-")]
+            builder = TPBuilder(self.scrapper_type).with_ind(self.ind)\
+                                                   .with_city(self.city) \
+                                                   .with_year(splitted[0]) \
+                                                   .with_month(splitted[1]) \
+                                                   .with_waiting(GeneralParametersUC.get_instance().waiting)
+            if self.scrapper_type in ScrapperType.hourly_scrapper_types():
+                builder.with_day(splitted[2])
+            builder.legality()
+
+            if builder.is_legal:
+                tps.append(builder.build())
+
+        return tps
+
+    # override
+    def _get_parameters(self):
         return self.__PARAMETERS
 
     def __repr__(self):
@@ -196,7 +289,27 @@ class WundergroundUC(ScrapperUC):
         return wuc
 
     # override
-    def get_parameters(self):
+    def to_tps(self):
+        tps = []
+        for ymd in self._uc_to_dates():
+            splitted = [int(x) for x in ymd.split("-")]
+            builder = TPBuilder(self.scrapper_type).with_region(self.region)\
+                                                   .with_country_code(self.country_code)\
+                                                   .with_city(self.city)\
+                                                   .with_year(splitted[0])\
+                                                   .with_month(splitted[1])\
+                                                   .with_waiting(GeneralParametersUC.get_instance().waiting)
+            if self.scrapper_type in ScrapperType.hourly_scrapper_types():
+                builder.with_day(splitted[2])
+            builder.legality()
+
+            if builder.is_legal:
+                tps.append(builder.build())
+
+        return tps
+
+    # override
+    def _get_parameters(self):
         return self.__PARAMETERS
 
     def __repr__(self):

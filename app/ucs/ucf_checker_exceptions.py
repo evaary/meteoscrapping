@@ -105,19 +105,19 @@ class DateFieldException(ConfigFileCheckerException):
 
 class YearsDateException(ConfigFileCheckerException):
     def __init__(self):
-        super().__init__("La valeur minimum du champ {y} doit être de {m}".format(  y=UCFParameter.YEARS.name,
-                                                                                    m=UCFParameter.MIN_YEARS_VALUE))
+        super().__init__("La valeur minimum du champ {y} doit être de {m}".format(y=UCFParameter.YEARS.name,
+                                                                                  m=UCFParameter.MIN_YEARS))
 
 
 class MonthsDateException(ConfigFileCheckerException):
     def __init__(self):
-        super().__init__("Le champ {m} doit être compris entre {x} et {y}".format(  m=UCFParameter.MONTHS.name,
-                                                                                    x=UCFParameter.MIN_MONTHS_DAYS_VALUE,
-                                                                                    y=UCFParameter.MAX_MONTHS_VALUE))
+        super().__init__("Le champ {m} doit être compris entre {x} et {y}".format(m=UCFParameter.MONTHS.name,
+                                                                                  x=UCFParameter.MIN_MONTHS_DAYS_VALUE,
+                                                                                  y=UCFParameter.MAX_MONTHS))
 
 
 class DaysDateException(ConfigFileCheckerException):
     def __init__(self):
-        super().__init__("Le champ {d} doit être compris entre {x} et {y}".format(  d=UCFParameter.DAYS.name,
-                                                                                    x=UCFParameter.MIN_MONTHS_DAYS_VALUE,
-                                                                                    y=UCFParameter.MAX_DAYS_VALUE))
+        super().__init__("Le champ {d} doit être compris entre {x} et {y}".format(d=UCFParameter.DAYS.name,
+                                                                                  x=UCFParameter.MIN_MONTHS_DAYS_VALUE,
+                                                                                  y=UCFParameter.MAX_DAYS))

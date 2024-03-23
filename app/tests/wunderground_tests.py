@@ -14,7 +14,7 @@ class Wunderground_MonthlyTester(TestCase):
 
     CONFIG = { "country_code"   : "it",
                "region"         : "LIBD",
-               "city"           : "matera",
+               "__city"           : "matera",
                "year"           : [2021],
                "month"          : [1],
                "waiting"        : 3 }

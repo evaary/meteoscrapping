@@ -1,12 +1,11 @@
 import copy
 from unittest import TestCase
 
-from app.boite_a_bonheur.ScraperTypeEnum import ScrapperType
-from app.ucs.GeneralParametersUC import GeneralParametersUC
+from app.ucs.ucs_module import GeneralParametersUC
 from app.ucs.UserConfigFile import UserConfigFile
 
 
-class ScrapperUCsTester(TestCase):
+class UCsTester(TestCase):
 
     BASE_PATH = "./app/tests/ucfs"
 
@@ -39,8 +38,8 @@ class ScrapperUCsTester(TestCase):
         self.assertNotEqual(muc_1, muc_2)
         self.assertNotEqual(muc_1, None)
         self.assertNotEqual(muc_1, dict({"bouh": 3}))
-        # TODO
-        # muc_1_clone.scrapper_type = ScrapperType.WUNDERGROUND_DAILY
+
+        # muc_1_clone.__scrapper_type = ScrapperType.WUNDERGROUND_DAILY
         # self.assertNotEqual(muc_1, muc_1_clone)
 
     def test_hashcode(self):

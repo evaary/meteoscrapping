@@ -8,6 +8,9 @@ class UCFParameterEnumMember:
     def __repr__(self):
         return self.name
 
+    def __eq__(self, other):
+        return self.name == other.name
+
 
 class UCFParameter:
 
@@ -30,10 +33,10 @@ class UCFParameter:
     MAX_WAITING = 5
     MIN_WAITING = 1
     MIN_MONTHS_DAYS_VALUE = 1
-    MIN_YEARS_VALUE = 1800
     MAX_DATE_FIELD_SIZE = 2
-    MAX_MONTHS_VALUE = 12
-    MAX_DAYS_VALUE = 31
+    MIN_YEARS = 1800
+    MAX_MONTHS = 12
+    MAX_DAYS = 31
 
     @classmethod
     def scrappers_parameters(cls):

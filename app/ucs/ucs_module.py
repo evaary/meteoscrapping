@@ -1,5 +1,7 @@
 import abc
 from abc import ABC
+from typing import (Dict,
+                    List)
 
 from app.boite_a_bonheur.ScraperTypeEnum import ScrapperType
 from app.boite_a_bonheur.UCFParameterEnum import UCFParameterEnumMember, UCFParameter
@@ -17,7 +19,7 @@ class GeneralParametersUC:
         raise Exception("GeneralParametersUC : utiliser GeneralParametersUC.get_instance")
 
     @classmethod
-    def get_instance(cls):
+    def get_instance(cls) -> "GeneralParametersUC":
 
         if cls.__INSTANCE is None:
             cls.__INSTANCE = cls.__new__(cls)
@@ -26,7 +28,7 @@ class GeneralParametersUC:
         return cls.__INSTANCE
 
     @classmethod
-    def from_json_object(cls, jsono):
+    def from_json_object(cls, jsono) -> "GeneralParametersUC":
 
         __INSTANCE = cls.get_instance()
         try:
@@ -47,7 +49,7 @@ class ScrapperUC(ABC):
         self.days = []
 
     @classmethod
-    def from_json_object(cls, jsono, param_name: UCFParameterEnumMember):
+    def from_json_object(cls, jsono, param_name: UCFParameterEnumMember) -> "ScrapperUC":
 
         if param_name not in UCFParameter.scrappers_parameters():
             raise ValueError("ScrapperUC.from_ucf : param_name doit être un des scrappers")
@@ -63,7 +65,7 @@ class ScrapperUC(ABC):
 
         return suc
 
-    def _uc_to_dates(self):
+    def _uc_to_dates(self) -> List[str]:
         all_dates_as_str = [f"{annee}-{mois}"
                             for annee in range(self.years[0],
                                                self.years[-1] + 1)
@@ -82,11 +84,11 @@ class ScrapperUC(ABC):
         return all_dates_as_str
 
     @abc.abstractmethod
-    def to_tps(self) -> "list[TaskParameters]":
+    def to_tps(self) -> List[TaskParameters]:
         pass
 
     @abc.abstractmethod
-    def _get_parameters(self) -> dict[UCFParameterEnumMember, str]:
+    def _get_parameters(self) -> Dict[UCFParameterEnumMember, str]:
         pass
 
     def __repr__(self):

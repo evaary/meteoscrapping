@@ -13,7 +13,7 @@ class UserConfigFile:
         self.wunderground_ucs = []
 
     @classmethod
-    def from_json(cls, path_to_ucf):
+    def from_json(cls, path_to_ucf) -> "UserConfigFile":
 
         config_file = UCFChecker.check(path_to_ucf)
         ucf = UserConfigFile()
@@ -53,6 +53,14 @@ class UserConfigFile:
 
     def get_wunderground_ucs(self) -> "list[ScrapperUC]":
         return [copy.deepcopy(uc) for uc in self.wunderground_ucs]
+
+    def get_all_ucs(self) -> "list[ScrapperUC]":
+        all_ucs = []
+        all_ucs.extend(self.ogimet_ucs)
+        all_ucs.extend(self.meteociel_ucs)
+        all_ucs.extend(self.wunderground_ucs)
+
+        return all_ucs
 
     def __repr__(self):
         return f"<{self.__class__.__name__} {self.meteociel_ucs} {self.ogimet_ucs} {self.wunderground_ucs}"

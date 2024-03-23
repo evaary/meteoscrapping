@@ -1,8 +1,10 @@
 import abc
 from abc import ABC
-from typing import (Dict,
-                    List)
+from typing import (Any,
+                    Dict,
+                    Generator)
 
+from app.boite_a_bonheur.MonthsEnum import MonthEnum
 from app.boite_a_bonheur.ScraperTypeEnum import ScrapperType
 from app.boite_a_bonheur.UCFParameterEnum import UCFParameterEnumMember, UCFParameter
 from app.tps.tps_module import (TPBuilder,
@@ -65,26 +67,8 @@ class ScrapperUC(ABC):
 
         return suc
 
-    def _uc_to_dates(self) -> List[str]:
-        all_dates_as_str = [f"{annee}-{mois}"
-                            for annee in range(self.years[0],
-                                               self.years[-1] + 1)
-
-                            for mois in range(self.months[0],
-                                              self.months[-1] + 1)]
-        try:
-            all_dates_as_str = [f"{annee_mois}-{jour}"
-                                for annee_mois in all_dates_as_str
-
-                                for jour in range(self.days[0],
-                                                  self.days[-1] + 1)]
-        except IndexError:
-            pass
-
-        return all_dates_as_str
-
     @abc.abstractmethod
-    def to_tps(self) -> List[TaskParameters]:
+    def to_tps(self) -> Generator[TaskParameters, Any, None]:
         pass
 
     @abc.abstractmethod
@@ -166,23 +150,44 @@ class MeteocielUC(ScrapperUC):
 
     # override
     def to_tps(self):
-        tps = []
-        for ymd in self._uc_to_dates():
-            splitted = [int(x) for x in ymd.split("-")]
-            builder = TPBuilder(self.scrapper_type).with_code(self.code)\
-                                                   .with_code_num(self.code_num)\
-                                                   .with_city(self.city)\
-                                                   .with_year(splitted[0])\
-                                                   .with_month(splitted[1])\
-                                                   .with_waiting(GeneralParametersUC.get_instance().waiting)
-            if self.scrapper_type in ScrapperType.hourly_scrapper_types():
-                builder.with_day(splitted[2])
-            builder.legality()
 
-            if builder.is_legal:
-                tps.append(builder.build())
+        if self.scrapper_type == ScrapperType.METEOCIEL_DAILY:
 
-        return tps
+            return (TPBuilder(self.scrapper_type).with_code(self.code)
+                                                 .with_code_num(self.code_num)
+                                                 .with_city(self.city)
+                                                 .with_waiting(GeneralParametersUC.get_instance().waiting)
+                                                 .with_year(year)
+                                                 .with_month(month)
+                                                 .build()
+                    for year in range(self.years[0],
+                                      self.years[-1] + 1)
+
+                    for month in range(self.months[0],
+                                       self.months[-1] + 1))
+
+        elif self.scrapper_type == ScrapperType.METEOCIEL_HOURLY:
+
+            return (TPBuilder(self.scrapper_type).with_code(self.code)
+                                                 .with_code_num(self.code_num)
+                                                 .with_city(self.city)
+                                                 .with_waiting(GeneralParametersUC.get_instance().waiting)
+                                                 .with_year(year)
+                                                 .with_month(month)
+                                                 .with_day(day)
+                                                 .build()
+                    for year in range(self.years[0],
+                                      self.years[-1] + 1)
+
+                    for month in range(self.months[0],
+                                       self.months[-1] + 1)
+
+                    for day in range(self.days[0],
+                                     self.days[-1] + 1)
+
+                    if day <= MonthEnum.from_id(month).ndays)
+        else:
+            raise ValueError("MeteocielUC.to_tps : scrapper_type invalide")
 
     # override
     def _get_parameters(self):
@@ -228,22 +233,42 @@ class OgimetUC(ScrapperUC):
 
     # override
     def to_tps(self):
-        tps = []
-        for ymd in self._uc_to_dates():
-            splitted = [int(x) for x in ymd.split("-")]
-            builder = TPBuilder(self.scrapper_type).with_ind(self.ind)\
-                                                   .with_city(self.city) \
-                                                   .with_year(splitted[0]) \
-                                                   .with_month(splitted[1]) \
-                                                   .with_waiting(GeneralParametersUC.get_instance().waiting)
-            if self.scrapper_type in ScrapperType.hourly_scrapper_types():
-                builder.with_day(splitted[2])
-            builder.legality()
 
-            if builder.is_legal:
-                tps.append(builder.build())
+        if self.scrapper_type == ScrapperType.OGIMET_DAILY:
 
-        return tps
+            return (TPBuilder(self.scrapper_type).with_ind(self.ind)
+                                                 .with_city(self.city)
+                                                 .with_waiting(GeneralParametersUC.get_instance().waiting)
+                                                 .with_year(year)
+                                                 .with_month(month)
+                                                 .build()
+                    for year in range(self.years[0],
+                                      self.years[-1] + 1)
+
+                    for month in range(self.months[0],
+                                       self.months[-1] + 1))
+
+        elif self.scrapper_type == ScrapperType.OGIMET_HOURLY:
+
+            return (TPBuilder(self.scrapper_type).with_ind(self.ind)
+                                                 .with_city(self.city)
+                                                 .with_waiting(GeneralParametersUC.get_instance().waiting)
+                                                 .with_year(year)
+                                                 .with_month(month)
+                                                 .with_day(day)
+                                                 .build()
+                    for year in range(self.years[0],
+                                      self.years[-1] + 1)
+
+                    for month in range(self.months[0],
+                                       self.months[-1] + 1)
+
+                    for day in range(self.days[0],
+                                     self.days[-1] + 1)
+
+                    if day <= MonthEnum.from_id(month).ndays)
+        else:
+            raise ValueError("OgimetUC.to_tps : scrapper_type invalide")
 
     # override
     def _get_parameters(self):
@@ -292,23 +317,44 @@ class WundergroundUC(ScrapperUC):
 
     # override
     def to_tps(self):
-        tps = []
-        for ymd in self._uc_to_dates():
-            splitted = [int(x) for x in ymd.split("-")]
-            builder = TPBuilder(self.scrapper_type).with_region(self.region)\
-                                                   .with_country_code(self.country_code)\
-                                                   .with_city(self.city)\
-                                                   .with_year(splitted[0])\
-                                                   .with_month(splitted[1])\
-                                                   .with_waiting(GeneralParametersUC.get_instance().waiting)
-            if self.scrapper_type in ScrapperType.hourly_scrapper_types():
-                builder.with_day(splitted[2])
-            builder.legality()
 
-            if builder.is_legal:
-                tps.append(builder.build())
+        if self.scrapper_type == ScrapperType.WUNDERGROUND_DAILY:
 
-        return tps
+            return (TPBuilder(self.scrapper_type).with_country_code(self.country_code)
+                                                 .with_region(self.region)
+                                                 .with_city(self.city)
+                                                 .with_waiting(GeneralParametersUC.get_instance().waiting)
+                                                 .with_year(year)
+                                                 .with_month(month)
+                                                 .build()
+                    for year in range(self.years[0],
+                                      self.years[-1] + 1)
+
+                    for month in range(self.months[0],
+                                       self.months[-1] + 1))
+
+        elif self.scrapper_type == ScrapperType.WUNDERGROUND_HOURLY:
+
+            return (TPBuilder(self.scrapper_type).with_country_code(self.country_code)
+                                                 .with_region(self.region)
+                                                 .with_city(self.city)
+                                                 .with_waiting(GeneralParametersUC.get_instance().waiting)
+                                                 .with_year(year)
+                                                 .with_month(month)
+                                                 .with_day(day)
+                                                 .build()
+                    for year in range(self.years[0],
+                                      self.years[-1] + 1)
+
+                    for month in range(self.months[0],
+                                       self.months[-1] + 1)
+
+                    for day in range(self.days[0],
+                                     self.days[-1] + 1)
+
+                    if day <= MonthEnum.from_id(month).ndays)
+        else:
+            raise ValueError("WundergroundUC.to_tps : scrapper_type invalide")
 
     # override
     def _get_parameters(self):

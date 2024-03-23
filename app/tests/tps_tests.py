@@ -15,7 +15,7 @@ class TPsTester(TestCase):
         mdtps = [muc for muc in ucf.get_meteociel_ucs() if len(muc.days) == 0][0].to_tps()
         mhtps = [muc for muc in ucf.get_meteociel_ucs() if len(muc.days) != 0][0].to_tps()
 
-        self.assertEqual(len(wtps), 6)
-        self.assertEqual(len(otps), 1)
-        self.assertEqual(len(mdtps), 2)
-        self.assertEqual(len(mhtps), 2)
+        self.assertEqual(sum([1 for _ in wtps]), 6)
+        self.assertEqual(sum([1 for _ in otps]), 1)
+        self.assertEqual(sum([1 for _ in mdtps]), 2)
+        self.assertEqual(sum([1 for _ in mhtps]), 2)

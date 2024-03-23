@@ -2,15 +2,16 @@ import multiprocessing as mp
 import os
 import random
 from concurrent.futures import ProcessPoolExecutor
-from json.decoder import JSONDecodeError
 
-from app.ucs.ucs_module import ConfigFilesChecker
-from app.ucs.ucs_module import ConfigFileCheckerException
-from app.data_managers import from_json, to_csv, to_json
+from app.boite_a_bonheur.ScraperTypeEnum import ScrapperType
+from app.ucs.UserConfigFile import UserConfigFile
+from app.ucs.ucs_module import ScrapperUC
+from app.ucs.ucf_checker_exceptions import ConfigFileCheckerException
+from app.boite_a_bonheur.utils import to_csv, to_json
 from app.scrappers.abcs import MeteoScrapper
-from app.scrappers.meteociel_scrappers import MeteocielDaily, MeteocielMonthly
-from app.scrappers.ogimet_scrappers import OgimetMonthly
-from app.scrappers.wunderground_scrappers import WundergroundMonthly
+from app.scrappers.meteociel_scrappers import MeteocielHourly, MeteocielDaily
+from app.scrappers.ogimet_scrappers import OgimetDaily
+from app.scrappers.wunderground_scrappers import WundergroundDaily
 
 
 class Runner:
@@ -19,90 +20,20 @@ class Runner:
     WORKDIR = os.getcwd()
 
     # Emplacements des répertoires d'intérêt.
-    PATHS = {   "results": os.path.join(WORKDIR, "results"),
-                "errors" : os.path.join(WORKDIR, "errors") }
+    PATHS = {"results": os.path.join(WORKDIR, "results"),
+             "errors": os.path.join(WORKDIR, "errors")}
 
-    SCRAPPERS = {   "ogimet"         : OgimetMonthly,
-                    "wunderground"   : WundergroundMonthly,
-                    "meteociel"      : MeteocielMonthly,
-                    "meteociel_daily": MeteocielDaily }
+    # Association entre le type de scrapper des UCs et le scrapper à instancier en lui même.
+    # Les None ne posent pas de problème car lors de la lecture du fichier config,
+    # on contrôle que tous les UCs sont bien pris en charge.
+    SCRAPPERS = {ScrapperType.WUNDERGROUND_HOURLY: None,
+                 ScrapperType.WUNDERGROUND_DAILY: WundergroundDaily,
 
-    CHECKER = ConfigFilesChecker.instance()
+                 ScrapperType.OGIMET_HOURLY: None,
+                 ScrapperType.OGIMET_DAILY: OgimetDaily,
 
-
-
-    @classmethod
-    def _create_data_and_errors_filenames(cls, config: dict) -> "tuple[str]":
-
-        """
-        Création des paths des fichiers contenant les data, résultats du scrap, et les erreurs.
-
-        @params
-            config : une des configs du fichier config
-
-        @return
-            le tuple contenant les noms du fichiers de données et celui des erreurs
-        """
-
-        id = random.randint(0, 10**6)
-
-        datafilename = "_".join( [ str(id),
-                                   config["__city"],
-                                   config["scrapper"] ] )\
-                          .lower() + ".csv"
-
-        errorsfilename = "_".join( [ str(id),
-                                     config["__city"],
-                                     config["scrapper"],
-                                     "errors.json" ] )\
-                            .lower()
-
-        path_data = os.path.join( cls.PATHS["results"],
-                                  datafilename )
-
-        path_errors = os.path.join( cls.PATHS["errors"],
-                                    errorsfilename )
-
-        return (path_data, path_errors)
-
-
-
-    @staticmethod
-    def _get_all_configs(config_file: dict) -> "list[dict]":
-
-        """
-        Réunit toutes les configs du fichier config en une liste unique.
-
-        @param
-            config_file : le fichier config
-
-        @return
-            la liste de toutes les configs à traiter
-        """
-
-        all_configs = []
-
-        for scrapper_type in config_file.keys():
-
-            if scrapper_type == "waiting":
-                continue
-
-            all_scrapper_configs = config_file[scrapper_type]
-
-            for one_config in all_scrapper_configs:
-
-                one_config["scrapper"] = scrapper_type
-
-                try:
-                    one_config["waiting"] = config_file["waiting"]
-                except KeyError:
-                    pass
-
-            all_configs.extend(all_scrapper_configs)
-
-        return all_configs
-
-
+                 ScrapperType.METEOCIEL_HOURLY: MeteocielHourly,
+                 ScrapperType.METEOCIEL_DAILY: MeteocielDaily}
 
     @classmethod
     def stop(cls) -> None:
@@ -110,58 +41,55 @@ class Runner:
         for active_process in mp.active_children():
             active_process.terminate()
 
-
-
     @classmethod
-    def _run_one_job(cls, config) -> None:
+    def _run_one_job(cls, uc: ScrapperUC) -> None:
         """
-        Traitement réalisé pour chaque job du fichier config.
+        Traitement réalisé pour chaque UC du fichier config.
         @params
-            config : le contenu du fichier config.
+            uc : un jeu de paramètres wunderground, ogimet ou meteociel.
         """
 
-        scrapper: MeteoScrapper = cls.SCRAPPERS[ config["scrapper"] ]()
+        identifiant = random.randint(0, 10**9)
 
-        path_data, path_errors = cls._create_data_and_errors_filenames(config)
+        data_filename = "_".join([str(identifiant),
+                                  uc.scrapper_type.name,
+                                  uc.city])\
+                           .lower() + ".csv"
 
-        data = scrapper.scrap_from_config(config)
+        data_filename = os.path.join(cls.PATHS["results"],
+                                     data_filename)
 
-        # if not data.empty:
-        to_csv(data, path_data)
+        errors_filename = "_".join([str(identifiant),
+                                    uc.scrapper_type.name,
+                                    uc.city,
+                                    "errors.json"])\
+                             .lower()
+
+        errors_filename = os.path.join(cls.PATHS["errors"],
+                                       errors_filename)
+
+        scrapper: MeteoScrapper = cls.SCRAPPERS[uc.scrapper_type]()
+        data = scrapper.scrap_from_uc(uc)
+
+        if not data.empty:
+            to_csv(data, data_filename)
 
         if scrapper.errors:
-            to_json(scrapper.errors, path_errors)
-
-
+            to_json(scrapper.errors, errors_filename)
 
     @classmethod
     def run_from_config(cls) -> None:
 
-        mp.freeze_support() # pour ne pas que le main se relance en boucle
+        mp.freeze_support()  # pour ne pas que le main se relance en boucle
 
         try:
             print("lecture du fichier config.json...")
-            config_file: dict = from_json(os.path.join(cls.WORKDIR, "config.json"))
-            cls.CHECKER.check(config_file)
-        except FileNotFoundError:
-            # from_json ne trouve pas le fichier
-            print("ERREUR : pas de fichier config.json")
-            return
-        except JSONDecodeError:
-            # from_json n'arrive pas à lire le fichier
-            print("ERREUR : le fichier config est mal formé, impossible de charger un format json.")
-            return
+            ucf = UserConfigFile.from_json(os.path.join(cls.WORKDIR, "config.json"))
         except ConfigFileCheckerException as e:
-            # le checker a trouvé un problème avec le fichier
             print(e)
             return
 
         print("fichier config.json trouvé, lancement des téléchargements\n")
 
-        all_configs = cls._get_all_configs(config_file)
-
-        # for config in all_configs:
-        #     cls._run_one_job(config)
-
         with ProcessPoolExecutor(max_workers=cls.MAX_PROCESSES) as executor:
-            executor.map(cls._run_one_job, all_configs)
+            executor.map(cls._run_one_job, ucf.get_all_ucs())

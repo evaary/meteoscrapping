@@ -3,19 +3,14 @@ from unittest import TestCase
 import numpy as np
 import pandas as pd
 
-from app.job_parameters import JobParametersBuilder, OgimetMonthlyParameters
-from app.scrappers.ogimet_scrappers import OgimetMonthly
+from app.scrappers.ogimet_scrappers import OgimetDaily
+from app.ucs.UserConfigFile import UserConfigFile
 
 
-class Ogimet_MonthlyTester(TestCase):
+class OgimetDailyTester(TestCase):
 
-    SCRAPPER = OgimetMonthly()
-
-    CONFIG = { "ind"    : "16138",
-               "__city"   : "Ferrara",
-               "year"   : [2021],
-               "month"  : [2],
-               "waiting": 3 }
+    SCRAPPER = OgimetDaily()
+    UCF_PATH = "./app/tests/ucfs/ogimet_daily.json"
 
     # valeurs de référence pour janvier 2021
     URL_REF = "http://www.ogimet.com/cgi-bin/gsynres?lang=en&ind=16138&ano=2021&mes=3&day=0&hora=0&min=0&ndays=28"
@@ -63,17 +58,15 @@ class Ogimet_MonthlyTester(TestCase):
 
     @classmethod
     def compare_data(cls, data: pd.DataFrame) -> bool:
-        return ( data[cls.NUMERICS] - cls.RESULTATS[cls.NUMERICS] ).sum().sum() == 0
+        return (data[cls.NUMERICS] - cls.RESULTATS[cls.NUMERICS]).sum().sum() == 0
 
     @classmethod
     def setUpClass(cls):
         cls.RESULTATS["date"] = pd.to_datetime(cls.RESULTATS["date"])
         cls.RESULTATS = cls.RESULTATS.set_index("date")
 
-    def test_url(self):
-       parameters : OgimetMonthlyParameters = next( JobParametersBuilder.build_ogimet_monthly_parameters_generator_from_config(self.CONFIG) )
-       self.assertEqual(self.URL_REF, parameters.url)
-
     def test_scrap_data(self):
-        data = self.SCRAPPER.scrap_from_config(self.CONFIG).set_index("date")
-        self.assertTrue( self.compare_data(data) )
+        ucf = UserConfigFile.from_json(self.UCF_PATH)
+        uc = ucf.get_ogimet_ucs()[0]
+        data = self.SCRAPPER.scrap_from_uc(uc).set_index("date")
+        self.assertTrue(self.compare_data(data))

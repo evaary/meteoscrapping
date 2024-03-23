@@ -29,8 +29,6 @@ class TPBuilder:
         self.ind = ""
         self.country_code = ""
         self.region = ""
-        self.is_legal = False
-        self.has_legality_been_called = False
 
     def with_year(self, year: int) -> "TPBuilder":
 
@@ -55,7 +53,7 @@ class TPBuilder:
 
     def with_day(self, day: int) -> "TPBuilder":
 
-        MonthEnum.from_id(self.month)  # IndexError si month n'est pas valorisée
+        MonthEnum.from_id(self.month)  # IndexError si month n'est pas valorisée avant
 
         if day not in range(UCFParameter.MIN_MONTHS_DAYS_VALUE,
                             UCFParameter.MAX_DAYS + 1):
@@ -121,15 +119,7 @@ class TPBuilder:
         self.waiting = waiting
         return self
 
-    def legality(self) -> "TPBuilder":
-        self.has_legality_been_called = True
-        self.is_legal = self.day <= MonthEnum.from_id(self.month).ndays
-        return self
-
     def build(self) -> "TaskParameters":
-
-        if not self.is_legal:
-            raise ValueError("TPBuilder.build : legality n'a pas été appelée.")
 
         if self.month == 0 or self.year == 0:
             raise ValueError("TPBuilder.build : month et year doivent être valorisés.")
@@ -138,125 +128,56 @@ class TPBuilder:
             raise ValueError("TPBuilder.build : day doit être valorisé pour un scrapper heure par heure.")
 
         if self.scrapper_type in [ScrapperType.METEOCIEL_DAILY,
-                                    ScrapperType.METEOCIEL_HOURLY]:
+                                  ScrapperType.METEOCIEL_HOURLY]:
             if any([x is None or len(x) == 0 for x in [self.code,
                                                        self.code_num,
                                                        self.city]]):
-                raise ValueError("TPBuilder.build : code, code_num et __city doivent être valorisés pour un scrapper Meteociel.")
+                raise ValueError("TPBuilder.build : code, code_num et city doivent être valorisés pour un scrapper Meteociel.")
 
             return MeteocielTP(self)
 
         if self.scrapper_type in [ScrapperType.OGIMET_DAILY,
-                                    ScrapperType.OGIMET_HOURLY]:
+                                  ScrapperType.OGIMET_HOURLY]:
             if any([x is None or len(x) == 0 for x in [self.ind,
                                                        self.city]]):
-                raise ValueError("TPBuilder.build : code, code_num et __city doivent être valorisés pour un scrapper Ogimet.")
+                raise ValueError("TPBuilder.build : ind et city doivent être valorisés pour un scrapper Ogimet.")
 
             return OgimetTP(self)
 
         if self.scrapper_type in [ScrapperType.WUNDERGROUND_DAILY,
-                                    ScrapperType.WUNDERGROUND_HOURLY]:
+                                  ScrapperType.WUNDERGROUND_HOURLY]:
             if any([x is None or len(x) == 0 for x in [self.region,
                                                        self.country_code,
                                                        self.city]]):
-                raise ValueError("TPBuilder.build : region, country_code et __city doivent être valorisés pour un scrapper Wunderground.")
+                raise ValueError("TPBuilder.build : region, country_code et city doivent être valorisés pour un scrapper Wunderground.")
 
             return WundergroundTP(self)
 
         raise ValueError(f"TPBuilder.build : paramètre invalide {self.scrapper_type}.")
 
-    def get_year(self) -> int:
-        return self.year
-
-    def get_month(self) -> int:
-        return self.month
-
-    def get_day(self) -> int:
-        return self.day
-
-    def get_year_as_str(self) -> str:
-        return self.year_as_str
-
-    def get_month_as_str(self) -> str:
-        return self.month_as_str
-
-    def get_day_as_str(self) -> str:
-        return self.day_as_str
-
-    def get_waiting(self) -> int:
-        return self.waiting
-
-    def get_scrapper_type(self) -> ScrapperTypeEnumMember:
-        return self.scrapper_type
-
-    def get_city(self) -> str:
-        return self.city
-
-    def get_ind(self) -> str:
-        return self.ind
-
-    def get_code(self) -> str:
-        return self.code
-
-    def get_code_num(self) -> str:
-        return self.code_num
-
-    def get_country_code(self) -> str:
-        return self.country_code
-
-    def get_region(self) -> str:
-        return self.region
-
 
 class TaskParameters(abc.ABC):
 
     def __init__(self, tpbuilder: TPBuilder):
-        self.waiting = tpbuilder.get_waiting()
-        self.year = tpbuilder.get_year()
-        self.month = tpbuilder.get_month()
-        self.day = tpbuilder.get_day()
-        self.year_as_str = tpbuilder.get_year_as_str()
-        self.month_as_str = tpbuilder.get_month_as_str()
-        self.day_as_str = tpbuilder.get_day_as_str()
-        self.city = tpbuilder.get_city()
+        self.waiting = tpbuilder.waiting
+        self.year = tpbuilder.year
+        self.month = tpbuilder.month
+        self.day = tpbuilder.day
+        self.year_as_str = tpbuilder.year_as_str
+        self.month_as_str = tpbuilder.month_as_str
+        self.day_as_str = tpbuilder.day_as_str
+        self.city = tpbuilder.city
+        self.url = ""
+        self.criteria = None
+        self.key = f"{self.city}_{self.year_as_str}_{self.month_as_str}"
+        if tpbuilder.scrapper_type in ScrapperType.hourly_scrapper_types():
+            self.key = f"{self.key}_{self.day_as_str}"
 
     def __repr__(self):
         if self.day == 0:
             return f"{self.city} {self.month_as_str}/{self.year_as_str}"
         else:
             return f"{self.city} {self.day_as_str}/{self.month_as_str}/{self.year_as_str}"
-
-    def get_year(self) -> int:
-        return self.year
-
-    def get_month(self) -> int:
-        return self.month
-
-    def get_day(self) -> int:
-        return self.day
-
-    def get_year_as_str(self) -> str:
-        return self.year_as_str
-
-    def get_month_as_str(self) -> str:
-        return self.month_as_str
-
-    def get_day_as_str(self) -> str:
-        return self.day_as_str
-
-    def get_waiting(self) -> int:
-        return self.waiting
-
-    def get_city(self) -> str:
-        return self.city
-
-    @abc.abstractmethod
-    def get_url(self) -> str:
-        pass
-
-    @abc.abstractmethod
-    def get_criteria(self) -> Criteria:
-        pass
 
 
 class MeteocielTP(TaskParameters):
@@ -269,108 +190,84 @@ class MeteocielTP(TaskParameters):
     def __init__(self, tpbuilder: TPBuilder):
 
         super().__init__(tpbuilder)
-        self.code = tpbuilder.get_code()
-        self.code_num = tpbuilder.get_code_num()
+        self.code = tpbuilder.code
+        self.code_num = tpbuilder.code_num
 
-        if tpbuilder.get_scrapper_type() == ScrapperType.METEOCIEL_DAILY:
-            self.url = self.BASE_URL_DAILY.substitute(code_num=tpbuilder.get_code_num(),
-                                                        code=tpbuilder.get_code(),
-                                                        mois=tpbuilder.get_month(),
-                                                        annee=tpbuilder.get_year())
+        if tpbuilder.scrapper_type == ScrapperType.METEOCIEL_DAILY:
+            self.url = self.BASE_URL_DAILY.substitute(code_num=tpbuilder.code_num,
+                                                      code=tpbuilder.code,
+                                                      mois=tpbuilder.month,
+                                                      annee=tpbuilder.year)
             self.criteria = self.CRITERIA_DAILY
 
-        elif tpbuilder.get_scrapper_type() == ScrapperType.METEOCIEL_HOURLY:
-            month_enum_value = MonthEnum.from_id(tpbuilder.get_month())
-            self.url = self.BASE_URL_HOURLY.substitute(   code_num=tpbuilder.get_code_num(),
-                                                            code=tpbuilder.get_code(),
-                                                            jour2=tpbuilder.get_day(),
-                                                            mois2=MonthEnum.meteociel_hourly_numero(month_enum_value),
-                                                            annee2=tpbuilder.get_year())
+        elif tpbuilder.scrapper_type == ScrapperType.METEOCIEL_HOURLY:
+            month_enum_value = MonthEnum.from_id(tpbuilder.month)
+            self.url = self.BASE_URL_HOURLY.substitute(code_num=tpbuilder.code_num,
+                                                       code=tpbuilder.code,
+                                                       jour2=tpbuilder.day,
+                                                       mois2=MonthEnum.meteociel_hourly_numero(month_enum_value),
+                                                       annee2=tpbuilder.year)
             self.criteria = self.CRITERIA_HOURLY
 
         else:
-            raise ValueError("MeteocielTP : tpbuilder.__scrapper_type est invalide")
+            raise ValueError("MeteocielTP : tpbuilder.scrapper_type est invalide")
 
     def __repr__(self):
         return f"<{self.__class__.__name__} {super().__repr__()} {self.code_num} {self.code}"
 
-    # override
-    def get_url(self):
-        return self.url
-
-    # override
-    def get_criteria(self):
-        return self.criteria
-
 
 class OgimetTP(TaskParameters):
 
-    CRITERIA_DAILY = ("bgcolor", "#d0d0d0")
+    CRITERIA_DAILY = Criteria("bgcolor", "#d0d0d0")
     BASE_URL_DAILY = Template(f"http://www.ogimet.com/cgi-bin/gsynres?lang=en&ind=$ind&ano=$ano&mes=$mes&day=0&hora=0&min=0&ndays=$ndays")
 
     def __init__(self, tpbuilder: TPBuilder):
 
         super().__init__(tpbuilder)
-        self.ind = tpbuilder.get_ind()
+        self.ind = tpbuilder.ind
 
-        if tpbuilder.get_scrapper_type() == ScrapperType.OGIMET_DAILY:
-            month_enum_value = MonthEnum.from_id(tpbuilder.get_month())
-            self.url = self.BASE_URL_DAILY.substitute(ind=tpbuilder.get_ind(),
-                                                        ano=tpbuilder.get_year(),
-                                                        mes=MonthEnum.ogimet_daily_numero(month_enum_value),
-                                                        ndays=month_enum_value.ndays)
+        if tpbuilder.scrapper_type == ScrapperType.OGIMET_DAILY:
+            month_enum_value = MonthEnum.from_id(tpbuilder.month)
+            self.url = self.BASE_URL_DAILY.substitute(ind=tpbuilder.ind,
+                                                      ano=tpbuilder.year,
+                                                      mes=MonthEnum.ogimet_daily_numero(month_enum_value),
+                                                      ndays=month_enum_value.ndays)
             self.criteria = self.CRITERIA_DAILY
 
-        elif tpbuilder.get_scrapper_type() == ScrapperType.OGIMET_HOURLY:
+        elif tpbuilder.scrapper_type == ScrapperType.OGIMET_HOURLY:
             raise NotImplementedError("un jour peut être !")
 
         else:
-            raise ValueError("OgimetTP : tpbuilder.__scrapper_type est invalide")
+            raise ValueError("OgimetTP : tpbuilder.scrapper_type est invalide")
 
     def __repr__(self):
         return f"<{self.__class__.__name__} {super().__repr__()} {self.ind}"
 
-    # override
-    def get_url(self):
-        return self.url
-
-    # override
-    def get_criteria(self):
-        return self.criteria
-
 
 class WundergroundTP(TaskParameters):
 
-    CRITERIA_DAILY = ("aria-labelledby", "History __days")
+    CRITERIA_DAILY = Criteria("aria-labelledby", "History days")
     BASE_URL_DAILY = Template("https://www.wunderground.com/history/monthly/$country_code/$city/$region/date/$year-$month")
 
     def __init__(self, tpbuilder: TPBuilder):
 
         super().__init__(tpbuilder)
-        self.region = tpbuilder.get_region()
-        self.country_code = tpbuilder.get_country_code()
+        self.region = tpbuilder.region
+        self.country_code = tpbuilder.country_code
 
-        if tpbuilder.get_scrapper_type() == ScrapperType.WUNDERGROUND_DAILY:
-            self.url = self.BASE_URL_DAILY.substitute(country_code=tpbuilder.get_country_code(),
-                                                        city=tpbuilder.get_city(),
-                                                        region=tpbuilder.get_region(),
-                                                        year=tpbuilder.get_year(),
-                                                        month=tpbuilder.get_month())
+        if tpbuilder.scrapper_type == ScrapperType.WUNDERGROUND_DAILY:
+            self.url = self.BASE_URL_DAILY.substitute(country_code=tpbuilder.country_code,
+                                                      city=tpbuilder.city,
+                                                      region=tpbuilder.region,
+                                                      year=tpbuilder.year,
+                                                      month=tpbuilder.month)
             self.criteria = self.CRITERIA_DAILY
 
-        elif tpbuilder.get_scrapper_type() == ScrapperType.WUNDERGROUND_HOURLY:
+        elif tpbuilder.scrapper_type == ScrapperType.WUNDERGROUND_HOURLY:
             raise NotImplementedError("un jour peut être !")
 
         else:
-            raise ValueError("WundergroundTP : tpbuilder.__scrapper_type est invalide")
+            raise ValueError("WundergroundTP : tpbuilder.scrapper_type est invalide")
 
     def __repr__(self):
         return f"<{self.__class__.__name__} {super().__repr__()} {self.country_code} {self.region}"
-
-    # override
-    def get_url(self):
-        return self.url
-
-    # override
-    def get_criteria(self):
-        return self.criteria

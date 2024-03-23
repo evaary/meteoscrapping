@@ -1,0 +1,10 @@
+{
+    "parametres_generaux":{
+        "delaiJS": 2
+    },
+
+    "meteociel":[
+        {                  "code": "7249", "ville":"orleans", "annees":[2020, 2021], "mois":[2] },
+        { "code_num":"2", "code": "7249", "ville":"orleans", "annees":[2020], "mois":[2], "jours":[27,31] }
+    ]
+}

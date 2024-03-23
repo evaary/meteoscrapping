@@ -1,0 +1,10 @@
+{
+    "parametres_generaux":{
+        "delaiJS": 2
+    },
+
+    "wunderground":[
+        { "code_pays":"it", "region": "LIBD", "ville":"matera", "annees":[2021], "mois":[1,6] },
+        null
+    ]
+}

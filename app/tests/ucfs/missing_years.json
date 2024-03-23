@@ -1,0 +1,9 @@
+{
+    "parametres_generaux":{
+        "delaiJS": 2
+    },
+
+    "ogimet":[
+        { "ind":"16138", "ville":"Ferrara", "mois":[2] }
+    ]
+}

@@ -1,72 +1,44 @@
-from abc import abstractmethod, abstractstaticmethod
-from typing import Generator
-
 import pandas as pd
+from abc import abstractmethod
+from typing import List
 from requests_html import Element, HTMLSession
-
-from app.job_parameters import JobParameters
 from app.scrappers.exceptions import HtmlPageException
+from app.tps.tps_module import TaskParameters
+from app.ucs.ucs_module import ScrapperUC
 
 
 class Scrapper:
 
     @abstractmethod
-    def scrap_from_config(self, config: dict) -> pd.DataFrame:
-        """
-        Récupération de données à partir d'une config du fichier de configuration.
-
-        @params
-            config : une config du fichier de configuration
-
-        @return
-            le dataframe des données pour toutes les dates contenues dans la config
-        """
-        pass
-
-    @abstractstaticmethod
-    def _build_parameters_generator(config: dict) -> "Generator[JobParameters]":
-        """
-        Création du générateur de paramètres à partir de la config.
-
-        @params
-            config : une config du fichier de configuration
-
-        @return
-            un générateur contenant les paramètres du job à réaliser
-        """
+    def scrap_from_uc(self, uc: ScrapperUC) -> pd.DataFrame:
         pass
 
     @staticmethod
-    def _load_html(parameters: JobParameters):
+    def _load_html(tp: TaskParameters):
 
         try:
-
             with HTMLSession() as session:
-
-                html_page = session.get(parameters.url)
-                html_page.html.render( sleep=parameters.waiting,
-                                       keep_page=True,
-                                       scrolldown=1 )
-
+                html_page = session.get(tp.url)
+                html_page.html.render(sleep=tp.waiting,
+                                      keep_page=True,
+                                      scrolldown=1)
             if html_page.status_code != 200:
                 raise HtmlPageException()
 
         except Exception:
             raise HtmlPageException()
 
-        attr, val = parameters.criteria
-
-        # (2)
-        table: Element = [ tab for tab in html_page.html.find("table")
-                           if attr in tab.attrs and tab.attrs[attr] == val ][0]
+        attr = tp.criteria.get_css_attr()
+        val = tp.criteria.get_attr_value()
+        table: Element = [tab
+                          for tab in html_page.html.find("table")
+                          if attr in tab.attrs and tab.attrs[attr] == val][0]
         try:
-
             condition = "no valid" in table.find("thead")[0]\
                                            .find("th")[0]\
                                            .text\
                                            .lower()\
                                            .strip()
-
             table = None if condition else table
 
         except IndexError:
@@ -77,44 +49,17 @@ class Scrapper:
 
         return table
 
-    @abstractstaticmethod
-    def _scrap_columns_names(table: Element) -> "list[str]":
-        """
-        Récupération des noms des colonnes du tableau issu de _load_html.
-
-        @params
-            table : le tableau html retourné par _load_html
-
-        @return
-            la liste des noms des colonnes.
-        """
+    @staticmethod
+    def _scrap_columns_names(table: Element) -> "List[str]":
         pass
 
-    @abstractstaticmethod
-    def _scrap_columns_values(table: Element) -> "list[str]":
-        """
-        @params
-            table : le tableau html retourné par _load_html.
-
-        @return
-            la liste des valeurs contenues dans la table.
-        """
+    @staticmethod
+    def _scrap_columns_values(table: Element) -> "List[str]":
         pass
 
     @abstractmethod
-    def _rework_data( self,
-                      values: "list[str]",
-                      columns_names: "list[str]",
-                      parameters: JobParameters ) -> pd.DataFrame:
-        """
-        Mise en forme du tableau de données.
-
-        @params
-            values : La liste des valeurs contenues dans le tableau.
-            column_names : La liste des noms de colonnes.
-            parameters : les paramètres du job.
-
-        @return
-            le dataframe équivalent au tableau de données html.
-        """
+    def _rework_data(self,
+                     values: "List[str]",
+                     columns_names: "List[str]",
+                     tp: TaskParameters) -> pd.DataFrame:
         pass

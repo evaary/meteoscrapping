@@ -20,8 +20,8 @@ class Runner:
     WORKDIR = os.getcwd()
 
     # Emplacements des répertoires d'intérêt.
-    PATHS = {"results": os.path.join(WORKDIR, "results"),
-             "errors": os.path.join(WORKDIR, "errors")}
+    PATHS = {"resultats": os.path.join(WORKDIR, "resultats"),
+             "erreurs": os.path.join(WORKDIR, "erreurs")}
 
     # Association entre le type de scrapper des UCs et le scrapper à instancier en lui même.
     # Les None ne posent pas de problème car lors de la lecture du fichier config,
@@ -56,16 +56,16 @@ class Runner:
                                   uc.city])\
                            .lower() + ".csv"
 
-        data_filename = os.path.join(cls.PATHS["results"],
+        data_filename = os.path.join(cls.PATHS["resultats"],
                                      data_filename)
 
         errors_filename = "_".join([str(identifiant),
                                     uc.scrapper_type.name,
                                     uc.city,
-                                    "errors.json"])\
+                                    "erreurs.json"])\
                              .lower()
 
-        errors_filename = os.path.join(cls.PATHS["errors"],
+        errors_filename = os.path.join(cls.PATHS["erreurs"],
                                        errors_filename)
 
         scrapper: MeteoScrapper = cls.SCRAPPERS[uc.scrapper_type]()

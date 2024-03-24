@@ -249,26 +249,45 @@ class OgimetUC(ScrapperUC):
                                        self.months[-1] + 1))
 
         elif self.scrapper_type == ScrapperType.OGIMET_HOURLY:
-
+            # on peut requêter de façon à obtenir une page qui contient l'ensemble des données
+            # pour chaque mois
             return (TPBuilder(self.scrapper_type).with_ind(self.ind)
                                                  .with_city(self.city)
                                                  .with_waiting(GeneralParametersUC.get_instance().waiting)
                                                  .with_year(year)
                                                  .with_month(month)
-                                                 .with_day(day)
+                                                 .with_day(self.compute_day(month))
+                                                 .with_ndays(self.compute_ndays(month))
                                                  .build()
                     for year in range(self.years[0],
                                       self.years[-1] + 1)
 
                     for month in range(self.months[0],
-                                       self.months[-1] + 1)
-
-                    for day in range(self.days[0],
-                                     self.days[-1] + 1)
-
-                    if day <= MonthEnum.from_id(month).ndays)
+                                       self.months[-1] + 1))
         else:
             raise ValueError("OgimetUC.to_tps : scrapper_type invalide")
+
+    def compute_ndays(self, month: int) -> int:
+
+        if self.scrapper_type != ScrapperType.OGIMET_HOURLY:
+            raise ValueError("OgimetUC.compute_ndays : le type de scrapper est invalide")
+
+        ndays = self.days[-1] - self.days[0] + 1
+        max_ndays = MonthEnum.from_id(month).ndays
+        ndays = max_ndays if ndays > max_ndays else ndays
+
+        return ndays
+
+    def compute_day(self, month: int) -> int:
+
+        if self.scrapper_type != ScrapperType.OGIMET_HOURLY:
+            raise ValueError("OgimetUC.compute_day : le type de scrapper est invalide")
+
+        day = self.days[-1]
+        max_day = MonthEnum.from_id(month).ndays
+        day = max_day if day > max_day else day
+
+        return day
 
     # override
     def _get_parameters(self):

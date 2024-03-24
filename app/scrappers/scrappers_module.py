@@ -86,12 +86,12 @@ class MeteoScrapper(ABC):
 
         return table
 
-    @staticmethod
-    def _scrap_columns_names(table: Element) -> "List[str]":
+    @abstractmethod
+    def _scrap_columns_names(self, table: Element) -> "List[str]":
         pass
 
-    @staticmethod
-    def _scrap_columns_values(table: Element) -> "List[str]":
+    @abstractmethod
+    def _scrap_columns_values(self, table: Element) -> "List[str]":
         pass
 
     @abstractmethod
@@ -142,7 +142,7 @@ class MeteoScrapper(ABC):
         scrappers = {ScrapperType.WUNDERGROUND_HOURLY: None,
                      ScrapperType.WUNDERGROUND_DAILY: WundergroundDaily,
 
-                     ScrapperType.OGIMET_HOURLY: None,
+                     ScrapperType.OGIMET_HOURLY: OgimetHourly,
                      ScrapperType.OGIMET_DAILY: OgimetDaily,
 
                      ScrapperType.METEOCIEL_HOURLY: MeteocielHourly,
@@ -161,8 +161,7 @@ class MeteocielDaily(MeteoScrapper):
     REGEX_FOR_NUMERICS = r'-?\d+\.?\d*'
 
     # override
-    @staticmethod
-    def _scrap_columns_names(table):
+    def _scrap_columns_names(self, table):
         """
         Récupération du nom des colonnes.
         """
@@ -190,8 +189,7 @@ class MeteocielDaily(MeteoScrapper):
         return columns_names
 
     # override
-    @staticmethod
-    def _scrap_columns_values(table):
+    def _scrap_columns_values(self, table):
         """
         Récupération des valeurs du tableau.
         """
@@ -282,8 +280,7 @@ class MeteocielHourly(MeteoScrapper):
     REGEX_FOR_NUMERICS = r'-?\d+\.?\d*'
 
     # override
-    @staticmethod
-    def _scrap_columns_names(table):
+    def _scrap_columns_names(self, table):
         """
         Récupération du nom des colonnes.
         """
@@ -308,8 +305,7 @@ class MeteocielHourly(MeteoScrapper):
         return columns_names
 
     # override
-    @staticmethod
-    def _scrap_columns_values(table):
+    def _scrap_columns_values(self, table):
         """
         Récupération des valeurs du tableau.
         """
@@ -442,8 +438,7 @@ class MeteocielHourly(MeteoScrapper):
 class OgimetDaily(MeteoScrapper):
 
     # override
-    @staticmethod
-    def _scrap_columns_names(table):
+    def _scrap_columns_names(self, table):
         """
         Récupération du nom des colonnes.
         """
@@ -512,8 +507,7 @@ class OgimetDaily(MeteoScrapper):
         return columns_names
 
     # override
-    @staticmethod
-    def _scrap_columns_values(table):
+    def _scrap_columns_values(self, table):
         """
         Récupération des valeurs du tableau.
         """
@@ -647,6 +641,18 @@ class OgimetDaily(MeteoScrapper):
         return df
 
 
+class OgimetHourly(MeteoScrapper):
+
+    def _scrap_columns_names(self, table: Element) -> "List[str]":
+        pass
+
+    def _scrap_columns_values(self, table: Element) -> "List[str]":
+        pass
+
+    def _rework_data(self, values: "List[str]", columns_names: "List[str]", tp: TaskParameters) -> pd.DataFrame:
+        pass
+
+
 class WundergroundDaily(MeteoScrapper):
 
     UNITS_CONVERSION = {
@@ -671,8 +677,7 @@ class WundergroundDaily(MeteoScrapper):
     }
 
     # override
-    @staticmethod
-    def _scrap_columns_names(table):
+    def _scrap_columns_names(self, table):
         """
         Récupération du nom des colonnes.
         """
@@ -684,8 +689,7 @@ class WundergroundDaily(MeteoScrapper):
             raise ScrapException()
 
     # override
-    @staticmethod
-    def _scrap_columns_values(table):
+    def _scrap_columns_values(self, table):
         """
         Récupération des valeurs du tableau.
         """

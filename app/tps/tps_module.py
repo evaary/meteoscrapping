@@ -20,6 +20,7 @@ class TPBuilder:
         self.year = 0
         self.month = 0
         self.day = 0
+        self.ndays = 0
         self.year_as_str = ""
         self.month_as_str = ""
         self.day_as_str = ""
@@ -119,6 +120,12 @@ class TPBuilder:
         self.waiting = waiting
         return self
 
+    def with_ndays(self, ndays: int) -> "TPBuilder":
+        if ndays not in range(1, UCFParameter.MAX_DAYS + 1):
+            raise ValueError(f"TPBuilder.ndays : paramètre invalide {ndays}")
+        self.ndays = ndays
+        return self
+
     def build(self) -> "TaskParameters":
 
         if self.month == 0 or self.year == 0:
@@ -174,18 +181,15 @@ class TaskParameters(abc.ABC):
             self.key = f"{self.key}_{self.day_as_str}"
 
     def __repr__(self):
-        if self.day == 0:
-            return f"{self.city} {self.month_as_str}/{self.year_as_str}"
-        else:
-            return f"{self.city} {self.day_as_str}/{self.month_as_str}/{self.year_as_str}"
+        return f"<{self.__class__.__name__} {self.url}>"
 
 
 class MeteocielTP(TaskParameters):
 
     CRITERIA_DAILY = Criteria("cellpadding", "2")
     CRITERIA_HOURLY = Criteria("bgcolor", "#EBFAF7")
-    BASE_URL_DAILY = Template("https://www.meteociel.com/climatologie/obs_villes.php?code$code_num=$code&mois=$mois&annee=$annee")
-    BASE_URL_HOURLY = Template("https://www.meteociel.com/temps-reel/obs_villes.php?code$code_num=$code&jour2=$jour2&mois2=$mois2&annee2=$annee2")
+    BASE_URL_DAILY = Template("https://www.meteociel.com/climatologie/obs_villes.php?code$code_num=$code&annee=$annee&mois=$mois")
+    BASE_URL_HOURLY = Template("https://www.meteociel.com/temps-reel/obs_villes.php?code$code_num=$code&annee2=$annee&mois2=$mois&jour2=$jour")
 
     def __init__(self, tpbuilder: TPBuilder):
 
@@ -204,44 +208,44 @@ class MeteocielTP(TaskParameters):
             month_enum_value = MonthEnum.from_id(tpbuilder.month)
             self.url = self.BASE_URL_HOURLY.substitute(code_num=tpbuilder.code_num,
                                                        code=tpbuilder.code,
-                                                       jour2=tpbuilder.day,
-                                                       mois2=MonthEnum.meteociel_hourly_numero(month_enum_value),
-                                                       annee2=tpbuilder.year)
+                                                       jour=tpbuilder.day,
+                                                       mois=MonthEnum.meteociel_hourly_numero(month_enum_value),
+                                                       annee=tpbuilder.year)
             self.criteria = self.CRITERIA_HOURLY
 
         else:
             raise ValueError("MeteocielTP : tpbuilder.scrapper_type est invalide")
 
-    def __repr__(self):
-        return f"<{self.__class__.__name__} {super().__repr__()} {self.code_num} {self.code}"
-
 
 class OgimetTP(TaskParameters):
 
-    CRITERIA_DAILY = Criteria("bgcolor", "#d0d0d0")
-    BASE_URL_DAILY = Template(f"http://www.ogimet.com/cgi-bin/gsynres?lang=en&ind=$ind&ano=$ano&mes=$mes&day=0&hora=0&min=0&ndays=$ndays")
+    CRITERIA = Criteria("bgcolor", "#d0d0d0")
+    BASE_URL = Template("http://www.ogimet.com/cgi-bin/gsynres?ind=$ind&ndays=$ndays&ano=$ano&mes=$mes&day=$day&hora=23&lang=en&decoded=$decoded")
 
     def __init__(self, tpbuilder: TPBuilder):
 
         super().__init__(tpbuilder)
+
         self.ind = tpbuilder.ind
+        self.criteria = self.CRITERIA
 
         if tpbuilder.scrapper_type == ScrapperType.OGIMET_DAILY:
-            month_enum_value = MonthEnum.from_id(tpbuilder.month)
-            self.url = self.BASE_URL_DAILY.substitute(ind=tpbuilder.ind,
-                                                      ano=tpbuilder.year,
-                                                      mes=MonthEnum.ogimet_daily_numero(month_enum_value),
-                                                      ndays=month_enum_value.ndays)
-            self.criteria = self.CRITERIA_DAILY
+            self.url = self.BASE_URL.substitute(ind=tpbuilder.ind,
+                                                ndays=MonthEnum.from_id(tpbuilder.month).ndays,
+                                                ano=tpbuilder.year,
+                                                mes=tpbuilder.month,
+                                                day=MonthEnum.from_id(tpbuilder.month).ndays,
+                                                decoded="no")
 
         elif tpbuilder.scrapper_type == ScrapperType.OGIMET_HOURLY:
-            raise NotImplementedError("un jour peut être !")
-
+            self.url = self.BASE_URL.substitute(ind=tpbuilder.ind,
+                                                ndays=tpbuilder.ndays,
+                                                ano=tpbuilder.year,
+                                                mes=tpbuilder.month,
+                                                day=tpbuilder.day,
+                                                decoded="yes")
         else:
             raise ValueError("OgimetTP : tpbuilder.scrapper_type est invalide")
-
-    def __repr__(self):
-        return f"<{self.__class__.__name__} {super().__repr__()} {self.ind}"
 
 
 class WundergroundTP(TaskParameters):
@@ -268,6 +272,3 @@ class WundergroundTP(TaskParameters):
 
         else:
             raise ValueError("WundergroundTP : tpbuilder.scrapper_type est invalide")
-
-    def __repr__(self):
-        return f"<{self.__class__.__name__} {super().__repr__()} {self.country_code} {self.region}"

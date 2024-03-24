@@ -50,7 +50,6 @@ Où trouver les paramètres ?
     Pour les jobs ogimet:
         - http://www.ogimet.com/cgi-bin/gsynres?lang=en&ind=08180&ano=2017&mes=8&day=0&hora=0&min=0&ndays=31
           http:      [...]                             &ind=<ind>&ano=          [...]
-        - /!\/!\ les mois dans l'URL sont numérotés différement. Dans la config, utiliser les numéros usuels.
         - Les colonnes daily weather summary sont exclues des résultats.
 
     Pour les jobs wunderground:

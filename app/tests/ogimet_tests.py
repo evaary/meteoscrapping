@@ -70,3 +70,19 @@ class OgimetDailyTester(TestCase):
         uc = ucf.get_ogimet_ucs()[0]
         data = self.SCRAPPER.scrap_from_uc(uc).set_index("date")
         self.assertTrue(self.compare_data(data))
+
+
+class OgimetHourlyTester(TestCase):
+
+    SCRAPPER = OgimetDaily()
+    UCF_PATH = "./app/tests/ucfs/ogimet_hourly.json"
+
+    URL_REF = "https://www.ogimet.com/cgi-bin/gsynres?ind=07149&lang=en&decoded=yes&ndays=1&ano=2023&mes=02&day=01&hora=00"
+
+    def test_scrap_data(self):
+        ucf = UserConfigFile.from_json(self.UCF_PATH)
+        uc = ucf.get_ogimet_ucs()[0]
+        for x in uc.to_tps():
+            print(x)
+        #data = self.SCRAPPER.scrap_from_uc(uc).set_index("date")
+        #self.assertTrue(self.compare_data(data))

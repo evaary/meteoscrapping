@@ -1,11 +1,6 @@
 class ProcessException(Exception):
+    pass
 
-    def __init__(self, *args, **kwargs):
-
-        if not args:
-            args = ("Echec du job",)
-
-        super().__init__(*args, **kwargs)
 
 class HtmlPageException(ProcessException):
 
@@ -14,12 +9,14 @@ class HtmlPageException(ProcessException):
     def __init__(self):
         super().__init__(self.MESSAGE)
 
+
 class ScrapException(ProcessException):
 
     MESSAGE = "Echec de récupération des données de la table html"
 
     def __init__(self):
         super().__init__(self.MESSAGE)
+
 
 class ReworkException(ProcessException):
 

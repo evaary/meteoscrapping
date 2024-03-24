@@ -1,6 +1,6 @@
 from unittest import TestCase
 import pandas as pd
-from app.scrappers.meteociel_scrappers import MeteocielHourly, MeteocielDaily
+from app.scrappers.scrappers_module import MeteocielHourly, MeteocielDaily
 from app.ucs.UserConfigFile import UserConfigFile
 
 

@@ -3,7 +3,7 @@ from unittest import TestCase
 import numpy as np
 import pandas as pd
 
-from app.scrappers.wunderground_scrappers import WundergroundDaily
+from app.scrappers.scrappers_module import WundergroundDaily
 from app.ucs.UserConfigFile import UserConfigFile
 
 

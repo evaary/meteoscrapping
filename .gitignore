@@ -3,12 +3,11 @@
 __pycache__/
 app/__pycache__
 
-results/
-errors/
+resultats/
+erreurs/
 output/
 config/
-env/
+venv/
 .idea/
 
 config.json
-./idea

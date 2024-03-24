@@ -3,7 +3,7 @@ from unittest import TestCase
 import numpy as np
 import pandas as pd
 
-from app.scrappers.ogimet_scrappers import OgimetDaily
+from app.scrappers.scrappers_module import OgimetDaily
 from app.ucs.UserConfigFile import UserConfigFile
 
 

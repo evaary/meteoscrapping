@@ -9,3 +9,6 @@ class Criteria:
 
     def get_attr_value(self):
         return self.__attribute_value
+
+    def __repr__(self):
+        return f"{self.__css_attribute} : {self.__attribute_value}"

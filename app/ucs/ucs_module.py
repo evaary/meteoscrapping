@@ -76,7 +76,22 @@ class ScrapperUC(ABC):
         pass
 
     def __repr__(self):
-        return f"{self.city} {self.years} {self.months} {self.days} {self.scrapper_type}"
+        if self.scrapper_type in ScrapperType.hourly_scrapper_types():
+            return "<{stype} {city} {d_from}/{m_from}/{y_from} -> {d_to}/{m_to}/{y_to}>".format(stype=self.scrapper_type,
+                                                                                                city=self.city,
+                                                                                                d_from=self.days[0],
+                                                                                                m_from=self.months[0],
+                                                                                                y_from=self.years[0],
+                                                                                                d_to=self.days[-1],
+                                                                                                m_to=self.months[-1],
+                                                                                                y_to=self.years[-1])
+        else:
+            return "<{stype} {city} {m_from}/{y_from} -> {m_to}/{y_to}>".format(stype=self.scrapper_type,
+                                                                                city=self.city,
+                                                                                m_from=self.months[0],
+                                                                                y_from=self.years[0],
+                                                                                m_to=self.months[-1],
+                                                                                y_to=self.years[-1])
 
     def __hash__(self):
         x = 7
@@ -193,10 +208,6 @@ class MeteocielUC(ScrapperUC):
     def _get_parameters(self):
         return self.__PARAMETERS
 
-    def __repr__(self):
-        msg = super().__repr__()
-        return f"<{self.__class__.__name__} {self.code} {self.code_num} {msg}>"
-
 
 class OgimetUC(ScrapperUC):
 
@@ -249,34 +260,49 @@ class OgimetUC(ScrapperUC):
                                        self.months[-1] + 1))
 
         elif self.scrapper_type == ScrapperType.OGIMET_HOURLY:
-
+            # on peut requêter de façon à obtenir une page qui contient l'ensemble des données
+            # pour chaque mois
             return (TPBuilder(self.scrapper_type).with_ind(self.ind)
                                                  .with_city(self.city)
                                                  .with_waiting(GeneralParametersUC.get_instance().waiting)
                                                  .with_year(year)
                                                  .with_month(month)
-                                                 .with_day(day)
+                                                 .with_day(self.compute_day(month))
+                                                 .with_ndays(self.compute_ndays(month))
                                                  .build()
                     for year in range(self.years[0],
                                       self.years[-1] + 1)
 
                     for month in range(self.months[0],
-                                       self.months[-1] + 1)
-
-                    for day in range(self.days[0],
-                                     self.days[-1] + 1)
-
-                    if day <= MonthEnum.from_id(month).ndays)
+                                       self.months[-1] + 1))
         else:
             raise ValueError("OgimetUC.to_tps : scrapper_type invalide")
+
+    def compute_ndays(self, month: int) -> int:
+
+        if self.scrapper_type != ScrapperType.OGIMET_HOURLY:
+            raise ValueError("OgimetUC.compute_ndays : le type de scrapper est invalide")
+
+        ndays = self.days[-1] - self.days[0] + 1
+        max_ndays = MonthEnum.from_id(month).ndays
+        ndays = max_ndays if ndays > max_ndays else ndays
+
+        return ndays
+
+    def compute_day(self, month: int) -> int:
+
+        if self.scrapper_type != ScrapperType.OGIMET_HOURLY:
+            raise ValueError("OgimetUC.compute_day : le type de scrapper est invalide")
+
+        day = self.days[-1]
+        max_day = MonthEnum.from_id(month).ndays
+        day = max_day if day > max_day else day
+
+        return day
 
     # override
     def _get_parameters(self):
         return self.__PARAMETERS
-
-    def __repr__(self):
-        msg = super().__repr__()
-        return f"<{self.__class__.__name__} {self.ind} {msg}>"
 
 
 class WundergroundUC(ScrapperUC):
@@ -359,7 +385,3 @@ class WundergroundUC(ScrapperUC):
     # override
     def _get_parameters(self):
         return self.__PARAMETERS
-
-    def __repr__(self):
-        msg = super().__repr__()
-        return f"<{self.__class__.__name__} {self.country_code} {self.region} {msg}>"

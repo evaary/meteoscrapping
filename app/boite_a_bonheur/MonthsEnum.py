@@ -48,14 +48,3 @@ class MonthEnum:
          3 => 2    6 => 5     9 => 8     12 => 11
         """
         return x.numero - 1
-
-    @classmethod
-    def ogimet_daily_numero(cls, x: MonthEnumMember) -> int:
-        """
-        La numérotation des mois sur ogimet (données jour par jour) est décalée.
-        Cette méthode associe la numérotation usuelle à gauche de la flèche et celle d'ogimet, à droite.
-         1 => 2    4 => 5     7 =>  8     10 => 11
-         2 => 3    5 => 6     8 =>  9     11 => 12
-         3 => 4    6 => 7     9 => 10     12 =>  1
-        """
-        return 1 if x == cls.DECEMBRE else x.numero + 1

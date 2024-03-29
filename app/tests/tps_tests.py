@@ -7,8 +7,12 @@ class TPsTester(TestCase):
 
     BASE_PATH = "./app/tests/ucfs"
 
+    CONFIG_FILES = {
+        "correct": f"{BASE_PATH}/correct.json"
+    }
+
     def test_nominal_case(self):
-        ucf = UserConfigFile.from_json(f"{self.BASE_PATH}/correct.json")
+        ucf = UserConfigFile.from_json(self.CONFIG_FILES["correct"])
 
         otps = [ouc for ouc in ucf.get_ogimet_ucs() if ouc.city == "Ferrara"][0].to_tps()
         wtps = ucf.get_wunderground_ucs()[0].to_tps()

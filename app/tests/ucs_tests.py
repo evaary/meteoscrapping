@@ -9,9 +9,14 @@ class UCsTester(TestCase):
 
     BASE_PATH = "./app/tests/ucfs"
 
+    CONFIG_FILES = {
+        "correct"      : f"{BASE_PATH}/correct.json",
+        "duplicate_suc": f"{BASE_PATH}/duplicate_scrapper_uc.json",
+    }
+
     def test_nominal_case(self):
         try:
-            ucf = UserConfigFile.from_json(f"{self.BASE_PATH}/correct.json")
+            ucf = UserConfigFile.from_json(self.CONFIG_FILES["correct"])
         except Exception:
             self.fail("ScrapperUCsTests : le cas nominal ne fonctionne pas")
 
@@ -21,12 +26,12 @@ class UCsTester(TestCase):
         self.assertEqual(len(ucf.get_wunderground_ucs()), 1)
 
     def test_duplicated_uc(self):
-        ucf = UserConfigFile.from_json(f"{self.BASE_PATH}/duplicate_scrapper_uc.json")
+        ucf = UserConfigFile.from_json(self.CONFIG_FILES["duplicate_suc"])
         self.assertEqual(len(ucf.get_wunderground_ucs()), 1)
 
     def test_equals(self):
 
-        ucf = UserConfigFile.from_json(f"{self.BASE_PATH}/correct.json")
+        ucf = UserConfigFile.from_json(self.CONFIG_FILES["correct"])
 
         muc_1 = ucf.get_meteociel_ucs()[0]
         muc_2 = ucf.get_meteociel_ucs()[1]
@@ -39,12 +44,13 @@ class UCsTester(TestCase):
         self.assertNotEqual(muc_1, None)
         self.assertNotEqual(muc_1, dict({"bouh": 3}))
 
+        # TODO à fixer
         # muc_1_clone.__scrapper_type = ScrapperType.WUNDERGROUND_DAILY
         # self.assertNotEqual(muc_1, muc_1_clone)
 
     def test_hashcode(self):
 
-        ucf = UserConfigFile.from_json(f"{self.BASE_PATH}/correct.json")
+        ucf = UserConfigFile.from_json(self.CONFIG_FILES["correct"])
 
         muc_1 = ucf.get_meteociel_ucs()[0]
         muc_2 = ucf.get_meteociel_ucs()[1]

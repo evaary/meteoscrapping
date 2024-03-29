@@ -47,7 +47,7 @@ class UCFChecker:
         is_month = date_field == UCFParameter.MONTHS
         is_day = date_field == UCFParameter.DAYS
 
-        if is_day and scrapper_name != UCFParameter.METEOCIEL:
+        if is_day and scrapper_name == UCFParameter.WUNDERGROUND:
             raise UnavailableScrapperException(scrapper_name)
 
         if not isinstance(obj, list):

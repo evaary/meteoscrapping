@@ -1,6 +1,5 @@
 import multiprocessing as mp
 import os
-from concurrent.futures import ProcessPoolExecutor
 
 from app.boite_a_bonheur.ScraperTypeEnum import ScrapperType
 from app.ucs.UserConfigFile import UserConfigFile
@@ -39,8 +38,8 @@ class Runner:
 
         base_filename = "_".join([uc.scrapper_type.name,
                                   uc.city,
-                                  f"from_{start_date}",
-                                  f"to_{end_date}"])\
+                                  f"du_{start_date}",
+                                  f"au_{end_date}"])\
                            .lower()
 
         data_filename = os.path.join(workdir,
@@ -62,16 +61,15 @@ class Runner:
     @classmethod
     def run_from_config(cls) -> None:
 
-        mp.freeze_support()  # pour ne pas que le main se relance en boucle
-
         try:
             print("lecture du fichier config.json...")
             ucf = UserConfigFile.from_json(os.path.join(os.getcwd(), "config.json"))
         except UCFCheckerException as e:
             print(e)
+            input("Tapez 'Entrée' pour quitter")
             return
 
         print("fichier config.json trouvé, lancement des téléchargements\n")
-
-        with ProcessPoolExecutor(max_workers=cls.MAX_PROCESSES) as executor:
-            executor.map(cls._run_one_job, ucf.get_all_ucs())
+        
+        for uc in ucf.get_all_ucs():
+            cls._run_one_job(uc)

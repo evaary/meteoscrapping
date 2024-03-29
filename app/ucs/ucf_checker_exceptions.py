@@ -92,8 +92,8 @@ class NoSuchDateFieldException(UCFCheckerException):
 
 class UnavailableScrapperException(UCFCheckerException):
     def __init__(self, ucfpem: UCFParameterEnumMember):
-        super().__init__("Le champs {d} est incompatible avec {ucfpem}".format(d=UCFParameter.DAYS.name,
-                                                                               ucfpem=ucfpem.name))
+        super().__init__("Le champ {d} est incompatible avec {ucfpem}".format(d=UCFParameter.DAYS.name,
+                                                                              ucfpem=ucfpem.name))
 
 
 class DateFieldException(UCFCheckerException):

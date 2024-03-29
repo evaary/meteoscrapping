@@ -76,7 +76,22 @@ class ScrapperUC(ABC):
         pass
 
     def __repr__(self):
-        return f"{self.city} {self.years} {self.months} {self.days} {self.scrapper_type}"
+        if self.scrapper_type in ScrapperType.hourly_scrapper_types():
+            return "<{stype} {city} {d_from}/{m_from}/{y_from} -> {d_to}/{m_to}/{y_to}>".format(stype=self.scrapper_type,
+                                                                                                city=self.city,
+                                                                                                d_from=self.days[0],
+                                                                                                m_from=self.months[0],
+                                                                                                y_from=self.years[0],
+                                                                                                d_to=self.days[-1],
+                                                                                                m_to=self.months[-1],
+                                                                                                y_to=self.years[-1])
+        else:
+            return "<{stype} {city} {m_from}/{y_from} -> {m_to}/{y_to}>".format(stype=self.scrapper_type,
+                                                                                city=self.city,
+                                                                                m_from=self.months[0],
+                                                                                y_from=self.years[0],
+                                                                                m_to=self.months[-1],
+                                                                                y_to=self.years[-1])
 
     def __hash__(self):
         x = 7
@@ -193,10 +208,6 @@ class MeteocielUC(ScrapperUC):
     def _get_parameters(self):
         return self.__PARAMETERS
 
-    def __repr__(self):
-        msg = super().__repr__()
-        return f"<{self.__class__.__name__} {self.code} {self.code_num} {msg}>"
-
 
 class OgimetUC(ScrapperUC):
 
@@ -293,10 +304,6 @@ class OgimetUC(ScrapperUC):
     def _get_parameters(self):
         return self.__PARAMETERS
 
-    def __repr__(self):
-        msg = super().__repr__()
-        return f"<{self.__class__.__name__} {self.ind} {msg}>"
-
 
 class WundergroundUC(ScrapperUC):
 
@@ -378,7 +385,3 @@ class WundergroundUC(ScrapperUC):
     # override
     def _get_parameters(self):
         return self.__PARAMETERS
-
-    def __repr__(self):
-        msg = super().__repr__()
-        return f"<{self.__class__.__name__} {self.country_code} {self.region} {msg}>"

@@ -1,5 +1,4 @@
 from threading import Timer
-from multiprocessing import current_process
 import re
 import numpy as np
 import pandas as pd
@@ -7,6 +6,7 @@ from abc import (ABC,
                  abstractmethod)
 from typing import List
 from time import perf_counter
+
 from app.scrappers.scrapping_exceptions import (ProcessException,
                                                 ReworkException,
                                                 ScrapException,
@@ -24,7 +24,6 @@ class MeteoScrapper(ABC):
     PROGRESS_TIMER_INTERVAL = 10  # en secondes
 
     def __init__(self):
-
         self.errors = dict()
         # date de départ de lancement des jobs
         self._start = 0
@@ -34,19 +33,16 @@ class MeteoScrapper(ABC):
         self._todo = 0
         # % de jobs traités
         self._progress = 0
-        # vitesse en % / s
-        self._speed = 0
 
     def _update(self):
         self._done += 1
         self._progress = round(self._done / self._todo * 100, 0)
-        self._speed = round(self._progress / perf_counter() - self._start, 0)
 
-    def _print_progress(self, should_stop=False) -> None:
-        print(f"{self.__class__.__name__} ({current_process().pid}) - {self._progress}% - {round(perf_counter() - self._start, 0)}s \n")
+    def _print_progress(self,  uc: ScrapperUC, should_stop=False) -> None:
+        print(f"{uc} - {self._progress}% - {round(perf_counter() - self._start, 0)}s \n")
 
         if not should_stop:
-            timer = Timer(self.PROGRESS_TIMER_INTERVAL, self._print_progress)
+            timer = Timer(self.PROGRESS_TIMER_INTERVAL, self._print_progress, [uc])
             timer.daemon = True
             timer.start()
 
@@ -107,11 +103,25 @@ class MeteoScrapper(ABC):
 
         self._todo = sum([1 for _ in uc.to_tps()])
         self._start = perf_counter()
-        self._print_progress()
+        self._print_progress(uc)
 
         for tp in uc.to_tps():
+            html_loading_trials = 3
+            html_data = None
+            while html_data is None and html_loading_trials > 0:
+                try:
+                    if html_loading_trials != 3:
+                        print("retrying...")
+                    html_data = self._load_html(tp)
+                except ProcessException as e:
+                    html_loading_trials -= 1
+
+            if html_data is None:
+                self.errors[tp.key] = {"url": tp.url,
+                                       "erreur": str(HtmlPageException())}
+                self._update()
+                continue
             try:
-                html_data = self._load_html(tp)
                 col_names = self._scrap_columns_names(html_data)
                 values = self._scrap_columns_values(html_data)
                 local_df = self._rework_data(values,
@@ -120,7 +130,7 @@ class MeteoScrapper(ABC):
             except ProcessException as e:
 
                 self.errors[tp.key] = {"url": tp.url,
-                                       "error": str(e)}
+                                       "erreur": str(e)}
                 self._update()
                 continue
 
@@ -128,8 +138,9 @@ class MeteoScrapper(ABC):
             self._update()
 
         global_df.sort_values(by="date")
+        global_df = global_df[["date"] + [x for x in global_df.columns if x != "date"]]
 
-        self._print_progress(should_stop=True)
+        self._print_progress(uc, should_stop=True)
 
         return global_df
 
@@ -643,14 +654,133 @@ class OgimetDaily(MeteoScrapper):
 
 class OgimetHourly(MeteoScrapper):
 
+    REGEX_FOR_DATES = r'\d+/\d+/\d+'
+
     def _scrap_columns_names(self, table: Element) -> "List[str]":
-        pass
+        try:
+            col_names = [th.text for th in table.find("tr")[0]
+                                                .find("th")]
+        except IndexError:
+            raise ScrapException()
+
+        col_names = ["_".join(colname.split("\n")) for colname in col_names]
+        col_names = [colname.lower()
+                            .replace("(c)", "°C")
+                            .replace("(mm)", "mm")
+                            .replace(" ", "_")
+                     for colname in col_names]
+
+        specific_index = col_names.index("date")
+        col_names.insert(specific_index + 1, "time")
+
+        return col_names
 
     def _scrap_columns_values(self, table: Element) -> "List[str]":
-        pass
 
-    def _rework_data(self, values: "List[str]", columns_names: "List[str]", tp: TaskParameters) -> pd.DataFrame:
-        pass
+        values = [td.text
+                  for tr in table.find("tr")[1:-1]
+                  for td in tr.find("td")]
+
+        return values
+
+    def _rework_data(self,
+                     values: "List[str]",
+                     columns_names: "List[str]",
+                     tp: TaskParameters) -> pd.DataFrame:
+
+        n_cols = len(columns_names)
+        values = self._fill_partial_rows(values, n_cols)
+
+        df = pd.DataFrame(np.array(values)
+                            .reshape(-1, n_cols),
+                          columns=columns_names)
+
+        df = df[[x for x in df.columns if x not in ["ww", "w1", "w2"]]]
+
+        try:
+            df["datetime"] = df["date"] + ":" + df["time"]
+        except:  # exception inconnue levée parfois
+            df["datetime"] = []
+
+        df = df.drop(["date", "time"], axis="columns")\
+               .rename(columns={"datetime": "date"})
+
+        df["prec_mm"] = ["" if "--" in x
+                         else "_".join(x.split("\n"))
+                         for x in df["prec_mm"].values]
+
+        start_day = [int(x.split("=")[1])
+                     for x in tp.url.split("&")
+                     if x.startswith("day")][0]
+
+        n_days = [int(x.split("=")[1])
+                  for x in tp.url.split("&")
+                  if x.startswith("ndays")][0]
+
+        times = [f"0{x}:00" if x < 10 else f"{x}:00" for x in range(0, 24)]
+
+        expected_dates = [f"{tp.month_as_str}/0{start_day - x}/{tp.year_as_str}" if start_day - x < 10
+                          else f"{tp.month_as_str}/{start_day - x}/{tp.year_as_str}"
+                          for x in range(0, n_days)]
+
+        expected_datetimes = [f"{expected_date}:{time}"
+                              for time in times
+                              for expected_date in expected_dates]
+
+        actual_datetimes = df["date"].values
+        missing_datetimes = [x for x in expected_datetimes if x not in actual_datetimes]
+
+        for missing_datetime in missing_datetimes:
+            row = pd.DataFrame(np.array([""] * len(df.columns))
+                                 .reshape(-1, len(df.columns)),
+                               columns=df.columns)
+            row.loc[0, ["date"]] = missing_datetime
+            df = pd.concat([df, row])
+
+        df = df.reset_index(drop=True)
+
+        numeric_columns = [x for x in df.columns if x not in ["date", "ddd", "prec_mm"]]
+        for numeric_column in numeric_columns:
+            df[numeric_column] = pd.to_numeric(df[numeric_column],
+                                               errors="coerce")
+
+        df["date"] = pd.to_datetime(df["date"],
+                                    format="%m/%d/%Y:%H:%M")
+        df = df.sort_values(by="date")
+
+        return df
+
+    @classmethod
+    def _fill_partial_rows(cls,
+                           values: "List[str]",
+                           n_cols: int) -> "List[str]":
+
+        has_complete_lines = len(values) % n_cols == 0
+
+        if len(values) == 0 or has_complete_lines:
+            return values
+
+        done = []
+        while not has_complete_lines:
+
+            row = values[:n_cols]
+            dates = [x
+                     for x in row
+                     if re.search(cls.REGEX_FOR_DATES, x) is not None]
+
+            if len(dates) > 1:
+                index = row.index(dates[1])
+                row = row[:index]
+
+            row_length = len(row)
+            row += [""] * (n_cols - row_length)
+            done += row
+            values = values[row_length:]
+
+            has_complete_lines =     len(values) == 0 \
+                                 and len(done) % n_cols == 0
+
+        return done
 
 
 class WundergroundDaily(MeteoScrapper):

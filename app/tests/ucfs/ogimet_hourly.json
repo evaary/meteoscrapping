@@ -4,6 +4,6 @@
     },
 
     "ogimet":[
-        { "ind":"07149", "ville":"paris_orly", "annees":[2017], "mois":[2], "jours":[31] }
+        { "ind":"07149", "ville":"paris_orly", "annees":[2017], "mois":[2], "jours":[1,3] }
     ]
 }

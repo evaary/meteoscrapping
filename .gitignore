@@ -8,6 +8,7 @@ erreurs/
 output/
 config/
 venv/
+configstheque/
 .idea/
 
 config.json

@@ -16,7 +16,6 @@ class TPBuilder:
             raise ValueError(f"TPBuilder : paramètre invalide : {scrapper_type}")
 
         self.scrapper_type = scrapper_type
-        self.waiting = UCFParameter.MIN_WAITING
         self.year = 0
         self.month = 0
         self.day = 0
@@ -113,13 +112,6 @@ class TPBuilder:
         self.ind = ind
         return self
 
-    def with_waiting(self, waiting: int) -> "TPBuilder":
-        if waiting not in range(UCFParameter.MIN_WAITING,
-                                UCFParameter.MAX_WAITING + 1):
-            raise ValueError(f"TPBuilder.waiting : paramètre invalide {waiting}")
-        self.waiting = waiting
-        return self
-
     def with_ndays(self, ndays: int) -> "TPBuilder":
         if ndays not in range(1, UCFParameter.MAX_DAYS + 1):
             raise ValueError(f"TPBuilder.ndays : paramètre invalide {ndays}")
@@ -166,7 +158,7 @@ class TPBuilder:
 class TaskParameters(abc.ABC):
 
     def __init__(self, tpbuilder: TPBuilder):
-        self.waiting = tpbuilder.waiting
+        self.waiting = UCFParameter.DEFAULT_WAITING
         self.year = tpbuilder.year
         self.month = tpbuilder.month
         self.day = tpbuilder.day

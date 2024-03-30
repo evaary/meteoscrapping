@@ -38,13 +38,16 @@ class MeteoScrapper(ABC):
         self._done += 1
         self._progress = round(self._done / self._todo * 100, 0)
 
-    def _print_progress(self,  uc: ScrapperUC, should_stop=False) -> None:
+    def _print_progress(self,  uc: ScrapperUC) -> None:
+
         print(f"{uc} - {self._progress}% - {round(perf_counter() - self._start, 0)}s \n")
 
-        if not should_stop:
-            timer = Timer(self.PROGRESS_TIMER_INTERVAL, self._print_progress, [uc])
-            timer.daemon = True
-            timer.start()
+        if self._progress == 100:
+            return
+
+        timer = Timer(self.PROGRESS_TIMER_INTERVAL, self._print_progress, [uc])
+        timer.daemon = True
+        timer.start()
 
     @staticmethod
     def _load_html(tp: TaskParameters):
@@ -113,8 +116,9 @@ class MeteoScrapper(ABC):
                     if html_loading_trials != 3:
                         print("retrying...")
                     html_data = self._load_html(tp)
-                except ProcessException as e:
+                except ProcessException:
                     html_loading_trials -= 1
+                    tp.waiting *= 2
 
             if html_data is None:
                 self.errors[tp.key] = {"url": tp.url,
@@ -140,7 +144,7 @@ class MeteoScrapper(ABC):
         global_df.sort_values(by="date")
         global_df = global_df[["date"] + [x for x in global_df.columns if x != "date"]]
 
-        self._print_progress(uc, should_stop=True)
+        self._print_progress(uc)
 
         return global_df
 

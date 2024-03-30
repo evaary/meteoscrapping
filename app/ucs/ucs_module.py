@@ -12,35 +12,6 @@ from app.tps.tps_module import (TPBuilder,
 from app.ucs.UCFChecker import UCFChecker
 
 
-class GeneralParametersUC:
-
-    __INSTANCE = None
-
-    def __init__(self):
-        self.waiting = UCFParameter.MIN_WAITING
-        raise Exception("GeneralParametersUC : utiliser GeneralParametersUC.get_instance")
-
-    @classmethod
-    def get_instance(cls) -> "GeneralParametersUC":
-
-        if cls.__INSTANCE is None:
-            cls.__INSTANCE = cls.__new__(cls)
-            cls.__INSTANCE.waiting = UCFParameter.MIN_WAITING
-
-        return cls.__INSTANCE
-
-    @classmethod
-    def from_json_object(cls, jsono) -> "GeneralParametersUC":
-
-        __INSTANCE = cls.get_instance()
-        try:
-            __INSTANCE.waiting = jsono[UCFParameter.WAITING.name]
-        except KeyError:
-            pass
-
-        return __INSTANCE
-
-
 class ScrapperUC(ABC):
 
     def __init__(self):
@@ -77,21 +48,21 @@ class ScrapperUC(ABC):
 
     def __repr__(self):
         if self.scrapper_type in ScrapperType.hourly_scrapper_types():
-            return "<{stype} {city} {d_from}/{m_from}/{y_from} -> {d_to}/{m_to}/{y_to}>".format(stype=self.scrapper_type,
-                                                                                                city=self.city,
-                                                                                                d_from=self.days[0],
-                                                                                                m_from=self.months[0],
-                                                                                                y_from=self.years[0],
-                                                                                                d_to=self.days[-1],
-                                                                                                m_to=self.months[-1],
-                                                                                                y_to=self.years[-1])
+            return "<{type} {city} {d_from}/{m_from}/{y_from} -> {d_to}/{m_to}/{y_to}>".format(type=self.scrapper_type,
+                                                                                               city=self.city,
+                                                                                               d_from=self.days[0],
+                                                                                               m_from=self.months[0],
+                                                                                               y_from=self.years[0],
+                                                                                               d_to=self.days[-1],
+                                                                                               m_to=self.months[-1],
+                                                                                               y_to=self.years[-1])
         else:
-            return "<{stype} {city} {m_from}/{y_from} -> {m_to}/{y_to}>".format(stype=self.scrapper_type,
-                                                                                city=self.city,
-                                                                                m_from=self.months[0],
-                                                                                y_from=self.years[0],
-                                                                                m_to=self.months[-1],
-                                                                                y_to=self.years[-1])
+            return "<{type} {city} {m_from}/{y_from} -> {m_to}/{y_to}>".format(type=self.scrapper_type,
+                                                                               city=self.city,
+                                                                               m_from=self.months[0],
+                                                                               y_from=self.years[0],
+                                                                               m_to=self.months[-1],
+                                                                               y_to=self.years[-1])
 
     def __hash__(self):
         x = 7
@@ -171,7 +142,6 @@ class MeteocielUC(ScrapperUC):
             return (TPBuilder(self.scrapper_type).with_code(self.code)
                                                  .with_code_num(self.code_num)
                                                  .with_city(self.city)
-                                                 .with_waiting(GeneralParametersUC.get_instance().waiting)
                                                  .with_year(year)
                                                  .with_month(month)
                                                  .build()
@@ -186,7 +156,6 @@ class MeteocielUC(ScrapperUC):
             return (TPBuilder(self.scrapper_type).with_code(self.code)
                                                  .with_code_num(self.code_num)
                                                  .with_city(self.city)
-                                                 .with_waiting(GeneralParametersUC.get_instance().waiting)
                                                  .with_year(year)
                                                  .with_month(month)
                                                  .with_day(day)
@@ -249,7 +218,6 @@ class OgimetUC(ScrapperUC):
 
             return (TPBuilder(self.scrapper_type).with_ind(self.ind)
                                                  .with_city(self.city)
-                                                 .with_waiting(GeneralParametersUC.get_instance().waiting)
                                                  .with_year(year)
                                                  .with_month(month)
                                                  .build()
@@ -264,7 +232,6 @@ class OgimetUC(ScrapperUC):
             # pour chaque mois
             return (TPBuilder(self.scrapper_type).with_ind(self.ind)
                                                  .with_city(self.city)
-                                                 .with_waiting(GeneralParametersUC.get_instance().waiting)
                                                  .with_year(year)
                                                  .with_month(month)
                                                  .with_day(self.compute_day(month))
@@ -349,7 +316,6 @@ class WundergroundUC(ScrapperUC):
             return (TPBuilder(self.scrapper_type).with_country_code(self.country_code)
                                                  .with_region(self.region)
                                                  .with_city(self.city)
-                                                 .with_waiting(GeneralParametersUC.get_instance().waiting)
                                                  .with_year(year)
                                                  .with_month(month)
                                                  .build()
@@ -364,7 +330,6 @@ class WundergroundUC(ScrapperUC):
             return (TPBuilder(self.scrapper_type).with_country_code(self.country_code)
                                                  .with_region(self.region)
                                                  .with_city(self.city)
-                                                 .with_waiting(GeneralParametersUC.get_instance().waiting)
                                                  .with_year(year)
                                                  .with_month(month)
                                                  .with_day(day)

@@ -1,8 +1,7 @@
 import copy
 from app.boite_a_bonheur.UCFParameterEnum import UCFParameter
 from app.ucs.UCFChecker import UCFChecker
-from app.ucs.ucs_module import (GeneralParametersUC,
-                                ScrapperUC)
+from app.ucs.ucs_module import ScrapperUC
 
 
 class UserConfigFile:
@@ -17,11 +16,6 @@ class UserConfigFile:
 
         config_file = UCFChecker.check(path_to_ucf)
         ucf = UserConfigFile()
-
-        try:
-            GeneralParametersUC.from_json_object(config_file[UCFParameter.GENERAL_PARAMETERS.name])
-        except KeyError:
-            pass
 
         try:
             oucs = config_file[UCFParameter.OGIMET.name]

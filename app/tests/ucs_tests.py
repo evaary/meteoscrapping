@@ -1,7 +1,6 @@
 import copy
 from unittest import TestCase
 
-from app.ucs.ucs_module import GeneralParametersUC
 from app.ucs.UserConfigFile import UserConfigFile
 
 
@@ -20,7 +19,6 @@ class UCsTester(TestCase):
         except Exception:
             self.fail("ScrapperUCsTests : le cas nominal ne fonctionne pas")
 
-        self.assertEqual(GeneralParametersUC.get_instance().waiting, 2)
         self.assertEqual(len(ucf.get_ogimet_ucs()), 2)
         self.assertEqual(len(ucf.get_meteociel_ucs()), 2)
         self.assertEqual(len(ucf.get_wunderground_ucs()), 1)

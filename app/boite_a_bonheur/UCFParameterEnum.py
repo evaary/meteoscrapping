@@ -15,8 +15,6 @@ class UCFParameterEnumMember:
 class UCFParameter:
 
     UCF = UCFParameterEnumMember("config.json")
-    GENERAL_PARAMETERS = UCFParameterEnumMember("parametres_generaux")
-    WAITING = UCFParameterEnumMember("delaiJS")
     OGIMET = UCFParameterEnumMember("ogimet")
     METEOCIEL = UCFParameterEnumMember("meteociel")
     WUNDERGROUND = UCFParameterEnumMember("wunderground")
@@ -30,8 +28,7 @@ class UCFParameter:
     REGION = UCFParameterEnumMember("region")
     COUNTRY_CODE = UCFParameterEnumMember("code_pays")
 
-    MAX_WAITING = 5
-    MIN_WAITING = 1
+    DEFAULT_WAITING = 1
     MIN_MONTHS_DAYS_VALUE = 1
     MAX_DATE_FIELD_SIZE = 2
     MIN_YEARS = 1800

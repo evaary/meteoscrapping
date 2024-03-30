@@ -1,9 +1,4 @@
 {
-    "parametres_generaux":
-    {
-        "delaiJS": 1
-    },
-
     "ogimet":
     [
         { "ind":"16288", "ville":"Caserta", "annees":[2020, 2021], "mois":[1,2] },

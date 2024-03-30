@@ -8,7 +8,6 @@ from app.ucs.ucf_checker_exceptions import (DateFieldException,
                                             MonthsDateException,
                                             NoSuchDateFieldException,
                                             UnavailableScrapperException,
-                                            WaitingException,
                                             NoConfigFoundException,
                                             NotAJsonFileException,
                                             NotAJsonObjectException,
@@ -86,10 +85,9 @@ class UCFChecker:
 
         #   (1) On tente de lire le fichier config
         #   (2) Le fichier config doit contenir un dict
-        #   (3) Les paramètres généraux doivent être un dict. Ils sont optionnels.
-        #   (4) Les paramètres pour chaque scrapper doivent être des listes.
+        #   (3) Les paramètres pour chaque scrapper doivent être des listes.
         #       json_array_parameters associe ces paramètres à leur état de présence (True = présent, par défaut)
-        #   (5) Chacun de ces paramètres est optionnel, mais il en faut au moins 1.
+        #   (4) Chacun de ces paramètres est optionnel, mais il en faut au moins 1.
 
         # (1)
         try:
@@ -100,12 +98,6 @@ class UCFChecker:
         if not isinstance(config_file, dict):
             raise NotAJsonObjectException(UCFParameter.UCF)
         # (3)
-        try:
-            if not isinstance(config_file[UCFParameter.GENERAL_PARAMETERS.name], dict):
-                raise NotAJsonObjectException(UCFParameter.GENERAL_PARAMETERS)
-        except KeyError:
-            pass
-        # (4)
         json_array_parameters = {UCFParameter.METEOCIEL: True,
                                  UCFParameter.OGIMET: True,
                                  UCFParameter.WUNDERGROUND: True}
@@ -116,39 +108,13 @@ class UCFChecker:
                     raise NotAJsonListException(array_field)
             except KeyError:
                 json_array_parameters[array_field] = False
-        # (5)
+        # (4)
         is_valid = any(json_array_parameters.values())
 
         if not is_valid:
             raise EmptyConfigFileException(path=path_to_config)
 
         return config_file
-
-    @staticmethod
-    def _check_general_parameters_content(config: dict) -> None:
-
-        #   (1) Les paramètres généraux sont optionnels, mais s'ils existent dans la config,
-        #       ils doivent contenir le waiting (temps à attendre pour que s'éxecute le JS de la page à scrapper).
-        #   (2) Le waiting doit être un entier ...
-        #   (3) ...compris entre le min et le max définis.
-
-        # (1)
-        try:
-            gen_param = config[UCFParameter.GENERAL_PARAMETERS.name]
-        except KeyError:
-            return
-
-        try:
-            waiting = gen_param[UCFParameter.WAITING.name]
-        except KeyError:
-            raise WaitingException()
-        # (2)
-        if not isinstance(waiting, int):
-            raise WaitingException()
-        # (3)
-        if waiting not in range(UCFParameter.MIN_WAITING,
-                                UCFParameter.MAX_WAITING + 1):
-            raise WaitingException()
 
     @staticmethod
     def check_scrapper_parameters_content(config: dict) -> None:
@@ -264,7 +230,6 @@ class UCFChecker:
     def check(cls, path: str) -> dict:
         cls.check_ucf_existence(path)
         config = cls.check_ucf_structure(path)
-        cls._check_general_parameters_content(config)
         cls.check_scrapper_parameters_content(config)
         cls.check_ucs(config)
 

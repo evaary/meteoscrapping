@@ -1,4 +1,4 @@
-.vscode
+.idea/
 
 __pycache__/
 app/__pycache__
@@ -6,9 +6,6 @@ app/__pycache__
 resultats/
 erreurs/
 output/
-config/
 venv/
-configstheque/
-.idea/
 
 config.json

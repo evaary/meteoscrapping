@@ -8,9 +8,8 @@ class MeteocielDailyTester(TestCase):
 
     SCRAPPER = MeteocielDaily()
     UCF_PATH = "./app/tests/ucfs/meteociel_daily.json"
-
-    # valeurs de référence pour janvier 2021
     URL_REF = "https://www.meteociel.com/climatologie/obs_villes.php?code2=7249&mois=1&annee=2021"
+
     RESULTATS = pd.DataFrame(
         [["2021-01-01",  2.1, -3.6,  0.0, 3.9],
          ["2021-01-02",  4.0, -2.2,  0.2, 6.0],
@@ -51,9 +50,6 @@ class MeteocielDailyTester(TestCase):
                  "ensoleillement_h"]
     )
 
-    def compare_data(self, data: pd.DataFrame) -> bool:
-        return (data - self.RESULTATS).sum().sum() == 0
-
     @classmethod
     def setUpClass(cls):
         cls.RESULTATS["date"] = pd.to_datetime(cls.RESULTATS["date"])
@@ -63,17 +59,18 @@ class MeteocielDailyTester(TestCase):
         ucf = UserConfigFile.from_json(self.UCF_PATH)
         uc = ucf.get_meteociel_ucs()[0]
         data = self.SCRAPPER.scrap_from_uc(uc).set_index("date")
-        self.assertTrue(self.compare_data(data))
+
+        differences_df = data - self.RESULTATS
+
+        self.assertEqual(differences_df.sum().sum(), 0)
 
 
 class MeteocielHourlyTester(TestCase):
 
     SCRAPPER = MeteocielHourly()
     UCF_PATH = "./app/tests/ucfs/meteociel_hourly.json"
-
-    NOT_NUMERIC = ["neb"]
-    # valeurs de référence pour janvier 2021
     URL_REF = "https://www.meteociel.com/temps-reel/obs_villes.php?code2=7249&jour2=1&mois2=0&annee2=2020"
+
     RESULTATS = pd.DataFrame(
         [["2020-01-01 23:00:00", "8/8", 0.7, 7.2, 100, 7.2, 7.2,  5.4,  9, 12, 1028.8, 0.0],
          ["2020-01-01 22:00:00", "8/8", 0.7, 7.1, 100, 7.1, 7.1,  5.3,  9, 15, 1028.9, 0.2],
@@ -105,19 +102,17 @@ class MeteocielHourlyTester(TestCase):
     )
 
     @classmethod
-    def compare_data(cls, data: pd.DataFrame) -> bool:
-        numeric = [x for x in cls.RESULTATS.columns if x not in cls.NOT_NUMERIC]
-        return (data[numeric] - cls.RESULTATS[numeric]).sum().sum() == 0
-
-    @classmethod
     def setUpClass(cls):
         cls.RESULTATS["date"] = pd.to_datetime(cls.RESULTATS["date"])
-        cls.RESULTATS = cls.RESULTATS.set_index("date")
-        cls.RESULTATS = cls.RESULTATS.sort_values(by="date")
+        cls.RESULTATS = cls.RESULTATS.set_index("date")\
+                                     .sort_values(by="date")
 
     def test_scrap_data(self):
         ucf = UserConfigFile.from_json(self.UCF_PATH)
         uc = ucf.get_meteociel_ucs()[0]
         data = self.SCRAPPER.scrap_from_uc(uc).set_index("date")
 
-        self.assertTrue(self.compare_data(data))
+        numeric = [x for x in self.RESULTATS.columns if x != "neb"]
+        differences_df = data[numeric] - self.RESULTATS[numeric]
+
+        self.assertEqual(differences_df.sum().sum(), 0)

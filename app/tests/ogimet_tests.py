@@ -3,9 +3,7 @@ from unittest import TestCase
 import numpy as np
 import pandas as pd
 
-from app.boite_a_bonheur.utils import to_csv
-from app.scrappers.scrappers_module import (OgimetDaily,
-                                            OgimetHourly)
+from app.scrappers.scrappers_module import (OgimetDaily, OgimetHourly)
 from app.ucs.UserConfigFile import UserConfigFile
 
 
@@ -13,8 +11,6 @@ class OgimetDailyTester(TestCase):
 
     SCRAPPER = OgimetDaily()
     UCF_PATH = "./app/tests/ucfs/ogimet_daily.json"
-
-    # valeurs de référence pour janvier 2021
     URL_REF = "http://www.ogimet.com/cgi-bin/gsynres?lang=en&ind=16138&ano=2021&mes=2&day=28&hora=23&ndays=28"
 
     RESULTATS = pd.DataFrame(
@@ -56,12 +52,6 @@ class OgimetDailyTester(TestCase):
                  "vis_km"]
     )
 
-    NUMERICS = RESULTATS.columns.difference(["wind_(km/h)_dir", "date", "prec_(mm)"])
-
-    @classmethod
-    def compare_data(cls, data: pd.DataFrame) -> bool:
-        return (data[cls.NUMERICS] - cls.RESULTATS[cls.NUMERICS]).sum().sum() == 0
-
     @classmethod
     def setUpClass(cls):
         cls.RESULTATS["date"] = pd.to_datetime(cls.RESULTATS["date"])
@@ -71,41 +61,47 @@ class OgimetDailyTester(TestCase):
         ucf = UserConfigFile.from_json(self.UCF_PATH)
         uc = ucf.get_ogimet_ucs()[0]
         data = self.SCRAPPER.scrap_from_uc(uc).set_index("date")
-        self.assertTrue(self.compare_data(data))
+
+        numerics = self.RESULTATS\
+                       .columns\
+                       .difference(["wind_(km/h)_dir", "date", "prec_(mm)"])
+
+        differences_df = data[numerics] - self.RESULTATS[numerics]
+
+        self.assertEqual(differences_df.sum().sum(), 0)
 
 
 class OgimetHourlyTester(TestCase):
 
     SCRAPPER = OgimetHourly()
     UCF_PATH = "./app/tests/ucfs/ogimet_hourly.json"
-
-    URL_REF = "https://www.ogimet.com/cgi-bin/gsynres?ind=07149&lang=en&decoded=yes&ndays=1&ano=2023&mes=02&day=01&hora=00"
+    URL_REF = "https://www.ogimet.com/cgi-bin/gsynres?ind=07149&lang=en&decoded=yes&ndays=1&ano=2023&mes=02&day=01&hora=23"
 
     RESULTATS = pd.DataFrame(
-        [["02/01/2017 00:00:00", 10.1, 9.5, 96, np.NaN, np.NaN,  "S",  7.2, 14.4, 1004.2, 1015.1, -0.1,  "0.0/6h", 8,      7,    0.1, np.NaN,  1.0],
-         ["02/01/2017 01:00:00",  9.8, 9.2, 96, np.NaN, np.NaN,  "S", 10.8, 14.4, 1003.7, 1014.6, -0.6,  "0.0/1h", 8,      7,    0.1, np.NaN,  2.3],
-         ["02/01/2017 02:00:00",  9.6, 9.0, 96, np.NaN, np.NaN,  "S",  7.2, 14.4, 1003.4, 1014.3, -0.7,  "0.0/1h", 8,      7,    0.1, np.NaN,  2.7],
-         ["02/01/2017 03:00:00",  9.6, 9.0, 96, np.NaN, np.NaN,  "S",  7.2, 14.4, 1003.0, 1013.9, -1.2,  "0.0/3h", 8,      8,    0.1, np.NaN,  5.0],
-         ["02/01/2017 04:00:00",  9.4, 8.9, 97, np.NaN, np.NaN,  "S", 14.4, 21.6, 1002.8, 1013.7, -0.9,  "0.0/1h", 8,      8,    0.1, np.NaN,  0.5],
-         ["02/01/2017 05:00:00",  9.1, 8.6, 97, np.NaN, np.NaN,  "S", 14.4, 21.6, 1002.5, 1013.4, -0.9,  "0.0/1h", 8,      8,    0.1, np.NaN,  1.0],
-         ["02/01/2017 06:00:00",  8.7, 8.2, 97,   11.4,    8.7,  "S",  7.2, 18.0, 1002.4, 1013.3, -0.6, "0.2/24h", 8,      8,    0.1,    0.1,  2.6],
-         ["02/01/2017 07:00:00",  8.5, 8.1, 97, np.NaN, np.NaN,  "S", 10.8, 18.0, 1002.3, 1013.2, -0.5,  "0.0/1h", 8,      8,    0.1, np.NaN,  1.8],
-         ["02/01/2017 08:00:00",  8.3, 7.9, 97, np.NaN, np.NaN,  "S",  7.2, 14.4, 1002.3, 1013.2, -0.2,  "0.0/1h", 7,      7,    0.1, np.NaN,  4.8],
-         ["02/01/2017 09:00:00",  9.5, 8.1, 91, np.NaN, np.NaN,  "S",  7.2, 14.4, 1002.1, 1013.0, -0.3,  "0.0/3h", 7,      7,    1.0, np.NaN, 15.0],
-         ["02/01/2017 10:00:00", 11.2, 7.7, 79, np.NaN, np.NaN,  "S", 18.0, 28.8, 1001.7, 1012.5, -0.6,  "0.0/1h", 7,      5,    1.5, np.NaN, 28.0],
-         ["02/01/2017 11:00:00", 11.3, 7.6, 78, np.NaN, np.NaN,  "S", 18.0, 28.8, 1001.4, 1012.2, -0.9,  "0.0/1h", 7,      1,    1.5, np.NaN, 20.0],
-         ["02/01/2017 12:00:00", 11.7, 8.2, 79, np.NaN, np.NaN,  "S", 14.4, 28.8, 1001.2, 1012.0, -0.9,  "0.0/6h", 8,      3,    0.3, np.NaN, 27.0],
-         ["02/01/2017 13:00:00", 11.8, 8.3, 79, np.NaN, np.NaN,  "S", 10.8, 32.4, 1000.4, 1011.2, -1.3,  "0.0/1h", 7,      1,    0.3, np.NaN, 28.0],
-         ["02/01/2017 14:00:00", 12.2, 8.1, 76, np.NaN, np.NaN,  "S", 14.4, 25.2,  999.7, 1010.5, -1.7,  "0.0/1h", 7,      1,    0.3, np.NaN, 20.0],
-         ["02/01/2017 15:00:00", 12.5, 8.2, 75, np.NaN, np.NaN,  "S", 18.0, 32.4,  999.8, 1010.6, -1.4,  "0.0/3h", 8,      5,    0.3, np.NaN, 20.0],
-         ["02/01/2017 16:00:00", 11.9, 7.8, 76, np.NaN, np.NaN,"SSW", 14.4, 36.0,  999.8, 1010.6, -0.6,        "", 8,      7,    0.6, np.NaN, 20.0],
-         ["02/01/2017 17:00:00", 11.3, 7.6, 78, np.NaN, np.NaN, "SW", 18.0, 36.0, 1000.1, 1010.9,  0.4,  "0.0/1h", 8,      7,    0.3, np.NaN, 20.0],
-         ["02/01/2017 18:00:00", 10.9, 7.9, 82,   12.6,    8.1,"SSW", 18.0, 28.8, 1000.6, 1011.4,  0.8,  "0.0/1h", 8,      7,    0.3, np.NaN, 18.0],
-         ["02/01/2017 19:00:00", 10.2, 7.6, 84, np.NaN, np.NaN,"SSW", 10.8, 25.2, 1000.4, 1011.3,  0.6,  "0.0/1h", 8,      7,    0.3, np.NaN, 11.0],
-         ["02/01/2017 20:00:00",  9.6, 7.5, 87, np.NaN, np.NaN,  "S",  3.6, 14.4, 1000.2, 1011.1,  0.1,  "0.0/1h", 8,      8,    2.5, np.NaN, 10.0],
-         ["02/01/2017 21:00:00",  9.1, 7.2, 88, np.NaN, np.NaN,  "S",  7.2, 10.8, 1000.1, 1011.0, -0.5,  "0.0/3h", 4,      1,    0.6, np.NaN,  9.0],
-         ["02/01/2017 22:00:00",  8.9, 7.0, 88, np.NaN, np.NaN,  "S", 10.8, 18.0,  999.9, 1010.8, -0.5,  "0.0/1h", 3,      1,    1.0, np.NaN, 13.0],
-         ["02/01/2017 23:00:00",  8.4, 6.5, 88, np.NaN, np.NaN,  "S",  7.2, 14.4,  999.7, 1010.6, -0.5,  "0.0/1h", 2, np.NaN, np.NaN, np.NaN, 11.0]],
+        [["2023-02-01 00:00:00", 6.7, 4.9, 88, np.NaN, np.NaN, "WSW", 10.8, 18.0, 1017.3, 1028.5, -0.4,         "Tr/6h",    8.0, 8,    0.3, np.NaN, 15.0],
+         ["2023-02-01 01:00:00", 6.5, 4.8, 89, np.NaN, np.NaN,  "SW", 10.8, 18.0, 1017.0, 1028.2, -0.7,        "0.0/1h",    8.0, 8,    0.3, np.NaN, 14.0],
+         ["2023-02-01 02:00:00", 6.1, 4.7, 91, np.NaN, np.NaN, "WSW",  7.2, 18.0, 1017.4, 1028.6,  0.1,        "0.0/1h",    8.0, 8,    0.3, np.NaN, 11.0],
+         ["2023-02-01 03:00:00", 6.6, 4.9, 89, np.NaN, np.NaN, "WSW",  7.2, 14.4, 1017.2, 1028.4, -0.1,        "0.0/3h",    8.0, 8,    0.6, np.NaN, 18.0],
+         ["2023-02-01 04:00:00", 7.3, 2.6, 72, np.NaN, np.NaN, "WNW", 18.0, 28.8, 1017.4, 1028.6,  0.4,        "0.0/1h",    8.0, 8,    1.0, np.NaN, 28.0],
+         ["2023-02-01 05:00:00", 6.9, 2.4, 73, np.NaN, np.NaN,   "W", 14.4, 25.2, 1017.3, 1028.5, -0.1,        "0.0/1h",    7.0, 7,    1.0, np.NaN, 27.0],
+         ["2023-02-01 06:00:00", 5.9, 2.2, 77,    7.6,    5.9,   "W", 10.8, 18.0, 1017.8, 1029.0,  0.6, "Tr/24h_Tr/12h", np.NaN, 3, np.NaN,    1.6, 19.0],
+         ["2023-02-01 07:00:00", 5.6, 2.2, 79, np.NaN, np.NaN, "WSW",  7.2, 18.0, 1017.9, 1029.1,  0.5,        "0.0/1h",    6.0, 6,    1.0, np.NaN, 20.0],
+         ["2023-02-01 08:00:00", 5.6, 2.2, 79, np.NaN, np.NaN,   "W",  7.2, 14.4, 1018.7, 1029.9,  1.4,        "0.0/1h",    5.0, 5,    1.0, np.NaN, 20.0],
+         ["2023-02-01 09:00:00", 7.2, 2.9, 74, np.NaN, np.NaN, "WSW", 10.8, 18.0, 1018.3, 1029.5,  0.5,        "0.0/3h",    6.0, 6,    1.0, np.NaN, 20.0],
+         ["2023-02-01 10:00:00", 7.7, 2.4, 69, np.NaN, np.NaN,   "W", 14.4, 28.8, 1019.1, 1030.3,  1.2,        "0.0/1h",    7.0, 7,    1.0, np.NaN, 15.0],
+         ["2023-02-01 11:00:00", 8.8, 2.4, 64, np.NaN, np.NaN,   "W", 21.6, 32.4, 1018.9, 1030.0,  0.2,        "0.0/1h",    8.0, 8,    1.0, np.NaN, 21.0],
+         ["2023-02-01 12:00:00", 9.5, 3.2, 65, np.NaN, np.NaN,   "W", 25.2, 39.6, 1018.5, 1029.6,  0.2,        "0.0/6h",    7.0, 7,    0.6, np.NaN, 15.0],
+         ["2023-02-01 13:00:00", 9.6, 2.2, 60, np.NaN, np.NaN,   "W", 25.2, 36.0, 1018.0, 1029.1, -1.1,        "0.0/1h",    7.0, 7,    0.6, np.NaN, 19.0],
+         ["2023-02-01 14:00:00", 9.2, 2.3, 62, np.NaN, np.NaN,   "W", 21.6, 43.2, 1017.6, 1028.7, -1.3,        "0.0/1h",    7.0, 7,    1.0, np.NaN, 15.0],
+         ["2023-02-01 15:00:00", 9.2, 2.3, 62, np.NaN, np.NaN,   "W", 21.6, 36.0, 1017.5, 1028.6, -1.0,        "0.0/3h",    7.0, 7,    1.0, np.NaN, 15.0],
+         ["2023-02-01 16:00:00", 8.9, 2.2, 63, np.NaN, np.NaN,   "W", 18.0, 32.4, 1017.7, 1028.8, -0.3,        "0.0/1h",    6.0, 6,    1.0, np.NaN, 30.0],
+         ["2023-02-01 17:00:00", 8.7, 2.0, 63, np.NaN, np.NaN,   "W", 10.8, 25.2, 1018.1, 1029.2,  0.5,        "0.0/1h",    7.0, 7,    1.0, np.NaN, 15.0],
+         ["2023-02-01 18:00:00", 8.4, 2.0, 64,   10.7,    5.5,   "W", 14.4, 21.6, 1018.4, 1029.5,  0.9,       "0.0/12h",    7.0, 6,    1.0, np.NaN, 15.0],
+         ["2023-02-01 19:00:00", 7.9, 2.1, 67, np.NaN, np.NaN, "WNW", 10.8, 21.6, 1018.5, 1029.7,  0.8,        "0.0/1h",    7.0, 7,    1.5, np.NaN, 15.0],
+         ["2023-02-01 20:00:00", 8.1, 2.1, 66, np.NaN, np.NaN, "WSW", 14.4, 25.2, 1018.7, 1029.8,  0.6,        "0.0/1h",    7.0, 7,    1.5, np.NaN, 15.0],
+         ["2023-02-01 21:00:00", 7.4, 2.9, 73, np.NaN, np.NaN,   "W", 10.8, 21.6, 1018.9, 1030.1,  0.5,        "0.0/3h",    7.0, 7,    1.5, np.NaN, 15.0],
+         ["2023-02-01 22:00:00", 6.9, 2.8, 75, np.NaN, np.NaN,   "W", 14.4, 21.6, 1018.8, 1030.0,  0.3,        "0.0/1h",    7.0, 7,    1.5, np.NaN, 15.0],
+         ["2023-02-01 23:00:00", 6.3, 3.1, 80, np.NaN, np.NaN, "WSW", 10.8, 21.6, 1018.8, 1030.0,  0.1,        "0.0/1h",    7.0, 4,    1.5, np.NaN, 15.0]],
 
          columns=["date",
                   "t_°C", "td_°C",
@@ -116,12 +112,6 @@ class OgimetHourlyTester(TestCase):
                   "prec_mm", "n_t", "n_h", "h_km", "inso_d-1", "vis_km"]
     )
 
-    NUMERICS = [x for x in RESULTATS.columns if x not in ("date", "ddd", "prec_mm")]
-
-    @classmethod
-    def compare_data(cls, data: pd.DataFrame) -> bool:
-        return (data[cls.NUMERICS] - cls.RESULTATS[cls.NUMERICS]).sum().sum() == 0
-
     @classmethod
     def setUpClass(cls):
         cls.RESULTATS["date"] = pd.to_datetime(cls.RESULTATS["date"])
@@ -131,4 +121,8 @@ class OgimetHourlyTester(TestCase):
         ucf = UserConfigFile.from_json(self.UCF_PATH)
         uc = ucf.get_ogimet_ucs()[0]
         data = self.SCRAPPER.scrap_from_uc(uc).set_index("date")
-        self.assertTrue(self.compare_data(data))
+
+        numerics = [x for x in self.RESULTATS.columns if x not in ["date", "ddd", "prec_mm"]]
+        differences_df = data[numerics] - self.RESULTATS[numerics]
+
+        self.assertEqual(differences_df.sum().sum(), 0)

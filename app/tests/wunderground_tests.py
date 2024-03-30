@@ -11,12 +11,7 @@ class WundergroundDailyTester(TestCase):
 
     SCRAPPER = WundergroundDaily()
     UCF_PATH = "./app/tests/ucfs/wunderground_daily.json"
-
-    # valeurs de référence pour janvier 2021
     URL_REF = "https://www.wunderground.com/history/monthly/it/matera/LIBD/date/2021-1"
-
-    # liste des colonnes qui n'ont pas besoin d'être converties dans une nouvelle unité
-    NOT_CONVERTED = ["humidity_(%)_max", "humidity_(%)_avg", "humidity_(%)_min"]
 
     RESULTATS = pd.DataFrame(
         [["2021-01-01", 14,  7.9,  3,  6,  3.5,  1,  93, 75.5, 48, 19, 12.3, 4, 1010.9, 1009.9, 1008.9, 0.00],
@@ -63,20 +58,6 @@ class WundergroundDailyTester(TestCase):
     )
 
     @classmethod
-    def compare_data(cls, data: pd.DataFrame) -> bool:
-
-        converted = [col for col in data.columns if col not in cls.NOT_CONVERTED]
-        converted = [col for col in converted if "°C" not in col]
-
-        difference = np.round((data[converted] - cls.RESULTATS[converted]) * 100 / cls.RESULTATS[converted], 2)
-
-        # on exclue les colonnes du vent car les écarts dûs à la conversion peuvent être importants
-        difference = difference[[x for x in list(difference.columns) if "wind" not in x]]
-
-        return (     difference.max(numeric_only=True).max() <= 0.5
-                 and (data[cls.NOT_CONVERTED] - cls.RESULTATS[cls.NOT_CONVERTED]).sum().sum() == 0)
-
-    @classmethod
     def setUpClass(cls):
         cls.RESULTATS["date"] = pd.to_datetime(cls.RESULTATS["date"])
         cls.RESULTATS = cls.RESULTATS.set_index("date")
@@ -85,4 +66,22 @@ class WundergroundDailyTester(TestCase):
         ucf = UserConfigFile.from_json(self.UCF_PATH)
         uc = ucf.get_wunderground_ucs()[0]
         data = self.SCRAPPER.scrap_from_uc(uc).set_index("date")
-        self.assertTrue(self.compare_data(data))
+
+        not_converted = ["humidity_(%)_max", "humidity_(%)_avg", "humidity_(%)_min"]
+        converted = [col for col in data.columns if
+                     col not in not_converted]
+
+        converted = [col for col in converted if "°C" not in col]
+
+        differences_converted = (data[converted] - self.RESULTATS[converted]) * 100 / self.RESULTATS[converted]
+        differences_converted = np.round(differences_converted, 2)  # en % d'écart
+
+        # on exclue les colonnes du vent car les écarts dûs à la conversion peuvent être importants
+        differences_converted = differences_converted[[x
+                                                       for x in list(differences_converted.columns)
+                                                       if "wind" not in x]]
+
+        differences_not_converted = data[not_converted] - self.RESULTATS[not_converted]
+
+        self.assertLessEqual(differences_converted.max(numeric_only=True).max(), 0.5)
+        self.assertEqual(differences_not_converted.sum().sum(), 0)

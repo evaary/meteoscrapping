@@ -63,7 +63,7 @@ Informations importantes
     La durée du téléchargement dépend surtout du nombre de mois (1 page requêtée par mois demandé).
     Chaque page scrappée peut contenir jusqu'à 1 mois de données heure par heure.
 
-    wunderground jour par jour et meteociel jour par jour
+    wunderground, meteociel et ogimet jour par jour
     La durée du téléchargement dépend du nombre de mois (1 page de 28/30/31 jours requêtée par mois demandé)
 
 Performances
@@ -75,6 +75,10 @@ Performances
     ogimet heure par heure
     { "ind":"07149", "ville":"paris_orly", "annees":[2015, 2020], "mois":[1, 12], "jours":[1, 31] }
     => a généré un CSV de 52 561 lignes en 3 476s, sans fichier d'erreur
+
+    ogimet jour par jour
+    { "ind":"07149", "ville":"paris_orly", "annees":[2015, 2020], "mois":[1, 12]}
+    => a généré un CSV de 2191 lignes en 3245s, sans fichier d'erreur
 
     wunderground jour par jour
     { "code_pays":"it", "region": "LIBD", "ville":"matera", "annees":[2013, 2023], "mois":[1,12] }
@@ -97,6 +101,7 @@ Structure du fichier config.json:
     [
         { "code_pays":"it", "region": "LIBD", "ville":"matera", "annees":[2021], "mois":[1] }
         { "code_pays":"it", "region": "LIBD", "ville":"matera", "annees":[2021], "mois":[3] }
+        { "code_pays":"it", "region": "LIBD", "ville":"matera", "annees":[2021], "mois":[1,3] }
     ],
 
     "meteociel":
@@ -108,6 +113,9 @@ Structure du fichier config.json:
 
 la config ogimet n°1 récupère tous les mois de 2020 à 2025.
 La config ogimet n°2 récupère les jours 13 à 18 des mois de janvier à mai 2023
-les configs wunderground récupèrent les mois de janvier et mars 2021
+
+les configs wunderground n° 1 et 2 récupèrent les mois de janvier et mars 2021
+la config wunderground n°3 récupère les mois de janvier à mars 2021 (janvier, février, mars)
+
 la config meteociel n°1 récupère les mois de février 2020 et février 2021
 la config meteociel n°2 récupère les jours 27 à 31 de janvier 2020 et 27 à 28 de février 2020

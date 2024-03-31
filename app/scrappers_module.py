@@ -117,7 +117,7 @@ class MeteoScrapper(ABC):
             self._update()
 
         global_df = global_df[["date"] + [x for x in global_df.columns if x != "date"]]
-        global_df.sort_values(by="date")
+        global_df = global_df.sort_values(by="date")
 
         self._print_progress(uc)
 
@@ -194,7 +194,7 @@ class MeteoScrapper(ABC):
         while not has_complete_lines:
             # (2)
             row = values[:n_cols]
-            dates_in_row = self._find_dates_in_row(row)
+            dates_in_row = self._find_dates_in_row(row, tp)
             # (3)
             if len(dates_in_row) > 1:
                 index = row.index(dates_in_row[1])
@@ -211,7 +211,7 @@ class MeteoScrapper(ABC):
         return done
 
     @abstractmethod
-    def _find_dates_in_row(self, row: List[str]) -> List[str]:
+    def _find_dates_in_row(self, row: List[str], tp: TaskParameters) -> List[str]:
         """
         Lors de la récupération des données, des lignes peuvent être incomplètes.
         Cette méthode renvoie toutes les valeurs de la ligne passée en paramètre qui correspondent à des dates.
@@ -337,7 +337,8 @@ class MeteocielDaily(MeteoScrapper):
                 IndexError):
             raise ScrapException()
 
-    def _find_dates_in_row(self, row: List[str]) -> List[str]:
+    def _find_dates_in_row(self, row: List[str], tp) -> List[str]:
+        # pas besoin du tp ici
         return [x
                 for x in row
                 if x.split(".")[0] in self.DAYS]
@@ -571,13 +572,9 @@ class MeteocielHourly(MeteoScrapper):
 
 class OgimetDaily(MeteoScrapper):
 
-    def _compute_expected_dates(self, tp: TaskParameters) -> List[str]:
-        pass
+    NOT_NUMERIC_COLUMNS = ["date",
+                           "wind_(km/h)_dir"]
 
-    def _find_dates_in_row(self, row: List[str]) -> List[str]:
-        pass
-
-    # override
     def _scrap_columns_names(self, table):
         """
         Récupération du nom des colonnes.
@@ -646,7 +643,6 @@ class OgimetDaily(MeteoScrapper):
 
         return columns_names
 
-    # override
     def _scrap_columns_values(self, table):
         """
         Récupération des valeurs du tableau.
@@ -658,68 +654,19 @@ class OgimetDaily(MeteoScrapper):
                 IndexError):
             raise ScrapException()
 
-    def _fill_partial_rows(self,
-                           values: List[str],
-                           n_cols: int,
-                           tp: TaskParameters):
+    def _find_dates_in_row(self, row, tp) -> List[str]:
         """
-        Comble les manques dans les lignes en ajoutant des "" à la fin.
-        @params
-            values : la liste des valeurs récupérées dans le tableau.
-            n_cols : nombre de colonnes du tableau.
-            tp : les paramètres du job courant
+        Ogimet gère mal les trous dans les données.
+        Si certaines valeurs manquent en début ou milieu de ligne,
+        elle sont comblées par "---", et tout va bien, on a des valeurs quand même.
 
-        @return
-            la liste complétée des valeurs du tableau.
+        Si les valeurs manquantes sont à la fin, la ligne s'arrête prématurément.
+        Elle compte moins de valeurs qu'attendu, on ne peut pas reconstruire le tableau.
+
+        _fill_missing_values comble les manques dans les lignes en ajoutant des "" à la fin.
         """
-        """
-        (0) Dimensions du futur tableau de données et nombre de valeurs collectées. S'il manque des
-            données dans la liste des valeurs récupérées, on la complètera pour avoir 1 valeur par cellule
-            dans le futur dataframe.
-            S'il ne manque rien, on renvoie la liste tel quel.
-        (1) done contient les valeurs traitées, todo les valeurs à traiter.
-        (2) Tant que done n'est pas complet, on sélectionne l'équivalent d'1 ligne dans todo.
-        (3) On compte le nombre de dates présentes dans la ligne. S'il y en a plus d'1,
-            la ligne est en fait un mélange de 2 lignes. On ne récupère que les valeurs
-            allant de la 1ère date incluse à la 2ème exclue.
-        (4) Si besoin, on complète la ligne jusqu'à avoir n_cols valeurs dedans.
-        (5) On ajoute la ligne désormais complète aux valeurs traitées, on retire des
-            valeurs à traiter les valeurs qu'on a retenu, si la ligne était un mélange.
-        """
-        # (0)
-        n_rows = MonthEnum.from_id(tp.month).ndays
-        n_expected = n_rows * n_cols
-        n_values = len(values)
+        return [x for x in row if f"{tp.month_as_str}/" in x]
 
-        if n_values == n_expected:
-            return values
-
-        # (1)
-        done = []
-        todo = values.copy()
-
-        while len(done) != n_expected:
-            # (2)
-            row = todo[:n_cols]
-
-            # (3)
-            dates = [x for x in row if f"{tp.month_as_str}/" in x]
-
-            if len(dates) != 1:
-                index = row.index(dates[1])
-                row = row[:index]
-            # (4)
-            actual_length = len(row)
-            toadd = n_cols - actual_length
-            row += [""] * toadd
-
-            # (5)
-            done += row
-            todo = todo[actual_length:]
-
-        return done
-
-    # override
     def _rework_data(self,
                      values,
                      columns_names,
@@ -728,57 +675,45 @@ class OgimetDaily(MeteoScrapper):
         Mise en forme du tbleau de tableau, conversions des unités si besoin.
         """
         """
-        (1) Ogimet gère mal les trous dans les données.
-            Si certaines valeurs manquent en début ou milieu de ligne,
-            elle sont comblées par "---", et tout va bien, on a des valeurs quand même.
-
-            Si les valeurs manquantes sont à la fin, la ligne s'arrête prématurément.
-            Elle compte moins de valeurs qu'attendu, on ne peut pas reconstruire le tableau.
-
-            _fill_missing_values comble les manques dans les lignes en ajoutant des "" à la fin.
-
-        (2) La liste des valeurs récupérées est de dimension 1,x. On la convertit en matrice de
-            dimensions n_rows, n_cols puis en dataframe.
-        (3) La colonne date est au format MM/JJ, on la convertit au format AAAA-MM-JJ et on trie.
-        (4) Les valeurs sont au format str, on les convertit en numérique colonne par colonne.
-        (5) La colonne wind_(km/h)_dir contient des str, on remplace les "---" par "" pour les
+        (1) Création du dataframe.
+        (2) La colonne date est au format MM/JJ, on la convertit au format AAAA-MM-JJ.
+        (3) Les valeurs sont au format str, on les convertit en numérique colonne par colonne.
+        (4) La colonne wind_(km/h)_dir contient des str, on remplace les "---" par "" pour les
             valeurs manquantes.
-        (6) On supprime les colonnes daily_weather_summary si elles existent en conservant les
+        (5) On supprime les colonnes daily_weather_summary si elles existent en conservant les
             colonnes qui n'ont pas daily_weather_summary dans leur nom.
         """
         # (1)
-        n_cols = len(columns_names)
-        values = self._fill_missing_values(values,
-                                           n_cols,
-                                           tp)
-        # (2)
         df = pd.DataFrame(np.array(values)
-                            .reshape(-1, n_cols),
+                            .reshape(-1, len(columns_names)),
                           columns=columns_names)
-        # (3)
+        # (2)
         df["date"] = tp.year_as_str + "/" + df["date"]
         df["date"] = pd.to_datetime(df["date"])
-        df = df.sort_values(by="date")
-
-        # (4)
+        # (3)
         numeric_cols = [col
                         for col in df.columns
-                        if col not in ["date", "wind_(km/h)_dir"]]
+                        if col not in self.NOT_NUMERIC_COLUMNS]
 
         for col in numeric_cols:
             df[col] = pd.to_numeric(df[col], errors="coerce")
-        # (5)
+        # (4)
         try:
             col = "wind_(km/h)_dir"
             indexes = df[df[col].str.contains("-")].index
             df.loc[indexes, col] = ""
         except KeyError:
             pass
-        # (6)
+        # (5)
         df = df[[col
                  for col in df.columns
                  if "daily_weather_summary" not in col]]
         return df
+
+    def _compute_expected_dates(self, tp: TaskParameters) -> List[str]:
+        return [     f"{tp.year_as_str}-{tp.month_as_str}-0{x}" if x < 10
+                else f"{tp.year_as_str}-{tp.month_as_str}-{x}"
+                for x in range(1, MonthEnum.from_id(tp.month).ndays + 1)]
 
 
 class OgimetHourly(MeteoScrapper):

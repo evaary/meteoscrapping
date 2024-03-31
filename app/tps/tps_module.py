@@ -1,4 +1,5 @@
 import abc
+import copy
 from string import Template
 
 from app.boite_a_bonheur.Criteria import Criteria
@@ -10,141 +11,173 @@ from app.boite_a_bonheur.UCFParameterEnum import UCFParameter
 
 class TPBuilder:
 
-    def __init__(self, scrapper_type: ScrapperTypeEnumMember):
+    def __init__(self, param: ScrapperTypeEnumMember):
 
-        if scrapper_type is None or scrapper_type in ScrapperType.generic_scrapper_types():
-            raise ValueError(f"TPBuilder : paramètre invalide : {scrapper_type}")
+        if param is None:
+            raise ValueError(f"TPBuilder : paramètre invalide : {param}")
 
-        self.scrapper_type = scrapper_type
-        self.year = 0
-        self.month = 0
-        self.day = 0
-        self.ndays = 0
-        self.year_as_str = ""
-        self.month_as_str = ""
-        self.day_as_str = ""
-        self.city = ""
-        self.code = ""
-        self.code_num = ""
-        self.ind = ""
-        self.country_code = ""
-        self.region = ""
+        self._scrapper_type = param
+        self._year = 0
+        self._month = 0
+        self._day = 0
+        self._ndays = 0
+        self._year_as_str = ""
+        self._month_as_str = ""
+        self._day_as_str = ""
+        self._city = ""
+        self._code = ""
+        self._code_num = ""
+        self._ind = ""
+        self._country_code = ""
+        self._region = ""
 
-    def with_year(self, year: int) -> "TPBuilder":
+    def with_year(self, param: int) -> "TPBuilder":
 
-        if year < UCFParameter.MIN_YEARS:
-            raise ValueError(f"TPBuilder.year : paramètre invalide {year}")
+        if param < UCFParameter.MIN_YEARS:
+            raise ValueError(f"TPBuilder.with_year : paramètre invalide {param}")
 
-        self.year = year
-        self.year_as_str = str(year)
+        self._year = param
+        self._year_as_str = str(param)
 
         return self
 
-    def with_month(self, month: int) -> "TPBuilder":
+    def with_month(self, param: int) -> "TPBuilder":
 
-        if month not in range(UCFParameter.MIN_MONTHS_DAYS_VALUE,
+        if param not in range(UCFParameter.MIN_MONTHS_DAYS_VALUE,
                               UCFParameter.MAX_MONTHS + 1):
-            raise ValueError(f"TPBuilder.month : paramètre invalide {month}")
+            raise ValueError(f"TPBuilder.with_month : paramètre invalide {param}")
 
-        self.month = month
-        self.month_as_str = "0" + str(month) if month < 10 else str(month)
-
-        return self
-
-    def with_day(self, day: int) -> "TPBuilder":
-
-        MonthEnum.from_id(self.month)  # IndexError si month n'est pas valorisée avant
-
-        if day not in range(UCFParameter.MIN_MONTHS_DAYS_VALUE,
-                            UCFParameter.MAX_DAYS + 1):
-            raise ValueError(f"TPBuilder.day : paramètre invalide {day}")
-
-        self.day = day
-        self.day_as_str = "0" + str(day) if day < 10 else str(day)
+        self._month = param
+        self._month_as_str = "0" + str(param) if param < 10 else str(param)
 
         return self
 
-    def with_city(self, city: str) -> "TPBuilder":
+    def with_day(self, param: int) -> "TPBuilder":
 
-        if city is None or len(city) == 0:
-            raise ValueError(f"TPBuilder.__city : paramètre invalide {city}")
+        MonthEnum.from_id(self._month)  # IndexError si month n'est pas valorisée avant
 
-        self.city = city
+        if self._scrapper_type not in ScrapperType.hourly_scrappers():
+            raise ValueError(f"TPBuilder.with_day : le type de scrapper{self._scrapper_type} est incompatible")
+
+        if param not in range(UCFParameter.MIN_MONTHS_DAYS_VALUE,
+                              UCFParameter.MAX_DAYS + 1):
+            raise ValueError(f"TPBuilder.with_day : paramètre invalide {param}")
+
+        self._day = param
+        self._day_as_str = "0" + str(param) if param < 10 else str(param)
+
         return self
 
-    def with_code(self, code: str) -> "TPBuilder":
+    def with_city(self, param: str) -> "TPBuilder":
 
-        if code is None or len(code) == 0:
-            raise ValueError(f"TPBuilder.code : paramètre invalide {code}")
+        if param is None or len(param) == 0:
+            raise ValueError(f"TPBuilder.with_city : paramètre invalide {param}")
 
-        self.code = code
+        self._city = param
+
         return self
 
-    def with_code_num(self, code_num: str) -> "TPBuilder":
+    def with_code(self, param: str) -> "TPBuilder":
 
-        if code_num is None or len(code_num) == 0:
-            raise ValueError(f"TPBuilder.code_num : paramètre invalide {code_num}")
+        if self._scrapper_type not in ScrapperType.meteociel_scrappers():
+            raise ValueError(f"TPBuilder.with_code : cette méthode n'est valable que pour un scrapper meteociel.")
 
-        self.code_num = code_num
+        if param is None or len(param) == 0:
+            raise ValueError(f"TPBuilder.with_code : paramètre invalide {param}")
+
+        self._code = param
+
         return self
 
-    def with_region(self, region: str) -> "TPBuilder":
+    def with_code_num(self, param: str) -> "TPBuilder":
 
-        if region is None or len(region) == 0:
-            raise ValueError(f"TPBuilder.region : paramètre invalide {region}")
+        if self._scrapper_type not in ScrapperType.meteociel_scrappers():
+            raise ValueError(f"TPBuilder.with_code_num : cette méthode n'est valable que pour un scrapper meteociel.")
 
-        self.region = region
+        if param is None or len(param) == 0:
+            raise ValueError(f"TPBuilder.with_code_num : paramètre invalide {param}")
+
+        self._code_num = param
+
         return self
 
-    def with_country_code(self, country_code: str) -> "TPBuilder":
+    def with_region(self, param: str) -> "TPBuilder":
 
-        if country_code is None or len(country_code) == 0:
-            raise ValueError(f"TPBuilder.country_code : paramètre invalide {country_code}")
+        if self._scrapper_type not in ScrapperType.wunderground_scrappers():
+            raise ValueError(f"TPBuilder.with_region : cette méthode n'est valable que pour un scrapper wunderground.")
 
-        self.country_code = country_code
+        if param is None or len(param) == 0:
+            raise ValueError(f"TPBuilder.with_region : paramètre invalide {param}")
+
+        self._region = param
+
         return self
 
-    def with_ind(self, ind: str) -> "TPBuilder":
+    def with_country_code(self, param: str) -> "TPBuilder":
 
-        if ind is None or len(ind) == 0:
-            raise ValueError(f"TPBuilder.ind : paramètre invalide {ind}")
+        if self._scrapper_type not in ScrapperType.wunderground_scrappers():
+            raise ValueError(f"TPBuilder.with_country_code : cette méthode n'est valable que pour un scrapper wunderground.")
 
-        self.ind = ind
+        if param is None or len(param) == 0:
+            raise ValueError(f"TPBuilder.with_country_code : paramètre invalide {param}")
+
+        self._country_code = param
+
         return self
 
-    def with_ndays(self, ndays: int) -> "TPBuilder":
-        if ndays not in range(1, UCFParameter.MAX_DAYS + 1):
-            raise ValueError(f"TPBuilder.ndays : paramètre invalide {ndays}")
-        self.ndays = ndays
+    def with_ind(self, param: str) -> "TPBuilder":
+
+        if self._scrapper_type not in ScrapperType.ogimet_scrappers():
+            raise ValueError(f"TPBuilder.with_ind : cette méthode n'est valable que pour un scrapper ogimet.")
+
+        if param is None or len(param) == 0:
+            raise ValueError(f"TPBuilder.with_ind : paramètre invalide {param}")
+
+        self._ind = param
+
+        return self
+
+    def with_ndays(self, param: int) -> "TPBuilder":
+
+        if self._scrapper_type != ScrapperType.OGIMET_HOURLY:
+            raise ValueError(f"TPBuilder.with_ndays : cette méthode n'est valable que pour un scrapper ogimet heure par heure.")
+
+        if param not in range(1, UCFParameter.MAX_DAYS + 1):
+            raise ValueError(f"TPBuilder.with_ndays : paramètre invalide {param}")
+
+        self._ndays = param
+
         return self
 
     def build(self) -> "TaskParameters":
 
-        if self.month == 0 or self.year == 0:
+        if self._month == 0 or self._year == 0:
             raise ValueError("TPBuilder.build : month et year doivent être valorisés.")
 
-        if self.scrapper_type in ScrapperType.hourly_scrapper_types() and self.day == 0:
+        if self._scrapper_type in ScrapperType.hourly_scrappers() and self._day == 0:
             raise ValueError("TPBuilder.build : day doit être valorisé pour un scrapper heure par heure.")
 
-        if self.scrapper_type in [ScrapperType.METEOCIEL_DAILY,
-                                  ScrapperType.METEOCIEL_HOURLY]:
-            if any([x is None or len(x) == 0 for x in [self.code,
-                                                       self.code_num,
-                                                       self.city]]):
+        if self._scrapper_type in ScrapperType.meteociel_scrappers():
+            if any([x is None or len(x) == 0 for x in [self._code,
+                                                       self._code_num,
+                                                       self._city]]):
                 raise ValueError("TPBuilder.build : code, code_num et city doivent être valorisés pour un scrapper Meteociel.")
 
             return MeteocielTP(self)
 
-        if self.scrapper_type in [ScrapperType.OGIMET_DAILY,
-                                  ScrapperType.OGIMET_HOURLY]:
-            if any([x is None or len(x) == 0 for x in [self.ind,
-                                                       self.city]]):
+        if self._scrapper_type in ScrapperType.ogimet_scrappers():
+
+            if any([x is None or len(x) == 0 for x in [self._ind,
+                                                       self._city]]):
                 raise ValueError("TPBuilder.build : ind et city doivent être valorisés pour un scrapper Ogimet.")
+
+            if (    self._scrapper_type == ScrapperType.OGIMET_HOURLY
+                and self._ndays == 0):
+                raise ValueError("TPBuilder.build : ndays doit être valorisé pour un scrapper Ogimet heure par heure.")
 
             return OgimetTP(self)
 
-        if self.scrapper_type in [ScrapperType.WUNDERGROUND_DAILY,
-                                  ScrapperType.WUNDERGROUND_HOURLY]:
+        if self._scrapper_type in ScrapperType.wunderground_scrappers():
             if any([x is None or len(x) == 0 for x in [self.region,
                                                        self.country_code,
                                                        self.city]]):
@@ -152,115 +185,257 @@ class TPBuilder:
 
             return WundergroundTP(self)
 
-        raise ValueError(f"TPBuilder.build : paramètre invalide {self.scrapper_type}.")
+        raise ValueError(f"TPBuilder.build : paramètre invalide {self._scrapper_type}.")
+
+    @property
+    def scrapper_type(self) -> ScrapperTypeEnumMember:
+        return copy.copy(self._scrapper_type)
+
+    @property
+    def year(self):
+        return self._year
+
+    @property
+    def year_as_str(self):
+        return self._year_as_str
+
+    @property
+    def month(self):
+        return self._month
+
+    @property
+    def month_as_str(self):
+        return self._month_as_str
+
+    @property
+    def day(self):
+        return self._day
+
+    @property
+    def day_as_str(self):
+        return self._day_as_str
+
+    @property
+    def code(self):
+
+        if self._scrapper_type not in ScrapperType.meteociel_scrappers():
+            raise ValueError(f"TPBuilder.code : l'accès à cet attribut n'est autorisé que pour un scrapper meteociel.")
+
+        return self._code
+
+    @property
+    def code_num(self):
+
+        if self._scrapper_type not in ScrapperType.meteociel_scrappers():
+            raise ValueError(f"TPBuilder.code : l'accès à cet attribut n'est autorisé que pour un scrapper meteociel.")
+
+        return self._code_num
+
+    @property
+    def ind(self):
+
+        if self._scrapper_type not in ScrapperType.ogimet_scrappers():
+            raise ValueError(f"TPBuilder.code : l'accès à cet attribut n'est autorisé que pour un scrapper ogimet.")
+
+        return self._ind
+
+    @property
+    def ndays(self):
+
+        if self._scrapper_type != ScrapperType.OGIMET_HOURLY:
+            raise ValueError(f"TPBuilder.ndays : l'accès à cet attribut n'est autorisé que pour un scrapper ogimet heure par heure.")
+
+        return self._ndays
+
+    @property
+    def country_code(self):
+
+        if self._scrapper_type not in ScrapperType.wunderground_scrappers():
+            raise ValueError(f"TPBuilder.code : l'accès à cet attribut n'est autorisé que pour un scrapper wunderground.")
+
+        return self._country_code
+
+    @property
+    def region(self):
+
+        if self.scrapper_type not in ScrapperType.wunderground_scrappers():
+            raise ValueError(f"TPBuilder.code : l'accès à cet attribut n'est autorisé que pour un scrapper wunderground.")
+
+        return self._region
+
+    @property
+    def city(self):
+        return self._city
 
 
 class TaskParameters(abc.ABC):
 
-    def __init__(self, tpbuilder: TPBuilder):
-        self.waiting = UCFParameter.DEFAULT_WAITING
-        self.year = tpbuilder.year
-        self.month = tpbuilder.month
-        self.day = tpbuilder.day
-        self.year_as_str = tpbuilder.year_as_str
-        self.month_as_str = tpbuilder.month_as_str
-        self.day_as_str = tpbuilder.day_as_str
-        self.city = tpbuilder.city
-        self.url = ""
-        self.criteria = None
-        self.key = f"{self.city}_{self.year_as_str}_{self.month_as_str}"
-        if tpbuilder.scrapper_type in ScrapperType.hourly_scrapper_types():
-            self.key = f"{self.key}_{self.day_as_str}"
+    def __init__(self, builder: TPBuilder):
+        self._waiting = UCFParameter.DEFAULT_WAITING
+        self._year = builder.year
+        self._month = builder.month
+        self._day = builder.day
+        self._year_as_str = builder.year_as_str
+        self._month_as_str = builder.month_as_str
+        self._day_as_str = builder.day_as_str
+        self._city = builder.city
+        self._url = ""
+        self._criteria = None
+        self._scrapper_type = builder.scrapper_type
+
+        if builder.scrapper_type in ScrapperType.hourly_scrappers():
+            self._key = f"{self._city}_{self._day_as_str}_{self._month_as_str}_{self._year_as_str}"
+        else:
+            self._key = f"{self._city}_{self._month_as_str}_{self._year_as_str}"
+
+    @property
+    def scrapper_type(self):
+        return self._scrapper_type
+
+    @property
+    def year(self):
+        return self._year
+
+    @property
+    def year_as_str(self):
+        return self._year_as_str
+
+    @property
+    def month(self):
+        return self._month
+
+    @property
+    def month_as_str(self):
+        return self._month_as_str
+
+    @property
+    def day(self):
+
+        if self._scrapper_type not in ScrapperType.hourly_scrappers():
+            raise "TaskParameters.day : l'accès à cet attribut n'est autorisé que pour un scrapper jour par jour"
+
+        return self._day
+
+    @property
+    def day_as_str(self):
+
+        if self._scrapper_type not in ScrapperType.hourly_scrappers():
+            raise "TaskParameters.day_as_str : l'accès à cet attribut n'est autorisé que pour un scrapper jour par jour"
+
+        return self._day_as_str
+
+    @property
+    def city(self):
+        return self._city
+
+    @property
+    def url(self):
+        return self._url
+
+    @property
+    def criteria(self):
+        return copy.copy(self._criteria)
+
+    @property
+    def waiting(self):
+        return self._waiting
+
+    @property
+    def key(self):
+        return self._key
+
+    def update_waiting(self):
+        self._waiting *= 2
 
     def __repr__(self):
-        return f"<{self.__class__.__name__} {self.url}>"
+        return f"<{self.__class__.__name__} {self._url}>"
 
 
 class MeteocielTP(TaskParameters):
 
-    CRITERIA_DAILY = Criteria("cellpadding", "2")
-    CRITERIA_HOURLY = Criteria("bgcolor", "#EBFAF7")
-    BASE_URL_DAILY = Template("https://www.meteociel.com/climatologie/obs_villes.php?code$code_num=$code&annee=$annee&mois=$mois")
-    BASE_URL_HOURLY = Template("https://www.meteociel.com/temps-reel/obs_villes.php?code$code_num=$code&annee2=$annee&mois2=$mois&jour2=$jour")
+    _CRITERIA_DAILY = Criteria("cellpadding", "2")
+    _CRITERIA_HOURLY = Criteria("bgcolor", "#EBFAF7")
+    _BASE_URL_DAILY = Template("https://www.meteociel.com/climatologie/obs_villes.php?code$code_num=$code&annee=$annee&mois=$mois")
+    _BASE_URL_HOURLY = Template("https://www.meteociel.com/temps-reel/obs_villes.php?code$code_num=$code&annee2=$annee&mois2=$mois&jour2=$jour")
 
-    def __init__(self, tpbuilder: TPBuilder):
+    def __init__(self, builder: TPBuilder):
 
-        super().__init__(tpbuilder)
-        self.code = tpbuilder.code
-        self.code_num = tpbuilder.code_num
+        super().__init__(builder)
+        self._code = builder.code
+        self._code_num = builder.code_num
 
-        if tpbuilder.scrapper_type == ScrapperType.METEOCIEL_DAILY:
-            self.url = self.BASE_URL_DAILY.substitute(code_num=tpbuilder.code_num,
-                                                      code=tpbuilder.code,
-                                                      mois=tpbuilder.month,
-                                                      annee=tpbuilder.year)
-            self.criteria = self.CRITERIA_DAILY
+        if builder.scrapper_type == ScrapperType.METEOCIEL_DAILY:
+            self._url = self._BASE_URL_DAILY.substitute(code_num=builder.code_num,
+                                                        code=builder.code,
+                                                        mois=builder.month,
+                                                        annee=builder.year)
+            self._criteria = self._CRITERIA_DAILY
 
-        elif tpbuilder.scrapper_type == ScrapperType.METEOCIEL_HOURLY:
-            month_enum_value = MonthEnum.from_id(tpbuilder.month)
-            self.url = self.BASE_URL_HOURLY.substitute(code_num=tpbuilder.code_num,
-                                                       code=tpbuilder.code,
-                                                       jour=tpbuilder.day,
-                                                       mois=MonthEnum.meteociel_hourly_numero(month_enum_value),
-                                                       annee=tpbuilder.year)
-            self.criteria = self.CRITERIA_HOURLY
+        elif builder.scrapper_type == ScrapperType.METEOCIEL_HOURLY:
+            month_enum_value = MonthEnum.from_id(builder.month)
+            self._url = self._BASE_URL_HOURLY.substitute(code_num=builder.code_num,
+                                                         code=builder.code,
+                                                         jour=builder.day,
+                                                         mois=MonthEnum.meteociel_hourly_numero(month_enum_value),
+                                                         annee=builder.year)
+            self._criteria = self._CRITERIA_HOURLY
 
         else:
-            raise ValueError("MeteocielTP : tpbuilder.scrapper_type est invalide")
+            raise ValueError("MeteocielTP : TPBuilder.scrapper_type est invalide")
 
 
 class OgimetTP(TaskParameters):
 
-    CRITERIA = Criteria("bgcolor", "#d0d0d0")
-    BASE_URL = Template("http://www.ogimet.com/cgi-bin/gsynres?ind=$ind&ndays=$ndays&ano=$ano&mes=$mes&day=$day&hora=23&lang=en&decoded=$decoded")
+    _CRITERIA = Criteria("bgcolor", "#d0d0d0")
+    _BASE_URL = Template("http://www.ogimet.com/cgi-bin/gsynres?ind=$ind&ndays=$ndays&ano=$ano&mes=$mes&day=$day&hora=23&lang=en&decoded=$decoded")
 
-    def __init__(self, tpbuilder: TPBuilder):
+    def __init__(self, builder: TPBuilder):
 
-        super().__init__(tpbuilder)
+        super().__init__(builder)
 
-        self.ind = tpbuilder.ind
-        self.criteria = self.CRITERIA
+        self._ind = builder.ind
+        self._criteria = self._CRITERIA
 
-        if tpbuilder.scrapper_type == ScrapperType.OGIMET_DAILY:
-            self.url = self.BASE_URL.substitute(ind=tpbuilder.ind,
-                                                ndays=MonthEnum.from_id(tpbuilder.month).ndays,
-                                                ano=tpbuilder.year,
-                                                mes=tpbuilder.month,
-                                                day=MonthEnum.from_id(tpbuilder.month).ndays,
-                                                decoded="no")
+        if builder.scrapper_type == ScrapperType.OGIMET_DAILY:
+            self._url = self._BASE_URL.substitute(ind=builder.ind,
+                                                  ndays=MonthEnum.from_id(builder.month).ndays,
+                                                  ano=builder.year,
+                                                  mes=builder.month,
+                                                  day=MonthEnum.from_id(builder.month).ndays,
+                                                  decoded="no")
 
-        elif tpbuilder.scrapper_type == ScrapperType.OGIMET_HOURLY:
-            self.url = self.BASE_URL.substitute(ind=tpbuilder.ind,
-                                                ndays=tpbuilder.ndays,
-                                                ano=tpbuilder.year,
-                                                mes=tpbuilder.month,
-                                                day=tpbuilder.day,
-                                                decoded="yes")
+        elif builder.scrapper_type == ScrapperType.OGIMET_HOURLY:
+            self._url = self._BASE_URL.substitute(ind=builder.ind,
+                                                  ndays=builder.ndays,
+                                                  ano=builder.year,
+                                                  mes=builder.month,
+                                                  day=builder.day,
+                                                  decoded="yes")
         else:
-            raise ValueError("OgimetTP : tpbuilder.scrapper_type est invalide")
+            raise ValueError("OgimetTP : TPBuilder.scrapper_type est invalide")
 
 
 class WundergroundTP(TaskParameters):
 
-    CRITERIA_DAILY = Criteria("aria-labelledby", "History days")
-    BASE_URL_DAILY = Template("https://www.wunderground.com/history/monthly/$country_code/$city/$region/date/$year-$month")
+    _CRITERIA_DAILY = Criteria("aria-labelledby", "History days")
+    _BASE_URL_DAILY = Template("https://www.wunderground.com/history/monthly/$country_code/$city/$region/date/$year-$month")
 
-    def __init__(self, tpbuilder: TPBuilder):
+    def __init__(self, builder: TPBuilder):
 
-        super().__init__(tpbuilder)
-        self.region = tpbuilder.region
-        self.country_code = tpbuilder.country_code
+        super().__init__(builder)
+        self._region = builder.region
+        self._country_code = builder.country_code
 
-        if tpbuilder.scrapper_type == ScrapperType.WUNDERGROUND_DAILY:
-            self.url = self.BASE_URL_DAILY.substitute(country_code=tpbuilder.country_code,
-                                                      city=tpbuilder.city,
-                                                      region=tpbuilder.region,
-                                                      year=tpbuilder.year,
-                                                      month=tpbuilder.month)
-            self.criteria = self.CRITERIA_DAILY
+        if builder.scrapper_type == ScrapperType.WUNDERGROUND_DAILY:
+            self._url = self._BASE_URL_DAILY.substitute(country_code=builder.country_code,
+                                                        city=builder.city,
+                                                        region=builder.region,
+                                                        year=builder.year,
+                                                        month=builder.month)
+            self._criteria = self._CRITERIA_DAILY
 
-        elif tpbuilder.scrapper_type == ScrapperType.WUNDERGROUND_HOURLY:
+        elif builder.scrapper_type == ScrapperType.WUNDERGROUND_HOURLY:
             raise NotImplementedError("un jour peut être !")
 
         else:
-            raise ValueError("WundergroundTP : tpbuilder.scrapper_type est invalide")
+            raise ValueError("WundergroundTP : TPBuilder.scrapper_type est invalide")

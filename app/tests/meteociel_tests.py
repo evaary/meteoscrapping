@@ -57,8 +57,8 @@ class MeteocielDailyTester(TestCase):
 
     def test_scrap_data(self):
         ucf = UserConfigFile.from_json(self.UCF_PATH)
-        uc = ucf.get_meteociel_ucs()[0]
-        data = self.SCRAPPER.scrap_from_uc(uc).set_index("date")
+        uc = ucf.meteociel_ucs[0]
+        data = self.SCRAPPER.scrap_uc(uc).set_index("date")
 
         differences_df = data - self.RESULTATS
 
@@ -109,8 +109,8 @@ class MeteocielHourlyTester(TestCase):
 
     def test_scrap_data(self):
         ucf = UserConfigFile.from_json(self.UCF_PATH)
-        uc = ucf.get_meteociel_ucs()[0]
-        data = self.SCRAPPER.scrap_from_uc(uc).set_index("date")
+        uc = ucf.meteociel_ucs[0]
+        data = self.SCRAPPER.scrap_uc(uc).set_index("date")
 
         numeric = [x for x in self.RESULTATS.columns if x != "neb"]
         differences_df = data[numeric] - self.RESULTATS[numeric]

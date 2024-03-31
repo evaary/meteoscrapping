@@ -1,14 +1,19 @@
 class Criteria:
 
     def __init__(self, css_attr: str, attr_value: str):
-        self.__css_attribute = css_attr
-        self.__attribute_value = attr_value
+        self._css_attribute = css_attr
+        self._attribute_value = attr_value
 
-    def get_css_attr(self):
-        return self.__css_attribute
+    @property
+    def css_attribute(self):
+        return self._css_attribute
 
-    def get_attr_value(self):
-        return self.__attribute_value
+    @property
+    def attribute_value(self):
+        return self._attribute_value
 
     def __repr__(self):
-        return f"{self.__css_attribute} : {self.__attribute_value}"
+        return f"{self._css_attribute} : {self._attribute_value}"
+
+    def __copy__(self):
+        return Criteria(self._css_attribute, self._attribute_value)

@@ -59,8 +59,8 @@ class OgimetDailyTester(TestCase):
 
     def test_scrap_data(self):
         ucf = UserConfigFile.from_json(self.UCF_PATH)
-        uc = ucf.get_ogimet_ucs()[0]
-        data = self.SCRAPPER.scrap_from_uc(uc).set_index("date")
+        uc = ucf.ogimet_ucs[0]
+        data = self.SCRAPPER.scrap_uc(uc).set_index("date")
 
         numerics = self.RESULTATS\
                        .columns\
@@ -119,8 +119,8 @@ class OgimetHourlyTester(TestCase):
 
     def test_scrap_data(self):
         ucf = UserConfigFile.from_json(self.UCF_PATH)
-        uc = ucf.get_ogimet_ucs()[0]
-        data = self.SCRAPPER.scrap_from_uc(uc).set_index("date")
+        uc = ucf.ogimet_ucs[0]
+        data = self.SCRAPPER.scrap_uc(uc).set_index("date")
 
         numerics = [x for x in self.RESULTATS.columns if x not in ["date", "ddd", "prec_mm"]]
         differences_df = data[numerics] - self.RESULTATS[numerics]

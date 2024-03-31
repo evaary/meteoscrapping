@@ -24,7 +24,7 @@ class MeteoScrapper(ABC):
     PROGRESS_TIMER_INTERVAL = 10  # en secondes
 
     def __init__(self):
-        self.errors = dict()
+        self._errors = dict()
         # date de départ de lancement des jobs
         self._start = 0
         # quantité de jobs traités
@@ -33,6 +33,10 @@ class MeteoScrapper(ABC):
         self._todo = 0
         # % de jobs traités
         self._progress = 0
+
+    @property
+    def errors(self):
+        return self._errors.copy()
 
     def _update(self):
         self._done += 1
@@ -55,7 +59,7 @@ class MeteoScrapper(ABC):
         try:
             with HTMLSession() as session:
                 html_page = session.get(tp.url)
-                html_page.html.render(sleep=tp.waiting,
+                html_page.html.render(sleep=tp.waiting,  # .html n'est pas trouvé mais est essentiel
                                       keep_page=True,
                                       scrolldown=1)
             if html_page.status_code != 200:
@@ -64,8 +68,8 @@ class MeteoScrapper(ABC):
         except Exception:
             raise HtmlPageException()
 
-        attr = tp.criteria.get_css_attr()
-        val = tp.criteria.get_attr_value()
+        attr = tp.criteria.css_attribute
+        val = tp.criteria.attribute_value
         table: Element = [tab
                           for tab in html_page.html.find("table")
                           if attr in tab.attrs and tab.attrs[attr] == val][0]
@@ -100,7 +104,7 @@ class MeteoScrapper(ABC):
                      tp: TaskParameters) -> pd.DataFrame:
         pass
 
-    def scrap_from_uc(self, uc: ScrapperUC):
+    def scrap_uc(self, uc: ScrapperUC):
 
         global_df = pd.DataFrame()
 
@@ -118,7 +122,7 @@ class MeteoScrapper(ABC):
                     html_data = self._load_html(tp)
                 except ProcessException:
                     html_loading_trials -= 1
-                    tp.waiting *= 2
+                    tp.update_waiting()
 
             if html_data is None:
                 self.errors[tp.key] = {"url": tp.url,

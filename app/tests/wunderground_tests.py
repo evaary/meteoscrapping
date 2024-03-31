@@ -64,8 +64,8 @@ class WundergroundDailyTester(TestCase):
 
     def test_scrap_data(self):
         ucf = UserConfigFile.from_json(self.UCF_PATH)
-        uc = ucf.get_wunderground_ucs()[0]
-        data = self.SCRAPPER.scrap_from_uc(uc).set_index("date")
+        uc = ucf.wunderground_ucs[0]
+        data = self.SCRAPPER.scrap_uc(uc).set_index("date")
 
         not_converted = ["humidity_(%)_max", "humidity_(%)_avg", "humidity_(%)_min"]
         converted = [col for col in data.columns if

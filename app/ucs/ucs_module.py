@@ -1,4 +1,5 @@
 import abc
+import copy
 from abc import ABC
 from typing import (Any,
                     Dict,
@@ -14,15 +15,38 @@ from app.ucs.UCFChecker import UCFChecker
 
 class ScrapperUC(ABC):
 
+    """"""
+    """pas de contrôle sur les valeurs settées car UCFChecker a déjà fait le taff"""
+
     def __init__(self):
-        self.city = ""
-        self.scrapper_type = None
-        self.years = []
-        self.months = []
-        self.days = []
+        self._city = ""
+        self._scrapper_type = None
+        self._years = []
+        self._months = []
+        self._days = []
+
+    @property
+    def city(self):
+        return self._city
+
+    @property
+    def scrapper_type(self):
+        return copy.copy(self._scrapper_type)
+
+    @property
+    def years(self):
+        return copy.copy(self._years)
+
+    @property
+    def months(self):
+        return copy.copy(self._months)
+
+    @property
+    def days(self):
+        return copy.copy(self._days)
 
     @classmethod
-    def from_json_object(cls, jsono, param_name: UCFParameterEnumMember) -> "ScrapperUC":
+    def from_json(cls, jsono, param_name: UCFParameterEnumMember) -> "ScrapperUC":
 
         if param_name not in UCFParameter.scrappers_parameters():
             raise ValueError("ScrapperUC.from_ucf : param_name doit être un des scrappers")
@@ -47,7 +71,7 @@ class ScrapperUC(ABC):
         pass
 
     def __repr__(self):
-        if self.scrapper_type in ScrapperType.hourly_scrapper_types():
+        if self.scrapper_type in ScrapperType.hourly_scrappers():
             return "<{type} {city} {d_from}/{m_from}/{y_from} -> {d_to}/{m_to}/{y_to}>".format(type=self.scrapper_type,
                                                                                                city=self.city,
                                                                                                d_from=self.days[0],
@@ -100,17 +124,25 @@ class ScrapperUC(ABC):
 
 class MeteocielUC(ScrapperUC):
 
-    __PARAMETERS = {UCFParameter.CITY: "city",
-                    UCFParameter.CODE: "code",
-                    UCFParameter.CODE_NUM: "code_num",
-                    UCFParameter.YEARS: "years",
-                    UCFParameter.MONTHS: "months",
-                    UCFParameter.DAYS: "days"}
+    _PARAMETERS = {UCFParameter.CITY: "_city",
+                   UCFParameter.CODE: "_code",
+                   UCFParameter.CODE_NUM: "_code_num",
+                   UCFParameter.YEARS: "_years",
+                   UCFParameter.MONTHS: "_months",
+                   UCFParameter.DAYS: "_days"}
 
     def __init__(self):
         super().__init__()
-        self.code = ""
-        self.code_num = ""
+        self._code = ""
+        self._code_num = ""
+
+    @property
+    def code(self):
+        return self._code
+
+    @property
+    def code_num(self):
+        return self._code_num
 
     @classmethod
     def from_json_object(cls, jsono, should_check_parameter: bool = True):
@@ -120,21 +152,20 @@ class MeteocielUC(ScrapperUC):
 
         muc = MeteocielUC()
 
-        muc.city = jsono[UCFParameter.CITY.name]
-        muc.code = jsono[UCFParameter.CODE.name]
-        muc.code_num = jsono[UCFParameter.CODE_NUM.name]
-        muc.years = jsono[UCFParameter.YEARS.name]
-        muc.months = jsono[UCFParameter.MONTHS.name]
+        muc._city = jsono[UCFParameter.CITY.name]
+        muc._code = jsono[UCFParameter.CODE.name]
+        muc._code_num = jsono[UCFParameter.CODE_NUM.name]
+        muc._years = jsono[UCFParameter.YEARS.name]
+        muc._months = jsono[UCFParameter.MONTHS.name]
 
         try:
-            muc.days = jsono[UCFParameter.DAYS.name]
-            muc.scrapper_type = ScrapperType.METEOCIEL_HOURLY
+            muc._days = jsono[UCFParameter.DAYS.name]
+            muc._scrapper_type = ScrapperType.METEOCIEL_HOURLY
         except KeyError:
-            muc.scrapper_type = ScrapperType.METEOCIEL_DAILY
+            muc._scrapper_type = ScrapperType.METEOCIEL_DAILY
 
         return muc
 
-    # override
     def to_tps(self):
 
         if self.scrapper_type == ScrapperType.METEOCIEL_DAILY:
@@ -173,22 +204,25 @@ class MeteocielUC(ScrapperUC):
         else:
             raise ValueError("MeteocielUC.to_tps : scrapper_type invalide")
 
-    # override
     def _get_parameters(self):
-        return self.__PARAMETERS
+        return self._PARAMETERS
 
 
 class OgimetUC(ScrapperUC):
 
-    __PARAMETERS = {UCFParameter.CITY: "city",
-                    UCFParameter.IND: "ind",
-                    UCFParameter.YEARS: "years",
-                    UCFParameter.MONTHS: "months",
-                    UCFParameter.DAYS: "days"}
+    _PARAMETERS = {UCFParameter.CITY: "_city",
+                   UCFParameter.IND: "_ind",
+                   UCFParameter.YEARS: "_years",
+                   UCFParameter.MONTHS: "_months",
+                   UCFParameter.DAYS: "_days"}
 
     def __init__(self):
         super().__init__()
-        self.ind = ""
+        self._ind = ""
+
+    @property
+    def ind(self):
+        return self._ind
 
     @classmethod
     def from_json_object(cls, jsono, should_check_parameter: bool = True):
@@ -198,20 +232,19 @@ class OgimetUC(ScrapperUC):
 
         ouc = OgimetUC()
 
-        ouc.city = jsono[UCFParameter.CITY.name]
-        ouc.ind = jsono[UCFParameter.IND.name]
-        ouc.years = jsono[UCFParameter.YEARS.name]
-        ouc.months = jsono[UCFParameter.MONTHS.name]
+        ouc._city = jsono[UCFParameter.CITY.name]
+        ouc._ind = jsono[UCFParameter.IND.name]
+        ouc._years = jsono[UCFParameter.YEARS.name]
+        ouc._months = jsono[UCFParameter.MONTHS.name]
 
         try:
-            ouc.days = jsono[UCFParameter.DAYS.name]
-            ouc.scrapper_type = ScrapperType.OGIMET_HOURLY
+            ouc._days = jsono[UCFParameter.DAYS.name]
+            ouc._scrapper_type = ScrapperType.OGIMET_HOURLY
         except KeyError:
-            ouc.scrapper_type = ScrapperType.OGIMET_DAILY
+            ouc._scrapper_type = ScrapperType.OGIMET_DAILY
 
         return ouc
 
-    # override
     def to_tps(self):
 
         if self.scrapper_type == ScrapperType.OGIMET_DAILY:
@@ -229,7 +262,7 @@ class OgimetUC(ScrapperUC):
 
         elif self.scrapper_type == ScrapperType.OGIMET_HOURLY:
             # on peut requêter de façon à obtenir une page qui contient l'ensemble des données
-            # pour chaque mois
+            # pour chaque mois, d'où les boucles sur les années et mois mais pas sur les jours
             return (TPBuilder(self.scrapper_type).with_ind(self.ind)
                                                  .with_city(self.city)
                                                  .with_year(year)
@@ -267,24 +300,31 @@ class OgimetUC(ScrapperUC):
 
         return day
 
-    # override
     def _get_parameters(self):
-        return self.__PARAMETERS
+        return self._PARAMETERS
 
 
 class WundergroundUC(ScrapperUC):
 
-    __PARAMETERS = {UCFParameter.CITY: "city",
-                    UCFParameter.COUNTRY_CODE: "country_code",
-                    UCFParameter.REGION: "region",
-                    UCFParameter.YEARS: "years",
-                    UCFParameter.MONTHS: "months",
-                    UCFParameter.DAYS: "days"}
+    _PARAMETERS = {UCFParameter.CITY: "_city",
+                   UCFParameter.COUNTRY_CODE: "_country_code",
+                   UCFParameter.REGION: "_region",
+                   UCFParameter.YEARS: "_years",
+                   UCFParameter.MONTHS: "_months",
+                   UCFParameter.DAYS: "_days"}
 
     def __init__(self):
         super().__init__()
-        self.region = ""
-        self.country_code = ""
+        self._region = ""
+        self._country_code = ""
+
+    @property
+    def region(self):
+        return self._region
+
+    @property
+    def country_code(self):
+        return self._country_code
 
     @classmethod
     def from_json_object(cls, jsono, should_check_parameter: bool = True):
@@ -294,21 +334,20 @@ class WundergroundUC(ScrapperUC):
 
         wuc = WundergroundUC()
 
-        wuc.city = jsono[UCFParameter.CITY.name]
-        wuc.country_code = jsono[UCFParameter.COUNTRY_CODE.name]
-        wuc.region = jsono[UCFParameter.REGION.name]
-        wuc.years = jsono[UCFParameter.YEARS.name]
-        wuc.months = jsono[UCFParameter.MONTHS.name]
+        wuc._city = jsono[UCFParameter.CITY.name]
+        wuc._country_code = jsono[UCFParameter.COUNTRY_CODE.name]
+        wuc._region = jsono[UCFParameter.REGION.name]
+        wuc._years = jsono[UCFParameter.YEARS.name]
+        wuc._months = jsono[UCFParameter.MONTHS.name]
 
         try:
-            wuc.days = jsono[UCFParameter.DAYS.name]
-            wuc.scrapper_type = ScrapperType.WUNDERGROUND_HOURLY
+            wuc._days = jsono[UCFParameter.DAYS.name]
+            wuc._scrapper_type = ScrapperType.WUNDERGROUND_HOURLY
         except KeyError:
-            wuc.scrapper_type = ScrapperType.WUNDERGROUND_DAILY
+            wuc._scrapper_type = ScrapperType.WUNDERGROUND_DAILY
 
         return wuc
 
-    # override
     def to_tps(self):
 
         if self.scrapper_type == ScrapperType.WUNDERGROUND_DAILY:
@@ -347,6 +386,5 @@ class WundergroundUC(ScrapperUC):
         else:
             raise ValueError("WundergroundUC.to_tps : scrapper_type invalide")
 
-    # override
     def _get_parameters(self):
-        return self.__PARAMETERS
+        return self._PARAMETERS

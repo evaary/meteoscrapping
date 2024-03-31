@@ -39,7 +39,7 @@ class Main:
             start_date = f"{uc.months[0]}_{uc.years[0]}"
             end_date = f"{uc.months[-1]}_{uc.years[-1]}"
 
-            if uc.scrapper_type in ScrapperType.hourly_scrapper_types():
+            if uc.scrapper_type in ScrapperType.hourly_scrappers():
                 start_date = f"{uc.days[0]}_{start_date}"
                 end_date = f"{uc.days[-1]}_{end_date}"
 
@@ -58,7 +58,7 @@ class Main:
                                            base_filename + ".json")
             # (3)
             scrapper = MeteoScrapper.scrapper_instance(uc)
-            data = scrapper.scrap_from_uc(uc)
+            data = scrapper.scrap_uc(uc)
 
             # (4)
             if not data.empty:

@@ -1,7 +1,24 @@
 class MonthEnumMember:
     def __init__(self, numero: int, ndays: int):
-        self.numero = numero
-        self.ndays = ndays
+        self._numero = numero
+        self._ndays = ndays
+
+    @property
+    def numero(self):
+        return self._numero
+
+    @property
+    def ndays(self):
+        return self._ndays
+
+    def __eq__(self, other):
+        if other is None or not isinstance(other, MonthEnumMember):
+            return False
+
+        return self._numero == other.numero
+
+    def __copy__(self):
+        return MonthEnumMember(self._numero, self._ndays)
         
         
 class MonthEnum:
@@ -38,8 +55,8 @@ class MonthEnum:
     def from_id(cls, numero: int) -> MonthEnumMember:
         return [x for x in cls.values() if x.numero == numero][0]
 
-    @classmethod
-    def meteociel_hourly_numero(cls, x: MonthEnumMember) -> int:
+    @staticmethod
+    def meteociel_hourly_numero(x: MonthEnumMember) -> int:
         """
         La numérotation des mois sur météociel (données heure par heure) est décalée.
         Cette méthode associe la numérotation usuelle à gauche de la flèche et celle de météociel, à droite.

@@ -7,14 +7,14 @@ from abc import (ABC,
 from typing import List
 from time import perf_counter
 
-from app.scrappers.scrapping_exceptions import (ProcessException,
-                                                ReworkException,
-                                                ScrapException,
-                                                HtmlPageException)
-from app.ucs.ucs_module import ScrapperUC
-from app.tps.tps_module import TaskParameters
+from app.exceptions.scrapping_exceptions import (ProcessException,
+                                                 ReworkException,
+                                                 ScrapException,
+                                                 HtmlPageException)
+from app.ucs_module import ScrapperUC
+from app.tps_module import TaskParameters
 from app.boite_a_bonheur.ScraperTypeEnum import ScrapperType
-from app.boite_a_bonheur.MonthsEnum import MonthEnum
+from app.boite_a_bonheur.MonthEnum import MonthEnum
 from requests_html import (Element,
                            HTMLSession)
 
@@ -24,7 +24,7 @@ class MeteoScrapper(ABC):
     PROGRESS_TIMER_INTERVAL = 10  # en secondes
 
     def __init__(self):
-        self.errors = dict()
+        self._errors = dict()
         # date de départ de lancement des jobs
         self._start = 0
         # quantité de jobs traités
@@ -34,17 +34,24 @@ class MeteoScrapper(ABC):
         # % de jobs traités
         self._progress = 0
 
+    @property
+    def errors(self):
+        return self._errors.copy()
+
     def _update(self):
         self._done += 1
         self._progress = round(self._done / self._todo * 100, 0)
 
-    def _print_progress(self,  uc: ScrapperUC, should_stop=False) -> None:
+    def _print_progress(self,  uc: ScrapperUC) -> None:
+
         print(f"{uc} - {self._progress}% - {round(perf_counter() - self._start, 0)}s \n")
 
-        if not should_stop:
-            timer = Timer(self.PROGRESS_TIMER_INTERVAL, self._print_progress, [uc])
-            timer.daemon = True
-            timer.start()
+        if self._progress == 100:
+            return
+
+        timer = Timer(self.PROGRESS_TIMER_INTERVAL, self._print_progress, [uc])
+        timer.daemon = True
+        timer.start()
 
     @staticmethod
     def _load_html(tp: TaskParameters):
@@ -52,7 +59,7 @@ class MeteoScrapper(ABC):
         try:
             with HTMLSession() as session:
                 html_page = session.get(tp.url)
-                html_page.html.render(sleep=tp.waiting,
+                html_page.html.render(sleep=tp.waiting,  # .html n'est pas trouvé mais est essentiel
                                       keep_page=True,
                                       scrolldown=1)
             if html_page.status_code != 200:
@@ -61,8 +68,8 @@ class MeteoScrapper(ABC):
         except Exception:
             raise HtmlPageException()
 
-        attr = tp.criteria.get_css_attr()
-        val = tp.criteria.get_attr_value()
+        attr = tp.criteria.css_attribute
+        val = tp.criteria.attribute_value
         table: Element = [tab
                           for tab in html_page.html.find("table")
                           if attr in tab.attrs and tab.attrs[attr] == val][0]
@@ -97,7 +104,7 @@ class MeteoScrapper(ABC):
                      tp: TaskParameters) -> pd.DataFrame:
         pass
 
-    def scrap_from_uc(self, uc: ScrapperUC):
+    def scrap_uc(self, uc: ScrapperUC):
 
         global_df = pd.DataFrame()
 
@@ -113,8 +120,9 @@ class MeteoScrapper(ABC):
                     if html_loading_trials != 3:
                         print("retrying...")
                     html_data = self._load_html(tp)
-                except ProcessException as e:
+                except ProcessException:
                     html_loading_trials -= 1
+                    tp.update_waiting()
 
             if html_data is None:
                 self.errors[tp.key] = {"url": tp.url,
@@ -140,7 +148,7 @@ class MeteoScrapper(ABC):
         global_df.sort_values(by="date")
         global_df = global_df[["date"] + [x for x in global_df.columns if x != "date"]]
 
-        self._print_progress(uc, should_stop=True)
+        self._print_progress(uc)
 
         return global_df
 

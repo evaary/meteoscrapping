@@ -3,8 +3,8 @@ from unittest import TestCase
 import numpy as np
 import pandas as pd
 
-from app.scrappers.scrappers_module import WundergroundDaily
-from app.ucs.UserConfigFile import UserConfigFile
+from app.scrappers_module import WundergroundDaily
+from app.UserConfigFile import UserConfigFile
 
 
 class WundergroundDailyTester(TestCase):
@@ -64,8 +64,8 @@ class WundergroundDailyTester(TestCase):
 
     def test_scrap_data(self):
         ucf = UserConfigFile.from_json(self.UCF_PATH)
-        uc = ucf.get_wunderground_ucs()[0]
-        data = self.SCRAPPER.scrap_from_uc(uc).set_index("date")
+        uc = ucf.wunderground_ucs[0]
+        data = self.SCRAPPER.scrap_uc(uc).set_index("date")
 
         not_converted = ["humidity_(%)_max", "humidity_(%)_avg", "humidity_(%)_min"]
         converted = [col for col in data.columns if

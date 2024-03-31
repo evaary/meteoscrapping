@@ -21,31 +21,6 @@ Utilisation:
     les résultats seront stockés dans un répertoire "resultats" à côté du fichier config
     les erreurs seront stockées dans un répertoire "erreurs" à côté du fichier config
 
-Structure du fichier config.json:
-{
-    "parametres_generaux":
-    {
-        "delaiJS": 1
-    },
-
-    "ogimet":
-    [
-        { "ind":"16288", "ville":"Caserta", "annees":[2020, 2025], "mois":[1, 12] },
-        { "ind":"07149", "ville":"paris_orly", "annees":[2023], "mois":[1,5], "jours":[13, 18] }
-    ],
-
-    "wunderground":
-    [
-        { "code_pays":"it", "region": "LIBD", "ville":"matera", "annees":[2021], "mois":[1,6] }
-    ],
-
-    "meteociel":
-    [
-        { "code_num":"2", "code": "7249", "ville":"orleans", "annees":[2020, 2021], "mois":[2] },
-        { "code_num":"2", "code": "7249", "ville":"orleans", "annees":[2020], "mois":[1, 2], "jours":[27,31] }
-    ]
-}
-
 Où trouver les paramètres ?
 
     dates : fixées par l'utilisateur
@@ -73,14 +48,6 @@ Où trouver les paramètres ?
 
 Informations importantes
 
-    - Les "parametres_generaux" sont optionnels. "meteociel", "wunderground" et "ogimet" sont optionnels tous les 3,
-    mais la présence d'au moins l'un d'eux avec une liste de configurations non vide est requise.
-
-    - "delaiJS" sert à patienter le temps que les données soient disponibles sur la page à scrapper.
-    Si le téléchargement des pages html échoue, augmenter le délai (valeurs autorisées 1 à 5)
-    peut résoudre le problème si le tableau existe bien sur la page.
-    Sinon, re-télécharger les données pour les dates concernées via de nouvelles configs.
-
     - 1 CSV (résultats) et éventuellement 1 JSON (erreurs) seront générés par configuration.
     - le paramètre "ville" est imposé pour wunderground mais arbitraire pour les autres.
     - le paramètre "jours" n'est pas disponible pour wunderground.
@@ -89,16 +56,66 @@ Informations importantes
     - Des ConnectionResetError peuvent apparaitre pendant le téléchargement, elles ne sont pas graves.
     - La 1ère fois que le programme se lance, il téléchargera chromium, c'est normal.
 
+    meteociel heure par heure
+    La durée du téléchargement dépend du nombre de jours (1 page de 24h requêtée par jour demandé)
+
+    ogimet heure par heure
+    La durée du téléchargement dépend surtout du nombre de mois (1 page requêtée par mois demandé).
+    Chaque page scrappée peut contenir jusqu'à 1 mois de données heure par heure.
+
+    wunderground, meteociel et ogimet jour par jour
+    La durée du téléchargement dépend du nombre de mois (1 page de 28/30/31 jours requêtée par mois demandé)
+
 Performances
 
+    meteociel heure par heure
     { "code_num":"2", "code": "7249", "ville":"orleans", "annees":[2019, 2020], "mois":[1, 12], "jours":[1, 31] }
-    => a généré un CSV de 17 521 lignes en 3040s, sans fichier d'erreur
+    => a généré un CSV de 17 521 lignes en 3 040s, sans fichier d'erreur
 
+    ogimet heure par heure
     { "ind":"07149", "ville":"paris_orly", "annees":[2015, 2020], "mois":[1, 12], "jours":[1, 31] }
     => a généré un CSV de 52 561 lignes en 3 476s, sans fichier d'erreur
 
+    ogimet jour par jour
+    { "ind":"07149", "ville":"paris_orly", "annees":[2015, 2020], "mois":[1, 12]}
+    => a généré un CSV de 2191 lignes en 3245s, sans fichier d'erreur
+
+    wunderground jour par jour
     { "code_pays":"it", "region": "LIBD", "ville":"matera", "annees":[2013, 2023], "mois":[1,12] }
     => a généré un CSV de 4 018 lignes en 916s, sans fichier d'erreur
 
+    meteociel jour par jour
     { "code_num":"2", "code": "7249", "ville":"orleans", "annees":[2013, 2023], "mois":[1, 12] }
     => a généré un CSV de 4 018 lignes en 533s, sans fichier d'erreur
+
+
+Structure du fichier config.json:
+{
+    "ogimet":
+    [
+        { "ind":"16288", "ville":"Caserta", "annees":[2020, 2025], "mois":[1, 12] },
+        { "ind":"07149", "ville":"paris_orly", "annees":[2023], "mois":[1,5], "jours":[13, 18] }
+    ],
+
+    "wunderground":
+    [
+        { "code_pays":"it", "region": "LIBD", "ville":"matera", "annees":[2021], "mois":[1] }
+        { "code_pays":"it", "region": "LIBD", "ville":"matera", "annees":[2021], "mois":[3] }
+        { "code_pays":"it", "region": "LIBD", "ville":"matera", "annees":[2021], "mois":[1,3] }
+    ],
+
+    "meteociel":
+    [
+        { "code_num":"2", "code": "7249", "ville":"orleans", "annees":[2020, 2021], "mois":[2] },
+        { "code_num":"2", "code": "7249", "ville":"orleans", "annees":[2020], "mois":[1, 2], "jours":[27,31] }
+    ]
+}
+
+la config ogimet n°1 récupère tous les mois de 2020 à 2025.
+La config ogimet n°2 récupère les jours 13 à 18 des mois de janvier à mai 2023
+
+les configs wunderground n° 1 et 2 récupèrent les mois de janvier et mars 2021
+la config wunderground n°3 récupère les mois de janvier à mars 2021 (janvier, février, mars)
+
+la config meteociel n°1 récupère les mois de février 2020 et février 2021
+la config meteociel n°2 récupère les jours 27 à 31 de janvier 2020 et 27 à 28 de février 2020

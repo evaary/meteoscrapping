@@ -1,22 +1,29 @@
+from typing import List
+
+
 class UCFParameterEnumMember:
     def __init__(self, name: str):
-        self.name = name
+        self._name = name
+
+    @property
+    def name(self):
+        return self._name
 
     def __hash__(self):
-        return hash(self.name)
+        return hash(self._name)
 
     def __repr__(self):
-        return self.name
+        return self._name
 
     def __eq__(self, other):
-        return self.name == other.name
+        if other is None or not isinstance(other, UCFParameterEnumMember):
+            return False
+        return self._name == other.name
 
 
 class UCFParameter:
 
     UCF = UCFParameterEnumMember("config.json")
-    GENERAL_PARAMETERS = UCFParameterEnumMember("parametres_generaux")
-    WAITING = UCFParameterEnumMember("delaiJS")
     OGIMET = UCFParameterEnumMember("ogimet")
     METEOCIEL = UCFParameterEnumMember("meteociel")
     WUNDERGROUND = UCFParameterEnumMember("wunderground")
@@ -30,8 +37,17 @@ class UCFParameter:
     REGION = UCFParameterEnumMember("region")
     COUNTRY_CODE = UCFParameterEnumMember("code_pays")
 
-    MAX_WAITING = 5
-    MIN_WAITING = 1
+    SPECIFIC_FIELDS = {
+        WUNDERGROUND: [REGION, COUNTRY_CODE],
+        METEOCIEL: [CODE, CODE_NUM],
+        OGIMET: [IND]
+    }
+
+    COMMON_FIELDS = [CITY]
+
+    DATE_FIELDS = [YEARS, MONTHS, DAYS]
+
+    DEFAULT_WAITING = 2
     MIN_MONTHS_DAYS_VALUE = 1
     MAX_DATE_FIELD_SIZE = 2
     MIN_YEARS = 1800
@@ -49,3 +65,7 @@ class UCFParameter:
         return [cls.YEARS,
                 cls.MONTHS,
                 cls.DAYS]
+
+    @classmethod
+    def specific_fields_by_scrapper(cls, ucfparameter: UCFParameterEnumMember) -> "List[UCFParameterEnumMember]":
+        return cls.SPECIFIC_FIELDS[ucfparameter]

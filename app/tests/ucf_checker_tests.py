@@ -1,21 +1,20 @@
 from unittest import TestCase
 
-from app.ucs.UCFChecker import UCFChecker
-from app.ucs.ucf_checker_exceptions import (DateFieldException,
-                                            DaysDateException,
-                                            MonthsDateException,
-                                            NoSuchDateFieldException,
-                                            UnavailableScrapperException,
-                                            WaitingException,
-                                            NoConfigFoundException,
-                                            NotAJsonFileException,
-                                            NotAJsonObjectException,
-                                            NotAJsonListException,
-                                            EmptyConfigFileException,
-                                            ScrapperUCException,
-                                            CommonStrFieldException,
-                                            SpecificStrFieldException,
-                                            YearsDateException)
+from app.UCFChecker import UCFChecker
+from app.exceptions.ucf_checker_exceptions import (DateFieldException,
+                                                   DaysDateException,
+                                                   MonthsDateException,
+                                                   RequiredDateFieldException,
+                                                   UnavailableScrapperException,
+                                                   NoConfigFoundException,
+                                                   NotAJsonFileException,
+                                                   NotAJsonObjectException,
+                                                   NotAJsonListException,
+                                                   EmptyConfigFileException,
+                                                   ScrapperUCException,
+                                                   CommonStrFieldException,
+                                                   SpecificStrFieldException,
+                                                   YearsDateException)
 
 
 class UCFCheckerTester(TestCase):
@@ -27,12 +26,9 @@ class UCFCheckerTester(TestCase):
         "empty"               : f"{BASE_PATH}/empty.json",
         "malformed"           : f"{BASE_PATH}/malformed.json",
         "wrong_config"        : f"{BASE_PATH}/wrong_config.json",
-        "invalid_parameters"  : f"{BASE_PATH}/invalid_parameters.json",
         "null_scrapper_uc"    : f"{BASE_PATH}/null_scrapper_uc.json",
         "invalid_scrapper"    : f"{BASE_PATH}/invalid_scrapper.json",
         "irrelevant"          : f"{BASE_PATH}/irrelevant.json",
-        "waiting_misstyped"   : f"{BASE_PATH}/waiting_misstyped.json",
-        "waiting_oob"         : f"{BASE_PATH}/waiting_out_of_bounds.json",
         "invalid_scrapper_ucs": f"{BASE_PATH}/invalid_scrapper_ucs.json",
         "invalid_specstr"     : f"{BASE_PATH}/invalid_specific_str_field.json",
         "invalid_comstr"      : f"{BASE_PATH}/invalid_common_str_field.json",
@@ -69,9 +65,6 @@ class UCFCheckerTester(TestCase):
         with self.assertRaises(NotAJsonObjectException):
             UCFChecker.check(self.CONFIG_FILES["wrong_config"])
 
-        with self.assertRaises(NotAJsonObjectException):
-            UCFChecker.check(self.CONFIG_FILES["invalid_parameters"])
-
         with self.assertRaises(ScrapperUCException):
             UCFChecker.check(self.CONFIG_FILES["null_scrapper_uc"])
 
@@ -81,13 +74,6 @@ class UCFCheckerTester(TestCase):
     def test_no_ucs(self):
         with self.assertRaises(EmptyConfigFileException):
             UCFChecker.check(self.CONFIG_FILES["irrelevant"])
-
-    def test_wrong_waiting(self):
-        with self.assertRaises(WaitingException):
-            UCFChecker.check(self.CONFIG_FILES["waiting_misstyped"])
-
-        with self.assertRaises(WaitingException):
-            UCFChecker.check(self.CONFIG_FILES["waiting_oob"])
 
     def test_invalid_str_fields(self):
         with self.assertRaises(ScrapperUCException):
@@ -104,10 +90,10 @@ class UCFCheckerTester(TestCase):
         with self.assertRaises(NotAJsonListException):
             UCFChecker.check(self.CONFIG_FILES["date_not_list"])
 
-        with self.assertRaises(NoSuchDateFieldException):
+        with self.assertRaises(RequiredDateFieldException):
             UCFChecker.check(self.CONFIG_FILES["missing_months"])
 
-        with self.assertRaises(NoSuchDateFieldException):
+        with self.assertRaises(RequiredDateFieldException):
             UCFChecker.check(self.CONFIG_FILES["missing_years"])
 
         with self.assertRaises(DateFieldException):

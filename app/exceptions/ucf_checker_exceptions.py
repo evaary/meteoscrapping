@@ -39,14 +39,6 @@ class EmptyConfigFileException(UCFCheckerException):
         super().__init__(msg)
 
 
-class WaitingException(UCFCheckerException):
-    def __init__(self):
-        super().__init__("{g} doit contenir le paramètre {w}, compris entre {m} et {M}".format(g=UCFParameter.GENERAL_PARAMETERS.name,
-                                                                                               w=UCFParameter.WAITING.name,
-                                                                                               m=UCFParameter.MIN_WAITING,
-                                                                                               M=UCFParameter.MAX_WAITING))
-
-
 class ScrapperUCException(UCFCheckerException):
     def __init__(self, ucfpem: UCFParameterEnumMember):
         super().__init__(f"{ucfpem.name} doit contenir des objets JSON non vides")
@@ -84,7 +76,7 @@ class SpecificStrFieldException(UCFCheckerException):
         super().__init__(msg)
 
 
-class NoSuchDateFieldException(UCFCheckerException):
+class RequiredDateFieldException(UCFCheckerException):
     def __init__(self):
         super().__init__("Les champs {y} et {m} sont obligatoires dans toutes les configurations".format(y=UCFParameter.YEARS.name,
                                                                                                          m=UCFParameter.MONTHS.name))

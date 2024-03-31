@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from app.ucs.UserConfigFile import UserConfigFile
+from app.UserConfigFile import UserConfigFile
 
 
 class TPsTester(TestCase):

@@ -7,14 +7,14 @@ from abc import (ABC,
 from typing import List
 from time import perf_counter
 
-from app.scrappers.scrapping_exceptions import (ProcessException,
-                                                ReworkException,
-                                                ScrapException,
-                                                HtmlPageException)
-from app.ucs.ucs_module import ScrapperUC
-from app.tps.tps_module import TaskParameters
+from app.exceptions.scrapping_exceptions import (ProcessException,
+                                                 ReworkException,
+                                                 ScrapException,
+                                                 HtmlPageException)
+from app.ucs_module import ScrapperUC
+from app.tps_module import TaskParameters
 from app.boite_a_bonheur.ScraperTypeEnum import ScrapperType
-from app.boite_a_bonheur.MonthsEnum import MonthEnum
+from app.boite_a_bonheur.MonthEnum import MonthEnum
 from requests_html import (Element,
                            HTMLSession)
 

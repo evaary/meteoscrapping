@@ -5,12 +5,12 @@ from typing import (Any,
                     Dict,
                     Generator)
 
-from app.boite_a_bonheur.MonthsEnum import MonthEnum
+from app.boite_a_bonheur.MonthEnum import MonthEnum
 from app.boite_a_bonheur.ScraperTypeEnum import ScrapperType
 from app.boite_a_bonheur.UCFParameterEnum import UCFParameterEnumMember, UCFParameter
-from app.tps.tps_module import (TPBuilder,
-                                TaskParameters)
-from app.ucs.UCFChecker import UCFChecker
+from app.tps_module import (TPBuilder,
+                            TaskParameters)
+from app.UCFChecker import UCFChecker
 
 
 class ScrapperUC(ABC):
@@ -49,7 +49,7 @@ class ScrapperUC(ABC):
     def from_json(cls, jsono, param_name: UCFParameterEnumMember) -> "ScrapperUC":
 
         if param_name not in UCFParameter.scrappers_parameters():
-            raise ValueError("ScrapperUC.from_ucf : param_name doit être un des scrappers")
+            raise ValueError("ScrapperUC.from_ucf : param_name doit être un des exceptions")
 
         if param_name == UCFParameter.WUNDERGROUND:
             suc = WundergroundUC.from_json_object(jsono, False)

@@ -1,7 +1,7 @@
 import copy
 from app.boite_a_bonheur.UCFParameterEnum import UCFParameter
-from app.ucs.UCFChecker import UCFChecker
-from app.ucs.ucs_module import ScrapperUC
+from app.UCFChecker import UCFChecker
+from app.ucs_module import ScrapperUC
 
 
 class UserConfigFile:

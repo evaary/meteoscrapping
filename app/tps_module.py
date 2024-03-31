@@ -3,7 +3,7 @@ import copy
 from string import Template
 
 from app.boite_a_bonheur.Criteria import Criteria
-from app.boite_a_bonheur.MonthsEnum import MonthEnum
+from app.boite_a_bonheur.MonthEnum import MonthEnum
 from app.boite_a_bonheur.ScraperTypeEnum import (ScrapperType,
                                                  ScrapperTypeEnumMember)
 from app.boite_a_bonheur.UCFParameterEnum import UCFParameter

@@ -1,9 +1,9 @@
 import os
 from app.boite_a_bonheur.ScraperTypeEnum import ScrapperType
-from app.ucs.UserConfigFile import UserConfigFile
-from app.ucs.ucf_checker_exceptions import UCFCheckerException
+from app.UserConfigFile import UserConfigFile
+from app.exceptions.ucf_checker_exceptions import UCFCheckerException
 from app.boite_a_bonheur.utils import to_csv, to_json
-from app.scrappers.scrappers_module import MeteoScrapper
+from app.scrappers_module import MeteoScrapper
 
 
 class Main:

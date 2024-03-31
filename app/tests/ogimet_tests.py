@@ -3,8 +3,8 @@ from unittest import TestCase
 import numpy as np
 import pandas as pd
 
-from app.scrappers.scrappers_module import (OgimetDaily, OgimetHourly)
-from app.ucs.UserConfigFile import UserConfigFile
+from app.scrappers_module import (OgimetDaily, OgimetHourly)
+from app.UserConfigFile import UserConfigFile
 
 
 class OgimetDailyTester(TestCase):

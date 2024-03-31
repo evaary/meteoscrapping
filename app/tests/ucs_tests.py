@@ -2,7 +2,7 @@ import copy
 from unittest import TestCase
 
 from app.boite_a_bonheur.ScraperTypeEnum import ScrapperType
-from app.ucs.UserConfigFile import UserConfigFile
+from app.UserConfigFile import UserConfigFile
 
 
 class UCsTester(TestCase):

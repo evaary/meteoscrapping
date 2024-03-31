@@ -63,6 +63,7 @@ class MeteocielDailyTester(TestCase):
         differences_df = data - self.RESULTATS
 
         self.assertEqual(differences_df.sum().sum(), 0)
+        self.assertEqual(data.shape, self.RESULTATS.shape)
 
 
 class MeteocielHourlyTester(TestCase):

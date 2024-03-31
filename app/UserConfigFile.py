@@ -37,15 +37,13 @@ class UserConfigFile:
 
         try:
             mucs = config_file[UCFParameter.METEOCIEL.name]
-            ucf._meteociel_ucs = list(set([ScrapperUC.from_json(muc, UCFParameter.METEOCIEL)
-                                          for muc in mucs]))
+            ucf._meteociel_ucs = list(set([ScrapperUC.from_json(muc, UCFParameter.METEOCIEL) for muc in mucs]))
         except KeyError:
             pass
 
         try:
             wucs = config_file[UCFParameter.WUNDERGROUND.name]
-            ucf._wunderground_ucs = list(set([ScrapperUC.from_json(wuc, UCFParameter.WUNDERGROUND)
-                                             for wuc in wucs]))
+            ucf._wunderground_ucs = list(set([ScrapperUC.from_json(wuc, UCFParameter.WUNDERGROUND) for wuc in wucs]))
         except KeyError:
             pass
 

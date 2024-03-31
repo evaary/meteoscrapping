@@ -15,9 +15,6 @@ from app.UCFChecker import UCFChecker
 
 class ScrapperUC(ABC):
 
-    """"""
-    """pas de contrôle sur les valeurs settées car UCFChecker a déjà fait le taff"""
-
     def __init__(self):
         self._city = ""
         self._scrapper_type = None
@@ -136,14 +133,6 @@ class MeteocielUC(ScrapperUC):
         self._code = ""
         self._code_num = ""
 
-    @property
-    def code(self):
-        return self._code
-
-    @property
-    def code_num(self):
-        return self._code_num
-
     @classmethod
     def from_json_object(cls, jsono, should_check_parameter: bool = True):
 
@@ -170,35 +159,35 @@ class MeteocielUC(ScrapperUC):
 
         if self.scrapper_type == ScrapperType.METEOCIEL_DAILY:
 
-            return (TPBuilder(self.scrapper_type).with_code(self.code)
-                                                 .with_code_num(self.code_num)
-                                                 .with_city(self.city)
+            return (TPBuilder(self.scrapper_type).with_code(self._code)
+                                                 .with_code_num(self._code_num)
+                                                 .with_city(self._city)
                                                  .with_year(year)
                                                  .with_month(month)
                                                  .build()
-                    for year in range(self.years[0],
-                                      self.years[-1] + 1)
+                    for year in range(self._years[0],
+                                      self._years[-1] + 1)
 
-                    for month in range(self.months[0],
-                                       self.months[-1] + 1))
+                    for month in range(self._months[0],
+                                       self._months[-1] + 1))
 
         elif self.scrapper_type == ScrapperType.METEOCIEL_HOURLY:
 
-            return (TPBuilder(self.scrapper_type).with_code(self.code)
-                                                 .with_code_num(self.code_num)
-                                                 .with_city(self.city)
+            return (TPBuilder(self.scrapper_type).with_code(self._code)
+                                                 .with_code_num(self._code_num)
+                                                 .with_city(self._city)
                                                  .with_year(year)
                                                  .with_month(month)
                                                  .with_day(day)
                                                  .build()
-                    for year in range(self.years[0],
-                                      self.years[-1] + 1)
+                    for year in range(self._years[0],
+                                      self._years[-1] + 1)
 
-                    for month in range(self.months[0],
-                                       self.months[-1] + 1)
+                    for month in range(self._months[0],
+                                       self._months[-1] + 1)
 
-                    for day in range(self.days[0],
-                                     self.days[-1] + 1)
+                    for day in range(self._days[0],
+                                     self._days[-1] + 1)
 
                     if day <= MonthEnum.from_id(month).ndays)
         else:
@@ -219,10 +208,6 @@ class OgimetUC(ScrapperUC):
     def __init__(self):
         super().__init__()
         self._ind = ""
-
-    @property
-    def ind(self):
-        return self._ind
 
     @classmethod
     def from_json_object(cls, jsono, should_check_parameter: bool = True):
@@ -249,52 +234,52 @@ class OgimetUC(ScrapperUC):
 
         if self.scrapper_type == ScrapperType.OGIMET_DAILY:
 
-            return (TPBuilder(self.scrapper_type).with_ind(self.ind)
-                                                 .with_city(self.city)
+            return (TPBuilder(self.scrapper_type).with_ind(self._ind)
+                                                 .with_city(self._city)
                                                  .with_year(year)
                                                  .with_month(month)
                                                  .build()
-                    for year in range(self.years[0],
-                                      self.years[-1] + 1)
+                    for year in range(self._years[0],
+                                      self._years[-1] + 1)
 
-                    for month in range(self.months[0],
-                                       self.months[-1] + 1))
+                    for month in range(self._months[0],
+                                       self._months[-1] + 1))
 
         elif self.scrapper_type == ScrapperType.OGIMET_HOURLY:
             # on peut requêter de façon à obtenir une page qui contient l'ensemble des données
             # pour chaque mois, d'où les boucles sur les années et mois mais pas sur les jours
-            return (TPBuilder(self.scrapper_type).with_ind(self.ind)
-                                                 .with_city(self.city)
+            return (TPBuilder(self.scrapper_type).with_ind(self._ind)
+                                                 .with_city(self._city)
                                                  .with_year(year)
                                                  .with_month(month)
-                                                 .with_day(self.compute_day(month))
-                                                 .with_ndays(self.compute_ndays(month))
+                                                 .with_day(self._compute_day(month))
+                                                 .with_ndays(self._compute_ndays(month))
                                                  .build()
-                    for year in range(self.years[0],
-                                      self.years[-1] + 1)
+                    for year in range(self._years[0],
+                                      self._years[-1] + 1)
 
-                    for month in range(self.months[0],
-                                       self.months[-1] + 1))
+                    for month in range(self._months[0],
+                                       self._months[-1] + 1))
         else:
             raise ValueError("OgimetUC.to_tps : scrapper_type invalide")
 
-    def compute_ndays(self, month: int) -> int:
+    def _compute_ndays(self, month: int) -> int:
 
-        if self.scrapper_type != ScrapperType.OGIMET_HOURLY:
+        if self._scrapper_type != ScrapperType.OGIMET_HOURLY:
             raise ValueError("OgimetUC.compute_ndays : le type de scrapper est invalide")
 
-        ndays = self.days[-1] - self.days[0] + 1
+        ndays = self._days[-1] - self._days[0] + 1
         max_ndays = MonthEnum.from_id(month).ndays
         ndays = max_ndays if ndays > max_ndays else ndays
 
         return ndays
 
-    def compute_day(self, month: int) -> int:
+    def _compute_day(self, month: int) -> int:
 
-        if self.scrapper_type != ScrapperType.OGIMET_HOURLY:
+        if self._scrapper_type != ScrapperType.OGIMET_HOURLY:
             raise ValueError("OgimetUC.compute_day : le type de scrapper est invalide")
 
-        day = self.days[-1]
+        day = self._days[-1]
         max_day = MonthEnum.from_id(month).ndays
         day = max_day if day > max_day else day
 
@@ -317,14 +302,6 @@ class WundergroundUC(ScrapperUC):
         super().__init__()
         self._region = ""
         self._country_code = ""
-
-    @property
-    def region(self):
-        return self._region
-
-    @property
-    def country_code(self):
-        return self._country_code
 
     @classmethod
     def from_json_object(cls, jsono, should_check_parameter: bool = True):
@@ -352,37 +329,20 @@ class WundergroundUC(ScrapperUC):
 
         if self.scrapper_type == ScrapperType.WUNDERGROUND_DAILY:
 
-            return (TPBuilder(self.scrapper_type).with_country_code(self.country_code)
-                                                 .with_region(self.region)
-                                                 .with_city(self.city)
+            return (TPBuilder(self.scrapper_type).with_country_code(self._country_code)
+                                                 .with_region(self._region)
+                                                 .with_city(self._city)
                                                  .with_year(year)
                                                  .with_month(month)
                                                  .build()
-                    for year in range(self.years[0],
-                                      self.years[-1] + 1)
+                    for year in range(self._years[0],
+                                      self._years[-1] + 1)
 
-                    for month in range(self.months[0],
-                                       self.months[-1] + 1))
+                    for month in range(self._months[0],
+                                       self._months[-1] + 1))
 
         elif self.scrapper_type == ScrapperType.WUNDERGROUND_HOURLY:
-
-            return (TPBuilder(self.scrapper_type).with_country_code(self.country_code)
-                                                 .with_region(self.region)
-                                                 .with_city(self.city)
-                                                 .with_year(year)
-                                                 .with_month(month)
-                                                 .with_day(day)
-                                                 .build()
-                    for year in range(self.years[0],
-                                      self.years[-1] + 1)
-
-                    for month in range(self.months[0],
-                                       self.months[-1] + 1)
-
-                    for day in range(self.days[0],
-                                     self.days[-1] + 1)
-
-                    if day <= MonthEnum.from_id(month).ndays)
+            raise NotImplementedError("un jour peut être !")
         else:
             raise ValueError("WundergroundUC.to_tps : scrapper_type invalide")
 

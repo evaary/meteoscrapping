@@ -1,3 +1,6 @@
+from typing import List
+
+
 class UCFParameterEnumMember:
     def __init__(self, name: str):
         self._name = name
@@ -34,6 +37,16 @@ class UCFParameter:
     REGION = UCFParameterEnumMember("region")
     COUNTRY_CODE = UCFParameterEnumMember("code_pays")
 
+    SPECIFIC_FIELDS = {
+        WUNDERGROUND: [REGION, COUNTRY_CODE],
+        METEOCIEL: [CODE, CODE_NUM],
+        OGIMET: [IND]
+    }
+
+    COMMON_FIELDS = [CITY]
+
+    DATE_FIELDS = [YEARS, MONTHS, DAYS]
+
     DEFAULT_WAITING = 2
     MIN_MONTHS_DAYS_VALUE = 1
     MAX_DATE_FIELD_SIZE = 2
@@ -52,3 +65,7 @@ class UCFParameter:
         return [cls.YEARS,
                 cls.MONTHS,
                 cls.DAYS]
+
+    @classmethod
+    def specific_fields_by_scrapper(cls, ucfparameter: UCFParameterEnumMember) -> "List[UCFParameterEnumMember]":
+        return cls.SPECIFIC_FIELDS[ucfparameter]

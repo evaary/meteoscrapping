@@ -4,7 +4,7 @@ from app.ucs.UCFChecker import UCFChecker
 from app.ucs.ucf_checker_exceptions import (DateFieldException,
                                             DaysDateException,
                                             MonthsDateException,
-                                            NoSuchDateFieldException,
+                                            RequiredDateFieldException,
                                             UnavailableScrapperException,
                                             NoConfigFoundException,
                                             NotAJsonFileException,
@@ -90,10 +90,10 @@ class UCFCheckerTester(TestCase):
         with self.assertRaises(NotAJsonListException):
             UCFChecker.check(self.CONFIG_FILES["date_not_list"])
 
-        with self.assertRaises(NoSuchDateFieldException):
+        with self.assertRaises(RequiredDateFieldException):
             UCFChecker.check(self.CONFIG_FILES["missing_months"])
 
-        with self.assertRaises(NoSuchDateFieldException):
+        with self.assertRaises(RequiredDateFieldException):
             UCFChecker.check(self.CONFIG_FILES["missing_years"])
 
         with self.assertRaises(DateFieldException):

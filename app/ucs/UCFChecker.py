@@ -6,7 +6,7 @@ from app.boite_a_bonheur.UCFParameterEnum import (UCFParameter,
 from app.ucs.ucf_checker_exceptions import (DateFieldException,
                                             DaysDateException,
                                             MonthsDateException,
-                                            NoSuchDateFieldException,
+                                            RequiredDateFieldException,
                                             UnavailableScrapperException,
                                             NoConfigFoundException,
                                             NotAJsonFileException,
@@ -31,6 +31,15 @@ class UCFChecker:
     def check_date_field(obj,
                          date_field: UCFParameterEnumMember,
                          scrapper_name: UCFParameterEnumMember) -> None:
+        """Détermine si un champ date est valide ou pas."""
+
+        """
+        (1) Wunderground n'est pas disponible en version jour par jour.
+        (2) Les champs date doivent être des listes ordonnées de max 2 entiers positifs.
+            Les années doivent valoir au minimum 1800.
+            Les mois doivent être compris entre 1 et 12.
+            Les jours doivent être compris entre 1 et 31.
+        """
 
         if date_field not in UCFParameter.dates_parameters():
             raise ValueError("UCFChecker.check_date_field : {f} doit être {y}, {m}, ou {d}".format(f=date_field.name,
@@ -45,10 +54,10 @@ class UCFChecker:
         is_year = date_field == UCFParameter.YEARS
         is_month = date_field == UCFParameter.MONTHS
         is_day = date_field == UCFParameter.DAYS
-
+        # (1)
         if is_day and scrapper_name == UCFParameter.WUNDERGROUND:
             raise UnavailableScrapperException(scrapper_name)
-
+        # (2)
         if not isinstance(obj, list):
             raise NotAJsonListException(date_field)
 
@@ -74,7 +83,6 @@ class UCFChecker:
 
     @staticmethod
     def check_ucf_existence(path_to_config: str) -> None:
-
         is_valid =      os.path.exists(path_to_config)\
                     and os.path.isfile(path_to_config)
         if not is_valid:
@@ -82,13 +90,14 @@ class UCFChecker:
 
     @staticmethod
     def check_ucf_structure(path_to_config: str) -> dict:
-
-        #   (1) On tente de lire le fichier config
-        #   (2) Le fichier config doit contenir un dict
-        #   (3) Les paramètres pour chaque scrapper doivent être des listes.
-        #       json_array_parameters associe ces paramètres à leur état de présence (True = présent, par défaut)
-        #   (4) Chacun de ces paramètres est optionnel, mais il en faut au moins 1.
-
+        """"""
+        """
+        (1) On tente de lire le fichier config.
+        (2) Le fichier config doit contenir un dict.
+        (3) Les paramètres pour chaque scrapper doivent être des listes.
+            scrapper_presence associe ces paramètres à leur état de présence (True = présent, par défaut)
+        (4) Chacun de ces paramètres est optionnel, mais il en faut au moins 1.
+        """
         # (1)
         try:
             config_file: dict = from_json(path_to_config)
@@ -98,55 +107,44 @@ class UCFChecker:
         if not isinstance(config_file, dict):
             raise NotAJsonObjectException(UCFParameter.UCF)
         # (3)
-        json_array_parameters = {UCFParameter.METEOCIEL: True,
-                                 UCFParameter.OGIMET: True,
-                                 UCFParameter.WUNDERGROUND: True}
+        scrapper_presence = {UCFParameter.METEOCIEL: True,
+                             UCFParameter.OGIMET: True,
+                             UCFParameter.WUNDERGROUND: True}
 
-        for array_field in json_array_parameters.keys():
+        for array_field in scrapper_presence.keys():
             try:
                 if not isinstance(config_file[array_field.name], list):
                     raise NotAJsonListException(array_field)
             except KeyError:
-                json_array_parameters[array_field] = False
+                scrapper_presence[array_field] = False
         # (4)
-        is_valid = any(json_array_parameters.values())
-
-        if not is_valid:
+        if not any(scrapper_presence.values()):
             raise EmptyConfigFileException(path=path_to_config)
 
         return config_file
 
     @staticmethod
-    def check_scrapper_parameters_content(config: dict) -> None:
-        # Chacun des paramètres meteociel, ogimet et wunderground sont optionnels,
-        # mais s'ils sont présents, ils doivent contenir des objets JSON non vides.
-        # Au moins un des champs présents ne doit pas être vide.
+    def check_scrappers(config: dict) -> None:
+        """"""
+        """
+        Chacun des paramètres meteociel, ogimet et wunderground sont optionnels,
+        mais s'ils sont présents, ils doivent contenir des objets JSON non vides.
+        Au moins un des champs présents ne doit pas être vide.
+        """
 
         all_configs = []
+        for ucfparameter in [UCFParameter.METEOCIEL,
+                             UCFParameter.OGIMET,
+                             UCFParameter.WUNDERGROUND]:
+            try:
+                json_obj_list = config[ucfparameter.name]
+            except KeyError:
+                continue
 
-        try:
-            json_obj_list = config[UCFParameter.METEOCIEL.name]
             if not all([isinstance(x, dict) and len(x) != 0 for x in json_obj_list]):
                 raise ScrapperUCException(UCFParameter.METEOCIEL)
-            all_configs.extend(json_obj_list)
-        except KeyError:
-            pass
 
-        try:
-            json_obj_list = config[UCFParameter.OGIMET.name]
-            if not all([isinstance(x, dict) and len(x) != 0 for x in json_obj_list]):
-                raise ScrapperUCException(UCFParameter.OGIMET)
             all_configs.extend(json_obj_list)
-        except KeyError:
-            pass
-
-        try:
-            json_obj_list = config[UCFParameter.WUNDERGROUND.name]
-            if not all([isinstance(x, dict) and len(x) != 0 for x in json_obj_list]):
-                raise ScrapperUCException(UCFParameter.WUNDERGROUND)
-            all_configs.extend(json_obj_list)
-        except KeyError:
-            pass
 
         if len(all_configs) == 0:
             raise EmptyConfigFileException()
@@ -154,83 +152,62 @@ class UCFChecker:
     @classmethod
     def check_ucs(cls, config: dict) -> None:
 
-        ucs = []
-        try:
-            ucs = config[UCFParameter.WUNDERGROUND.name]
-        except KeyError:
-            pass
+        for ucfparameter in [UCFParameter.METEOCIEL,
+                             UCFParameter.OGIMET,
+                             UCFParameter.WUNDERGROUND]:
+            try:
+                ucs = config[ucfparameter.name]
+            except KeyError:
+                continue
 
-        for wuc in ucs:
-            cls.check_individual_uc(wuc, UCFParameter.WUNDERGROUND)
-
-        ucs = []
-        try:
-            ucs = config[UCFParameter.METEOCIEL.name]
-        except KeyError:
-            pass
-
-        for muc in ucs:
-            cls.check_individual_uc(muc, UCFParameter.METEOCIEL)
-
-        ucs = []
-        try:
-            ucs = config[UCFParameter.OGIMET.name]
-        except KeyError:
-            pass
-
-        for ouc in ucs:
-            cls.check_individual_uc(ouc, UCFParameter.OGIMET)
+            for uc in ucs:
+                cls.check_uc(uc, ucfparameter)
 
     @classmethod
-    def check_individual_uc(cls, uc, scrapper_name: UCFParameterEnumMember):
+    def check_uc(cls, uc, scrapper_name: UCFParameterEnumMember):
+        """Détermine si un UC du fichier de configuration est valide ou pas"""
 
+        """
+        (1) On vérifie que les champs str spécifiques au scrapper sont bien remplis.
+        (2) On vérifie que les champs str communs sont bien remplis.
+        (3) On vérifie que tous les champs dates sont bien présents. Jours n'est pas obligatoire.
+        """
         if scrapper_name not in UCFParameter.scrappers_parameters():
-            raise ValueError(
-                "UCFChecker.check_individual_uc : {x} doit être {m}, {o}, ou {w}".format(x=scrapper_name.name,
-                                                                                         m=UCFParameter.METEOCIEL.name,
-                                                                                         o=UCFParameter.OGIMET.name,
-                                                                                         w=UCFParameter.WUNDERGROUND.name))
-        if scrapper_name == UCFParameter.WUNDERGROUND:
-            specific_str_fields = [UCFParameter.REGION,
-                                   UCFParameter.COUNTRY_CODE]
-
-        elif scrapper_name == UCFParameter.METEOCIEL:
-            specific_str_fields = [UCFParameter.CODE,
-                                   UCFParameter.CODE_NUM]
-        else:
-            specific_str_fields = [UCFParameter.IND]
-
+            raise ValueError("UCFChecker.check_individual_uc : {x} doit être {m}, {o}, ou {w}".format(x=scrapper_name.name,
+                                                                                                      m=UCFParameter.METEOCIEL.name,
+                                                                                                      o=UCFParameter.OGIMET.name,
+                                                                                                      w=UCFParameter.WUNDERGROUND.name))
+        try:
+            specific_str_fields = UCFParameter.specific_fields_by_scrapper(scrapper_name)
+        except KeyError:
+            raise ValueError(f"UCFChecker.check_individual_uc : scrapper_name invalide : {scrapper_name}")
+        # (1)
         try:
             if not all([cls.is_valid_str(uc[x.name]) for x in specific_str_fields]):
                 raise SpecificStrFieldException(scrapper_name)
         except KeyError:
             raise SpecificStrFieldException(scrapper_name)
-
-        common_str_fields = [UCFParameter.CITY]
+        # (2)
         try:
-            if not all([cls.is_valid_str(uc[x.name]) for x in common_str_fields]):
+            if not all([cls.is_valid_str(uc[x.name]) for x in UCFParameter.COMMON_FIELDS]):
                 raise CommonStrFieldException()
         except KeyError:
             raise CommonStrFieldException()
-
-        date_fields = [UCFParameter.YEARS,
-                       UCFParameter.MONTHS,
-                       UCFParameter.DAYS]
-
-        for date_field in date_fields:
+        # (3)
+        for date_field in UCFParameter.DATE_FIELDS:
             try:
                 cls.check_date_field(uc[date_field.name],
                                      date_field,
                                      scrapper_name)
             except KeyError:
-                if date_field != UCFParameter.DAYS:
-                    raise NoSuchDateFieldException()
+                if date_field != UCFParameter.DAYS:  # jours n'est pas obligatoire
+                    raise RequiredDateFieldException()
 
     @classmethod
     def check(cls, path: str) -> dict:
         cls.check_ucf_existence(path)
         config = cls.check_ucf_structure(path)
-        cls.check_scrapper_parameters_content(config)
+        cls.check_scrappers(config)
         cls.check_ucs(config)
 
         return config

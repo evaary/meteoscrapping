@@ -76,7 +76,7 @@ class SpecificStrFieldException(UCFCheckerException):
         super().__init__(msg)
 
 
-class NoSuchDateFieldException(UCFCheckerException):
+class RequiredDateFieldException(UCFCheckerException):
     def __init__(self):
         super().__init__("Les champs {y} et {m} sont obligatoires dans toutes les configurations".format(y=UCFParameter.YEARS.name,
                                                                                                          m=UCFParameter.MONTHS.name))

@@ -148,7 +148,7 @@ class MeteocielUC(ScrapperUC):
     def from_json_object(cls, jsono, should_check_parameter: bool = True):
 
         if should_check_parameter:
-            UCFChecker.check_individual_uc(jsono, UCFParameter.METEOCIEL)
+            UCFChecker.check_uc(jsono, UCFParameter.METEOCIEL)
 
         muc = MeteocielUC()
 
@@ -228,7 +228,7 @@ class OgimetUC(ScrapperUC):
     def from_json_object(cls, jsono, should_check_parameter: bool = True):
 
         if should_check_parameter:
-            UCFChecker.check_individual_uc(jsono, UCFParameter.OGIMET)
+            UCFChecker.check_uc(jsono, UCFParameter.OGIMET)
 
         ouc = OgimetUC()
 
@@ -330,7 +330,7 @@ class WundergroundUC(ScrapperUC):
     def from_json_object(cls, jsono, should_check_parameter: bool = True):
 
         if should_check_parameter:
-            UCFChecker.check_individual_uc(jsono, UCFParameter.WUNDERGROUND)
+            UCFChecker.check_uc(jsono, UCFParameter.WUNDERGROUND)
 
         wuc = WundergroundUC()
 

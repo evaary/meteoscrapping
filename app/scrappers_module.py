@@ -79,37 +79,16 @@ class MeteoScrapper(ABC):
         self._print_progress(uc)
 
         for tp in uc.to_tps():
-            html_loading_trials = 3
-            html_data = None
-            while html_data is None and html_loading_trials > 0:
-                try:
-                    if html_loading_trials != 3:
-                        print("retrying...")
-                    html_data = self._load_html(tp)
-                except ProcessException:
-                    html_loading_trials -= 1
-                    tp.update_waiting()
 
-            if html_data is None:
-                self.errors[tp.key] = {"url": tp.url,
-                                       "erreur": str(HtmlPageException())}
-                self._update()
-                continue
             try:
+                html_data = self._load_html(tp)
                 col_names = self._scrap_columns_names(html_data)
                 values = self._scrap_columns_values(html_data)
-                values = self._fill_partial_rows(values,
-                                                 len(col_names),
-                                                 tp)
-                local_df = self._rework_data(values,
-                                             col_names,
-                                             tp)
-                local_df = self._add_missing_rows(local_df,
-                                                  tp)
+                values = self._fill_partial_rows(values, len(col_names), tp)
+                local_df = self._rework_data(values, col_names, tp)
+                local_df = self._add_missing_rows(local_df, tp)
             except ProcessException as e:
-
-                self.errors[tp.key] = {"url": tp.url,
-                                       "erreur": str(e)}
+                self.errors[tp.key] = {"url": tp.url, "erreur": str(e)}
                 self._update()
                 continue
 
@@ -126,16 +105,26 @@ class MeteoScrapper(ABC):
     @staticmethod
     def _load_html(tp: TaskParameters):
 
-        try:
-            with HTMLSession() as session:
-                html_page = session.get(tp.url)
-                html_page.html.render(sleep=tp.waiting,  # .html n'est pas trouvé mais est essentiel
-                                      keep_page=True,
-                                      scrolldown=1)
-            if html_page.status_code != 200:
-                raise HtmlPageException()
+        html_loading_trials = 3
+        html_data = None
+        while html_data is None and html_loading_trials > 0:
 
-        except Exception:
+            if html_loading_trials != 3:
+                print("retrying...")
+
+            try:
+                with HTMLSession() as session:
+                    html_page = session.get(tp.url)
+                    html_page.html.render(sleep=tp.waiting,  # .html n'est pas trouvé mais est essentiel
+                                          keep_page=True,
+                                          scrolldown=1)
+                if html_page.status_code != 200:
+                    html_page = None
+            except Exception:
+                html_loading_trials -= 1
+                html_page = None
+
+        if html_data is None:
             raise HtmlPageException()
 
         attr = tp.criteria.css_attribute

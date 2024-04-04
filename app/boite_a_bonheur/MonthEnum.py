@@ -65,3 +65,7 @@ class MonthEnum:
          3 => 2    6 => 5     9 => 8     12 => 11
         """
         return x.numero - 1
+
+    @staticmethod
+    def format_day_month(day_or_month: int) -> str:
+        return f"0{day_or_month}" if day_or_month < 10 else str(day_or_month)

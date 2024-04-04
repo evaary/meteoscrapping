@@ -4,11 +4,11 @@ import numpy as np
 import pandas as pd
 from abc import (ABC,
                  abstractmethod)
-from typing import List
+from typing import (List,
+                    Tuple)
 from time import perf_counter
 
-from app.exceptions.scrapping_exceptions import (ProcessException,
-                                                 ReworkException,
+from app.exceptions.scrapping_exceptions import (ReworkException,
                                                  ScrapException,
                                                  HtmlPageException)
 from app.ucs_module import ScrapperUC
@@ -38,7 +38,7 @@ class MeteoScrapper(ABC):
     def errors(self):
         return self._errors.copy()
 
-    def _update(self):
+    def _update(self) -> None:
         self._done += 1
         self._progress = round(self._done / self._todo * 100, 0)
 
@@ -55,6 +55,7 @@ class MeteoScrapper(ABC):
 
     @staticmethod
     def scrapper_instance(uc: ScrapperUC) -> "MeteoScrapper":
+        """Renvoie l'instance de scrapper adapté à l'UC."""
         # Association entre le type de scrapper des UCs et la classe scrapper à instancier.
         # Les None ne posent pas de problème car lors de la lecture du fichier config,
         # on contrôle que tous les UCs sont bien pris en charge.
@@ -70,8 +71,8 @@ class MeteoScrapper(ABC):
 
         return scrappers[uc.scrapper_type]()
 
-    def scrap_uc(self, uc: ScrapperUC):
-
+    def scrap_uc(self, uc: ScrapperUC) -> pd.DataFrame:
+        """Télécharge les données et renvoie les résultats."""
         global_df = pd.DataFrame()
 
         self._todo = sum([1 for _ in uc.to_tps()])
@@ -79,7 +80,6 @@ class MeteoScrapper(ABC):
         self._print_progress(uc)
 
         for tp in uc.to_tps():
-
             try:
                 html_data = self._load_html(tp)
                 col_names = self._scrap_columns_names(html_data)
@@ -87,13 +87,12 @@ class MeteoScrapper(ABC):
                 values = self._fill_partial_rows(values, len(col_names), tp)
                 local_df = self._rework_data(values, col_names, tp)
                 local_df = self._add_missing_rows(local_df, tp)
-            except ProcessException as e:
+                global_df = pd.concat([global_df, local_df])
+            except Exception as e:
                 self.errors[tp.key] = {"url": tp.url, "erreur": str(e)}
-                self._update()
                 continue
-
-            global_df = pd.concat([global_df, local_df])
-            self._update()
+            finally:
+                self._update()
 
         global_df = global_df[["date"] + [x for x in global_df.columns if x != "date"]]
         global_df = global_df.sort_values(by="date")
@@ -103,13 +102,13 @@ class MeteoScrapper(ABC):
         return global_df
 
     @staticmethod
-    def _load_html(tp: TaskParameters):
-
+    def _load_html(tp: TaskParameters) -> Element:
+        """Charge une page html à scrapper et renvoie la table de données trouvée."""
         html_loading_trials = 3
-        html_data = None
-        while html_data is None and html_loading_trials > 0:
+        html_page = None
+        while html_page is None and html_loading_trials > 0:
 
-            if html_loading_trials != 3:
+            if html_loading_trials < 3:
                 print("retrying...")
 
             try:
@@ -124,7 +123,7 @@ class MeteoScrapper(ABC):
                 html_loading_trials -= 1
                 html_page = None
 
-        if html_data is None:
+        if html_page is None:
             raise HtmlPageException()
 
         attr = tp.criteria.css_attribute
@@ -150,62 +149,57 @@ class MeteoScrapper(ABC):
 
     @abstractmethod
     def _scrap_columns_names(self, table: Element) -> List[str]:
+        """Renvoie les noms des colonnes de la table."""
         pass
 
     @abstractmethod
     def _scrap_columns_values(self, table: Element) -> List[str]:
+        """Renvoie les données contenues dans la table."""
         pass
 
     def _fill_partial_rows(self,
                            values: List[str],
                            n_cols: int,
                            tp: TaskParameters) -> List[str]:
-        """Complète les lignes auxquelles il manque des valeurs avec des str vides"""
-        """
-        (1) values contient des lignes incomplètes si sa taille n'est pas un multiple de n_cols.
-            Si toutes les lignes sont complètes, on a rien à faire.
-        (2) A chaque tour de boucle du traitement, on sélectionne l'équivalent d'1 ligne dans row.
-        (3) On compte le nombre de dates présentes dans row. 
-            S'il y en a plus d'1, row est en fait un mélange de 2 lignes. 
-            On ne récupère dans row que les valeurs allant de la 1ère date incluse à la 2ème exclue.
-        (4) On complète row avec autant de str que nécessaire pour avoir n_cols valeurs dedans.
-        (5) On ajoute la ligne désormais complète aux valeurs traitées, on retire des
-            valeurs à traiter les valeurs qu'on a retenu.
-        (6) Le traitement dure tant que done ne contient pas le nombre de valeurs qu'elle est censée contenir.
-        """
+        """Complète les lignes auxquelles il manque des valeurs avec des str vides."""
+
+        # (1) values contient des lignes incomplètes si sa taille n'est pas un multiple de n_cols.
+        #     Si toutes les lignes sont complètes, on a rien à faire.
+        # (2) A chaque tour de boucle, on trouve l'indexe des 2 prochaines dates et
+        #     on sélectionne les valeurs entre la 1ère date incluse et la 2ème exclue dans row.
+        # (3) On complète row avec autant de str que nécessaire pour avoir n_cols valeurs dedans,
+        #     on l'ajoute aux valeurs traitées,
+        #     on la retire des valeurs à traiter.
+
         # (1)
-        has_complete_lines = len(values) % n_cols == 0
-        if len(values) == 0 or has_complete_lines:
+        if     len(values) == 0 \
+            or len(values) % n_cols == 0:
             return values
 
-        n_rows_final = len(values) // n_cols + 1
+        print("_fill_partial_rows : " + tp.url)
+
         done = []
-        while not has_complete_lines:
+        while len(values) > 0:
             # (2)
-            row = values[:n_cols]
-            dates_in_row = self._find_dates_in_row(row, tp)
+            first_index, second_index = self._next_dates_indexes(values, tp)
+            if second_index == -1:
+                row = values[first_index:]
+            else:
+                row = values[first_index:second_index]
             # (3)
-            if len(dates_in_row) > 1:
-                index = row.index(dates_in_row[1])
-                row = row[:index]
-            # (4)
             actual_row_length = len(row)
-            row += [""] * (n_cols - actual_row_length)
-            # (5)
-            done += row
+            row.extend([""] * (n_cols - actual_row_length))
+            done.extend(row)
             values = values[actual_row_length:]
-            # (6)
-            has_complete_lines = len(done) == n_rows_final * n_cols
 
         return done
 
     @abstractmethod
-    def _find_dates_in_row(self, row: List[str], tp: TaskParameters) -> List[str]:
-        """
-        Lors de la récupération des données, des lignes peuvent être incomplètes.
-        Cette méthode renvoie toutes les valeurs de la ligne passée en paramètre qui correspondent à des dates.
-        S'il y a plus d'1 date, la ligne courante est en fait un mélange de 2 lignes.
-        """
+    def _next_dates_indexes(self,
+                            values: List[str],
+                            tp: TaskParameters) -> Tuple[int, int]:
+        """Renvoie le tuple des indexes des 2 prochaines dates de values,
+        pour la reconstruction des lignes incomplètes"""
         pass
 
     @abstractmethod
@@ -213,31 +207,32 @@ class MeteoScrapper(ABC):
                      values: List[str],
                      columns_names: List[str],
                      tp: TaskParameters) -> pd.DataFrame:
+        """Mise en forme du tableau de tableau, conversions des unités si besoin."""
         pass
 
     def _add_missing_rows(self,
                           df: pd.DataFrame,
                           tp: TaskParameters) -> pd.DataFrame:
-        """
-        Le dataframe récupéré peut être incomplet. Cette méthode rajoute les lignes des dates manquantes.
-        """
-        """
-        (1) Si le dataframe contient autant de ligne qu'attendu, on a rien à faire.
-        (2) Sinon, on initialise un DataFrame totalement vide, des dimensions attendues, 
-            avec les mêmes colonnes que df.
-        (3) On place la date de chacun des df en indexe et on retire de missings tous les indexes de df.
-            Il ne reste que les lignes manquantes.
-        (4) On ajoute ces lignes aux résultats et on remet la date en colonne.
-        """
+        """Complète le dataframe si des lignes manquent."""
+
+        # (1) Si le dataframe contient autant de lignes qu'attendu, on a rien à faire.
+        # (2) Sinon, on initialise un DataFrame totalement vide, des dimensions attendues,
+        #     avec les mêmes colonnes que df.
+        # (3) On place la date de chacun des dfs en indexe et on retire de missings tous les indexes de df.
+        #     Il ne reste que les lignes manquantes.
+        # (4) On ajoute ces lignes aux résultats et on remet la date en colonne.
+
         # (1)
-        n_rows = len(df)
-        n_days = MonthEnum.from_id(tp.month).ndays
-        if n_rows == n_days:
+        n_rows = df.shape[0]
+        expected_dates = self._expected_dates(tp)
+        if n_rows == len(expected_dates):
             return df
+
+        print("_fill_partial_rows : " + tp.url)
         # (2)
-        missings = pd.DataFrame(np.full((n_days, df.shape[1]), np.NaN),
+        missings = pd.DataFrame(np.full((len(expected_dates), df.shape[1]), np.NaN),
                                 columns=df.columns)
-        missings["date"] = pd.to_datetime(self._compute_expected_dates(tp))
+        missings["date"] = pd.to_datetime(expected_dates)
         # (3)
         df = df.set_index("date")
         missings = missings.set_index("date")
@@ -249,11 +244,9 @@ class MeteoScrapper(ABC):
         return df
 
     @abstractmethod
-    def _compute_expected_dates(self, tp: TaskParameters) -> List[str]:
-        """
-        Lorsque le dataframe des données est formé, après _rework_data, il est possible que de lignes manquent.
-        Cette méthode renvoie la liste des dates attendues pour le tp courant dans le dataframe.
-        """
+    def _expected_dates(self, tp: TaskParameters) -> List[str]:
+        """Renvoie la liste des dates attendues pour le tp courant dans le dataframe,
+        pour l'ajout des lignes manquantes."""
         pass
 
 
@@ -275,15 +268,14 @@ class MeteocielDaily(MeteoScrapper):
     REGEX_FOR_NUMERICS = r'-?\d+\.?\d*'
 
     def _scrap_columns_names(self, table):
-        """"""
-        """"
-        (1) On récupère les noms des colonnes contenus dans la 1ère ligne du tableau.
-        (2) Certains caractères à accents passent mal (précipitations, phénomènes).
-            On les remplace, on enlève les "." et on remplace les espaces par des _.
-        
-        (3) On renomme la colonne jour en date, et la dernière colonne qui n'a pas de nom en to_delete.
-        (4) On ajoute au nom de la colonne son unité.
-        """
+
+        # (1) On récupère les noms des colonnes contenus dans la 1ère ligne du tableau.
+        # (2) Certains caractères à accents passent mal (précipitations, phénomènes).
+        #     On les remplace, on enlève les "." et on remplace les espaces par des _.
+        #
+        # (3) On renomme la colonne jour en date, et la dernière colonne qui n'a pas de nom en to_delete.
+        # (4) On ajoute au nom de la colonne son unité.
+
         try:
             # (1)
             columns_names = [td.text.lower().strip() for td in table.find("tr")[0].find("td")]
@@ -313,11 +305,8 @@ class MeteocielDaily(MeteoScrapper):
         return columns_names
 
     def _scrap_columns_values(self, table):
-        """"""
-        """
-        On récupère les valeurs des cellules de toutes les lignes,
-        sauf la 1ère (noms des colonnes) et la dernière (cumul / moyenne mensuel).
-        """
+        # On récupère les valeurs des cellules de toutes les lignes,
+        # sauf la 1ère (noms des colonnes) et la dernière (cumul / moyenne mensuel).
         try:
             return [td.text.strip()
                     for tr in table.find("tr")[1:-1]
@@ -326,28 +315,22 @@ class MeteocielDaily(MeteoScrapper):
                 IndexError):
             raise ScrapException()
 
-    def _find_dates_in_row(self, row: List[str], tp) -> List[str]:
-        # pas besoin du tp ici
-        return [x
-                for x in row
-                if x.split(".")[0] in self.DAYS]
+    def _next_dates_indexes(self, values, tp):
+        dates = [x for x in values if x.split(".")[0] in self.DAYS]
+        first_index = values.index(dates[0])
+        second_index = -1 if len(dates) == 1 else values.index(dates[1])
 
-    def _rework_data(self,
-                     values,
-                     columns_names,
-                     tp):
-        """
-        Mise en forme du tableau de tableau, conversions des unités si besoin.
-        """
-        """
-        (1) On créé le tableau de données.
-        (2) Suppression des colonnes inutiles. On passe par une compréhension pour éviter les KeyError.
-        (3) Le tableau ne contient que des string composées d'une valeur et d'une unité.
-            La fonction lambda renvoie la valeur trouvée dans une string, convertie en float si elle existe, ou nan.
-            On définit aussi une fonction lambda vectorisée qui met la date en forme.
-        (4) On reconstruit les dates à partir des numéros des jours extraits de la colonne des dates.
-        (5) On extrait les valeurs des autres colonnes.
-        """
+        return (first_index, second_index)
+
+    def _rework_data(self, values, columns_names, tp):
+        # (1) On créé le tableau de données.
+        # (2) Suppression des colonnes inutiles. On passe par une compréhension pour éviter les KeyError.
+        # (3) Le tableau ne contient que des string composées d'une valeur et d'une unité.
+        #     La fonction lambda renvoie la valeur trouvée dans une string, convertie en float si elle existe, ou nan.
+        #     On définit aussi une fonction lambda vectorisée qui met la date en forme.
+        # (4) On reconstruit les dates à partir des numéros des jours extraits de la colonne des dates.
+        # (5) On extrait les valeurs des autres colonnes.
+
         # (1)
         try:
             df = pd.DataFrame(np.array(values)
@@ -377,19 +360,12 @@ class MeteocielDaily(MeteoScrapper):
 
         return df
 
-    def _compute_expected_dates(self, tp: TaskParameters):
-        return [     f"{tp.year_as_str}-{tp.month_as_str}-0{x}" if x < 10
-                else f"{tp.year_as_str}-{tp.month_as_str}-{x}"
+    def _expected_dates(self, tp):
+        return [f"{tp.year_as_str}-{tp.month_as_str}-{MonthEnum.format_day_month(x)}"
                 for x in range(1, MonthEnum.from_id(tp.month).ndays + 1)]
 
 
 class MeteocielHourly(MeteoScrapper):
-
-    def _find_dates_in_row(self, row: List[str]) -> List[str]:
-        pass
-
-    def _compute_expected_dates(self, tp: TaskParameters) -> List[str]:
-        pass
 
     UNITS = {"visi": "km",
              "temperature": "°C",
@@ -403,104 +379,75 @@ class MeteocielHourly(MeteoScrapper):
     # Regex pour récupérer uniquement les float d'une string.
     REGEX_FOR_NUMERICS = r'-?\d+\.?\d*'
 
-    # override
     def _scrap_columns_names(self, table):
-        """
-        Récupération du nom des colonnes.
-        """
+        #   (1) Certains caractères à accents passent mal, on les remplace par leur version sans accent.
+        #   (2) Certains noms sont sur 2 lignes, on peut se passer de la 2ème.
+        #   (3) On renomme humi en humidite et point de rosee en point_de_rosee
+        #   (4) La colonne vent est composée de 2 sous colonnes: direction et vitesse.
+        #       Le tableau compte donc n colonnes mais n-1 noms de colonnes.
+        #       On rajoute donc un nom pour la colonne de la direction du vent.
         try:
             columns_names = [td.text.lower() for td in table.find("tr")[0].find("td")]
+            # (1)
             columns_names = [col.replace("ã©", "e")
                                 .replace(".", "")
                              for col in columns_names]
+            # (2)
             columns_names = [col.split("\n")[0] if "\n" in col else col for col in columns_names]
-            columns_names = [col if col != "humi" else "humidite" for col in columns_names]
 
-            # La colonne vent est composée de 2 sous colonnes: direction et vitesse.
-            # Le tableau compte donc n colonnes mais n-1 noms de colonnes.
-            # On rajoute donc un nom pour la colonne de la direction du vent.
-            indexe = columns_names.index("vent (rafales)")
-            columns_names.insert(indexe, "winddir")
-            columns_names = [col if "rosee" not in col else col.replace(" ", "_") for col in columns_names]
-        except (AttributeError,
-                IndexError):
+        except IndexError:
             raise ScrapException()
+        # (3)
+        try:
+            indexe = columns_names.index("humi")
+            columns_names[indexe] = "humidite"
+        except ValueError:
+            pass
+        try:
+            indexe = columns_names.index("point de rosee")
+            columns_names[indexe] = "point_de_rosee"
+        except ValueError:
+            pass
+        # (4)
+        indexe = columns_names.index("vent (rafales)")
+        columns_names.insert(indexe, "winddir")
 
         return columns_names
 
-    # override
     def _scrap_columns_values(self, table):
-        """
-        Récupération des valeurs du tableau.
-        """
+        # On enlève la 1ère ligne car elle contient le nom des colonnes
         try:
             return [td.text
                     for tr in table.find("tr")[1:]
                     for td in tr.find("td")]
-        except (AttributeError,
-                IndexError):
+        except IndexError:
             raise ScrapException()
 
-    @staticmethod
-    def _fill_missing_values(values: List[str], n_cols: int):
-        """
-        Des lignes correspondant aux données pour une heure peuvent manquer.
-        On complète les données s'il en manque.
+    def _next_dates_indexes(self, values, tp):
+        dates = [f"{x} h" for x in values if x in range(0, 24)]
+        first_index = values.index(dates[0])
+        second_index = -1 if len(dates) == 1 else values.index(dates[1])
 
-        @param
-            values : La liste des données récupérées.
-            n_cols : le nombre de colonnes du tableau.
+        return (first_index, second_index)
 
-        @return
-            la liste des valeurs, complétée.
-        """
-        n_rows = 24
-        n_expected = n_rows * n_cols
-        n_values = len(values)
+    def _rework_data(self, values, columns_names, tp):
+        #   (1) On créé le tableau.
+        #   (2) On met de coté la colonne vent car il faut la séparer en 2.
+        #       On supprime les colonnes inutiles.
+        #   (3) On convertit les valeurs du format string vers le format qui leur vont.
+        #   (4) Séparation de la colonne "vent (rafales)" en 2 colonnes "vent" et "rafales".
+        #       Les valeurs contenues dans "vent (rafales)" sont normalement de la forme :
+        #         - x km/h (y km/h)
+        #         - x km/h
+        #       On splite selon la ( pour avoir les 2 valeurs dans 2 str différentes.
+        #       Si le split rend une liste d'1 seule valeur, on rajoute une str vide pour bien avoir 2 valeurs.
+        #   (5) On réunit les données, on met en forme le tableau.
+        #   (6) On ajoute au nom de la colonne son unité.
 
-        if n_values == n_expected:
-            return values
-
-        hours = [f"{x} h" for x in range(0, 24)]
-        missing_hours = [x for x in hours if x not in values]
-
-        for hour in missing_hours:
-            line_to_add = [hour]
-            line_to_add.extend(["" for _ in range(n_cols - 1)])
-            values.extend(line_to_add)
-
-        return values
-
-    # override
-    def _rework_data(self,
-                     values,
-                     columns_names,
-                     tp):
-        """
-        Mise en forme du tableau de tableau, conversions des unités si besoin.
-        """
-        """
-        (1) On définit les dimensions du tableau puis on le créé.
-        (2) On met de coté la colonne vent car il faut la séparer en 2.
-            On supprime les colonnes inutiles.
-        (3) On convertit les valeurs du format string vers le format qui leur vont.
-        (4) Séparation de la colonne "vent (rafales)" en 2 colonnes "vent" et "rafales".
-            Les valeurs contenues dans "vent (rafales)" sont normalement de la forme :
-              - x km/h (y km/h)
-              - x km/h
-            On splite selon la ( pour avoir les 2 valeurs dans 2 str différentes.
-            Si le split rend une liste d'1 seule valeur, on rajoute une str vide pour bien avoir 2 valeurs.
-        (5) On réunit les données, on met en forme le tableau.
-        (6) On ajoute au nom de la colonne son unité.
-        """
         # (1)
-        n_rows = 24
-        n_cols = len(columns_names)
-        values = self._fill_missing_values(values, n_cols)
-
         try:
             df = pd.DataFrame(np.array(values)
-                                .reshape(n_rows, n_cols),
+                                .reshape(-1, len(columns_names)),
                               columns=columns_names)
         except ValueError:
             raise ReworkException()
@@ -558,6 +505,10 @@ class MeteocielHourly(MeteoScrapper):
                       for col in df.columns]
         return df
 
+    def _expected_dates(self, tp):
+        return [f"{tp.year_as_str}-{tp.month_as_str}-{tp.day_as_str} {MonthEnum.format_day_month(x)}:00:00"
+                for x in range(0, 24)]
+
 
 class OgimetDaily(MeteoScrapper):
 
@@ -565,27 +516,19 @@ class OgimetDaily(MeteoScrapper):
                            "wind_(km/h)_dir"]
 
     def _scrap_columns_names(self, table):
-        """
-        Récupération du nom des colonnes.
-        """
-        """
-        (1) On récupère les 2 tr du thead de la table de données sur ogimet dans trs.
-            Le 1er contient les noms principaux des colonnes, le 2ème 6 compléments.
-            Les 3 premiers compléments sont pour la température, les 3 suivants pour le vent.
-
-        (2) On initialise une liste de liste, de la même longueur que la liste des noms
-            principaux. Ces listes contiendront les subnames associés à chaque main name.
-            Pour température et vent, on a max 3 subnames chacun. Les autres listes sont vides.
-            On remplit les listes avec les valeurs de subnames associés.
-
-        (3) On établit la liste des noms de colonnes en associant les noms prinicpaux
-            et leurs compléments. On remplace les sauts de lignes et les espaces par des _ .
-            On passe en minuscules avec lower et on supprime les espaces avec strip.
-            On reforme l'unité de température.
-
-        (4) La colonne daily_weather_summary compte pour 8, on n'a qu'1 nom sur les 8.
-            On en rajoute 7.
-        """
+        #   (1) On récupère les 2 tr du thead de la table de données sur ogimet dans trs.
+        #       Le 1er contient les noms principaux des colonnes, le 2ème 6 compléments.
+        #       Les 3 premiers compléments sont pour la température, les 3 suivants pour le vent.
+        #   (2) On initialise une liste de liste, de la même longueur que la liste des noms
+        #       principaux. Ces listes contiendront les subnames associés à chaque main name.
+        #       Pour température et vent, on a max 3 subnames chacun. Les autres listes sont vides.
+        #       On remplit les listes avec les valeurs de subnames associés.
+        #   (3) On établit la liste des noms de colonnes en associant les noms prinicpaux
+        #       et leurs compléments. On remplace les sauts de lignes et les espaces par des _ .
+        #       On passe en minuscules avec lower et on supprime les espaces avec strip.
+        #       On reforme l'unité de température.
+        #   (4) La colonne daily_weather_summary compte pour 8, on n'a qu'1 nom sur les 8.
+        #       On en rajoute 7.
         # (1)
         try:
             trs = table.find("thead")[0]\
@@ -633,49 +576,35 @@ class OgimetDaily(MeteoScrapper):
         return columns_names
 
     def _scrap_columns_values(self, table):
-        """
-        Récupération des valeurs du tableau.
-        """
         try:
             return [td.text for td in table.find("tbody")[0]
                                            .find("td")]
-        except (AttributeError,
-                IndexError):
+        except IndexError:
             raise ScrapException()
 
-    def _find_dates_in_row(self, row, tp) -> List[str]:
-        """
-        Ogimet gère mal les trous dans les données.
-        Si certaines valeurs manquent en début ou milieu de ligne,
-        elle sont comblées par "---", et tout va bien, on a des valeurs quand même.
+    def _next_dates_indexes(self, values, tp):
+        dates = [x for x in values if f"{tp.month_as_str}/" in x]
+        first_index = values.index(dates[0])
+        second_index = -1 if len(dates) == 1 else values.index(dates[1])
 
-        Si les valeurs manquantes sont à la fin, la ligne s'arrête prématurément.
-        Elle compte moins de valeurs qu'attendu, on ne peut pas reconstruire le tableau.
+        return (first_index, second_index)
 
-        _fill_missing_values comble les manques dans les lignes en ajoutant des "" à la fin.
-        """
-        return [x for x in row if f"{tp.month_as_str}/" in x]
+    def _rework_data(self, values, columns_names, tp):
+        #   (1) Création du dataframe.
+        #   (2) La colonne date est au format MM/JJ, on la convertit au format AAAA-MM-JJ.
+        #   (3) Les valeurs sont au format str, on les convertit en numérique colonne par colonne.
+        #   (4) La colonne wind_(km/h)_dir contient des str, on remplace les "---" par "" pour les
+        #       valeurs manquantes.
+        #   (5) On supprime les colonnes daily_weather_summary si elles existent en conservant les
+        #       colonnes qui n'ont pas daily_weather_summary dans leur nom.
 
-    def _rework_data(self,
-                     values,
-                     columns_names,
-                     tp):
-        """
-        Mise en forme du tbleau de tableau, conversions des unités si besoin.
-        """
-        """
-        (1) Création du dataframe.
-        (2) La colonne date est au format MM/JJ, on la convertit au format AAAA-MM-JJ.
-        (3) Les valeurs sont au format str, on les convertit en numérique colonne par colonne.
-        (4) La colonne wind_(km/h)_dir contient des str, on remplace les "---" par "" pour les
-            valeurs manquantes.
-        (5) On supprime les colonnes daily_weather_summary si elles existent en conservant les
-            colonnes qui n'ont pas daily_weather_summary dans leur nom.
-        """
         # (1)
-        df = pd.DataFrame(np.array(values)
-                            .reshape(-1, len(columns_names)),
-                          columns=columns_names)
+        try:
+            df = pd.DataFrame(np.array(values)
+                              .reshape(-1, len(columns_names)),
+                              columns=columns_names)
+        except ValueError:
+            raise ReworkException()
         # (2)
         df["date"] = tp.year_as_str + "/" + df["date"]
         df["date"] = pd.to_datetime(df["date"])
@@ -699,23 +628,16 @@ class OgimetDaily(MeteoScrapper):
                  if "daily_weather_summary" not in col]]
         return df
 
-    def _compute_expected_dates(self, tp: TaskParameters) -> List[str]:
-        return [     f"{tp.year_as_str}-{tp.month_as_str}-0{x}" if x < 10
-                else f"{tp.year_as_str}-{tp.month_as_str}-{x}"
+    def _expected_dates(self, tp):
+        return [f"{tp.year_as_str}-{tp.month_as_str}-{MonthEnum.format_day_month(x)}"
                 for x in range(1, MonthEnum.from_id(tp.month).ndays + 1)]
 
 
 class OgimetHourly(MeteoScrapper):
 
-    def _find_dates_in_row(self, row: List[str]) -> List[str]:
-        pass
-
-    def _compute_expected_dates(self, tp: TaskParameters) -> List[str]:
-        pass
-
     REGEX_FOR_DATES = r'\d+/\d+/\d+'
 
-    def _scrap_columns_names(self, table: Element) -> List[str]:
+    def _scrap_columns_names(self, table):
         try:
             col_names = [th.text for th in table.find("tr")[0]
                                                 .find("th")]
@@ -734,28 +656,45 @@ class OgimetHourly(MeteoScrapper):
 
         return col_names
 
-    def _scrap_columns_values(self, table: Element) -> List[str]:
-
+    def _scrap_columns_values(self, table):
+        # On supprime la 1ère ligne (noms des colonnes) et la dernière (data du jour précédent le 1er demandé).
         values = [td.text
                   for tr in table.find("tr")[1:-1]
                   for td in tr.find("td")]
 
         return values
 
-    def _rework_data(self,
-                     values: List[str],
-                     columns_names: List[str],
-                     tp: TaskParameters) -> pd.DataFrame:
+    def _next_dates_indexes(self, values, tp):
+        days = [MonthEnum.format_day_month(tp.day - x) for x in range(0, tp.ndays)]
+        days = [f"{tp.month_as_str}/{x}/{tp.year_as_str}" for x in days]
+        dates = [x for x in values if x in days]
 
-        n_cols = len(columns_names)
-        values = self._fill_partial_rows(values, n_cols)
+        first_index = values.index(dates[0])
+        # on retire la 1ère valeur trouvée dans values étant donné qu'on cherche potentiellement
+        # la 2ème occurrence d'une même date. On rajoite 1 au 2ème indexe pour compenser.
+        second_index = -1 if len(dates) == 1 else values[first_index + 1:].index(dates[1]) + 1
 
-        df = pd.DataFrame(np.array(values)
-                            .reshape(-1, n_cols),
-                          columns=columns_names)
+        return (first_index, second_index)
 
+    def _rework_data(self, values, columns_names, tp):
+        #   (1) On créé le dataframe.
+        #   (2) Les colonnes ww, w1 et w2 ne nous intéresse pas.
+        #   (3) la date est divisée en 2 colonnes date et heure, on les rassemble, et on formate correctement.
+        #   (4) Le format des précipitations est bizarre, on choisit de le laisser sous forme de str.
+        #       Parfois la cellule contient 2 données, séparée par un retour à la ligne, on les met bout à bout.
+        #       => https://www.ogimet.com/cgi-bin/gsynres?ind=07149&ndays=31&ano=2020&mes=2&day=31&hora=23&lang=en&decoded=yes
+        #   (5) On convertit les données au format numérique.
+
+        # (1)
+        try:
+            df = pd.DataFrame(np.array(values)
+                              .reshape(-1, len(columns_names)),
+                              columns=columns_names)
+        except ValueError:
+            raise ReworkException()
+        # (2)
         df = df[[x for x in df.columns if x not in ["ww", "w1", "w2"]]]
-
+        # (3)
         try:
             df["datetime"] = df["date"] + ":" + df["time"]
         except:  # exception inconnue levée parfois
@@ -764,91 +703,31 @@ class OgimetHourly(MeteoScrapper):
         df = df.drop(["date", "time"], axis="columns")\
                .rename(columns={"datetime": "date"})
 
+        df["date"] = pd.to_datetime(df["date"],
+                                    format="%m/%d/%Y:%H:%M")
+        # (4)
         df["prec_mm"] = ["" if "--" in x
                          else "_".join(x.split("\n"))
                          for x in df["prec_mm"].values]
-
-        start_day = [int(x.split("=")[1])
-                     for x in tp.url.split("&")
-                     if x.startswith("day")][0]
-
-        n_days = [int(x.split("=")[1])
-                  for x in tp.url.split("&")
-                  if x.startswith("ndays")][0]
-
-        times = [f"0{x}:00" if x < 10 else f"{x}:00" for x in range(0, 24)]
-
-        expected_dates = [f"{tp.month_as_str}/0{start_day - x}/{tp.year_as_str}" if start_day - x < 10
-                          else f"{tp.month_as_str}/{start_day - x}/{tp.year_as_str}"
-                          for x in range(0, n_days)]
-
-        expected_datetimes = [f"{expected_date}:{time}"
-                              for time in times
-                              for expected_date in expected_dates]
-
-        actual_datetimes = df["date"].values
-        missing_datetimes = [x for x in expected_datetimes if x not in actual_datetimes]
-
-        for missing_datetime in missing_datetimes:
-            row = pd.DataFrame(np.array([""] * len(df.columns))
-                                 .reshape(-1, len(df.columns)),
-                               columns=df.columns)
-            row.loc[0, ["date"]] = missing_datetime
-            df = pd.concat([df, row])
-
-        df = df.reset_index(drop=True)
-
+        # (5)
         numeric_columns = [x for x in df.columns if x not in ["date", "ddd", "prec_mm"]]
         for numeric_column in numeric_columns:
             df[numeric_column] = pd.to_numeric(df[numeric_column],
                                                errors="coerce")
-
-        df["date"] = pd.to_datetime(df["date"],
-                                    format="%m/%d/%Y:%H:%M")
-        df = df.sort_values(by="date")
-
         return df
 
-    def _fill_partial_rows(self,
-                           values: List[str],
-                           n_cols: int,
-                           tp: TaskParameters) -> List[str]:
+    def _expected_dates(self, tp):
+        days = [f"{tp.year_as_str}-{tp.month_as_str}-{MonthEnum.format_day_month(tp.day - x)}"
+                for x in range(0, tp.ndays)]
 
-        has_complete_lines = len(values) % n_cols == 0
+        hours = [MonthEnum.format_day_month(x) for x in range(0, 24)]
 
-        if len(values) == 0 or has_complete_lines:
-            return values
-
-        done = []
-        while not has_complete_lines:
-
-            row = values[:n_cols]
-            dates = [x
-                     for x in row
-                     if re.search(self.REGEX_FOR_DATES, x) is not None]
-
-            if len(dates) > 1:
-                index = row.index(dates[1])
-                row = row[:index]
-
-            row_length = len(row)
-            row += [""] * (n_cols - row_length)
-            done += row
-            values = values[row_length:]
-
-            has_complete_lines =     len(values) == 0 \
-                                 and len(done) % n_cols == 0
-
-        return done
+        return [f"{day} {hour}:00:00"
+                for day in days
+                for hour in hours]
 
 
 class WundergroundDaily(MeteoScrapper):
-
-    def _find_dates_in_row(self, row: List[str]) -> List[str]:
-        pass
-
-    def _compute_expected_dates(self, tp: TaskParameters) -> List[str]:
-        pass
 
     UNITS_CONVERSION = {
 
@@ -871,35 +750,24 @@ class WundergroundDaily(MeteoScrapper):
                           "func": (lambda x: x * 25.4)}
     }
 
-    # override
     def _scrap_columns_names(self, table):
-        """
-        Récupération du nom des colonnes.
-        """
         try:
             return [td.text for td in table.find("thead")[0]
                                            .find("td")]
-        except (AttributeError,
-                IndexError):
+        except IndexError:
             raise ScrapException()
 
-    # override
     def _scrap_columns_values(self, table):
-        """
-        Récupération des valeurs du tableau.
-        """
-        """
-        La structure html du tableau est tordue, ce qui conduit à des doublons dans values.
-        Daily Observations compte 7 colonnes principales et 17 sous-colonnes.
-        Elle est donc de dimension (lignes, sous-colonnes).
-        values devrait être de longueur lignes * sous-colonnes.
-        Elle est en réalité de longueur lignes * sous-colonnes + 7. Il y a 7 valeurs additionnelles.
-        Pour janvier 2020 à bergamo, la 1ère des 7 valeurs additionnelles sera "Jan\n1\n2...",
-        la 2ème valeur sera "Max\nAvg\nMin\n52\n39.9\n32\n...",
-        la nième valeur contient les données de la nième colonne principale,
-        et donc de toutes ses sous-colonnes.
-        On récupère ces 7 valeurs additionnelles qui contiennent le caractère \n.
-        """
+        # La structure html du tableau est tordue, ce qui conduit à des doublons dans values.
+        # Daily Observations compte 7 colonnes principales et 17 sous-colonnes.
+        # Elle est donc de dimension (lignes, sous-colonnes).
+        # values devrait être de longueur lignes * sous-colonnes.
+        # Elle est en réalité de longueur lignes * sous-colonnes + 7. Il y a 7 valeurs additionnelles.
+        # Pour janvier 2020 à bergamo, la 1ère des 7 valeurs additionnelles sera "Jan\n1\n2...",
+        # la 2ème valeur sera "Max\nAvg\nMin\n52\n39.9\n32\n...",
+        # la nième valeur contient les données de la nième colonne principale,
+        # et donc de toutes ses sous-colonnes.
+        # On récupère ces 7 valeurs additionnelles qui contiennent le caractère \n.
         try:
             return [td.text
                     for td in table.find("tbody")[0]
@@ -909,42 +777,39 @@ class WundergroundDaily(MeteoScrapper):
                 IndexError):
             raise ScrapException()
 
-    # override
-    def _rework_data(self,
-                     values,
-                     columns_names,
-                     tp):
-        """
-        Mise en forme du tableau de tableau, conversions des unités si besoin.
-        """
-        """
-        (1) values est une liste de str. Chaque str contient toutes les données d'1 colonne principale
-            séparées par des \n ("x\nx\nx\nx..."). On convertit ces str en liste de données [x,x,x, ...].
-            values devient une liste de listes.
-            On définit aussi le nombre de ligne comme étant égal à la longueur de la 1ère liste de values,
-            qui correspond à la colonne Time.
-        (2) On initialise la matrice qui constituera le dataframe final avec la 1ère liste (Time) 
-            transformée en vecteur colonne.
-        (3) Le dataframe aura besoin de noms pour ses colonnes. Le nom final est composé d'un nom
-            principal et d'un complément, sauf pour les colonnes Time et Précipitations.
-            Les noms principaux sont contenus dans main_names, les compléments correspondent aux 1 ou 3
-            premières valeurs des listes dans values. Pour chaque liste, on détermine le nombre de colonnes
-            qu'elle contient, et on récupère les compléments (si elle compte pour 3 colonnes, on prend les 3
-            premières valeurs). On transforme la liste courante en vecteur colonne ou en matrice à 3 colonnes,
-            puis on accolle ces colonnes au dataframe principal.
-        (4) Les main_names ne vont pas, les unités précisées ne vont pas, il y a des majuscules et des espaces.
-            On veut tout en minsucule, avec des _ et dans les bonnes unités.
-            On remplace les main_names par leurs nouvelles valeurs : si la clé du dict UNITS_CONVERSION est présente
-            dans le main_name, on remplace et on passe au main_name suivant.
-            Ensuite, on associe les main_names avec leurs sub_names.
-            Enfin, le nom de la colonne des dates est actuellement Time. On le remplace par date.
-        (5) On créé le dataframe final à partir de la matrice et des noms de colonnes. La 1ère ligne,
-            contenant les compléments, est supprimée.
-        (6) La colonne date ne contient que les numéros du jour du mois (1 à 31, ou moins). On remplace
-            par la date au format AAAA-MM-JJ et on trie.
-        (7) Jusqu'ici les valeur du dataframe sont au format str. On les convertit en numérique.
-        (8) On convertit vers les unités classiques .
-        """
+    def _next_dates_indexes(self, values, tp):
+        # Il est impossible de renvoyer les indexes car on ne peut pas différencier les dates
+        # des autres valeurs.
+        raise NotImplementedError("WundergroundDaily : _next_dates_indexes n'est pas implémentée")
+
+    def _rework_data(self, values, columns_names, tp):
+        #   (1) values est une liste de str. Chaque str contient toutes les données d'1 colonne principale
+        #       séparées par des \n ("x\nx\nx\nx..."). On convertit ces str en liste de données [x,x,x, ...].
+        #       values devient une liste de listes.
+        #       On définit aussi le nombre de ligne comme étant égal à la longueur de la 1ère liste de values,
+        #       qui correspond à la colonne Time.
+        #   (2) On initialise la matrice qui constituera le dataframe final avec la 1ère liste (Time)
+        #       transformée en vecteur colonne.
+        #   (3) Le dataframe aura besoin de noms pour ses colonnes. Le nom final est composé d'un nom
+        #       principal et d'un complément, sauf pour les colonnes Time et Précipitations.
+        #       Les noms principaux sont contenus dans main_names, les compléments correspondent aux 1 ou 3
+        #       premières valeurs des listes dans values. Pour chaque liste, on détermine le nombre de colonnes
+        #       qu'elle contient, et on récupère les compléments (si elle compte pour 3 colonnes, on prend les 3
+        #       premières valeurs). On transforme la liste courante en vecteur colonne ou en matrice à 3 colonnes,
+        #       puis on accolle ces colonnes au dataframe principal.
+        #   (4) Les main_names ne vont pas, les unités précisées ne vont pas, il y a des majuscules et des espaces.
+        #       On veut tout en minsucule, avec des _ et dans les bonnes unités.
+        #       On remplace les main_names par leurs nouvelles valeurs : si la clé du dict UNITS_CONVERSION est présente
+        #       dans le main_name, on remplace et on passe au main_name suivant.
+        #       Ensuite, on associe les main_names avec leurs sub_names.
+        #       Enfin, le nom de la colonne des dates est actuellement Time. On le remplace par date.
+        #   (5) On créé le dataframe final à partir de la matrice et des noms de colonnes. La 1ère ligne,
+        #       contenant les compléments, est supprimée.
+        #   (6) La colonne date ne contient que les numéros du jour du mois (1 à 31, ou moins). On remplace
+        #       par la date au format AAAA-MM-JJ et on trie.
+        #   (7) Jusqu'ici les valeur du dataframe sont au format str. On les convertit en numérique.
+        #   (8) On convertit vers les unités classiques .
+
         # (1)
         values = [string.split("\n") for string in values]
         n_rows = len(values[0])
@@ -995,3 +860,7 @@ class WundergroundDaily(MeteoScrapper):
             df[cols_to_convert] = np.round(dico["func"](df[cols_to_convert]), 1)
 
         return df
+
+    def _expected_dates(self, tp):
+        return [f"{tp.year_as_str}-{tp.month_as_str}-{MonthEnum.format_day_month(x)}"
+                for x in range(1, MonthEnum.from_id(tp.month).ndays + 1)]

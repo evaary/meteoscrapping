@@ -48,7 +48,7 @@ class TPBuilder:
             raise ValueError(f"TPBuilder.with_month : paramètre invalide {param}")
 
         self._month = param
-        self._month_as_str = "0" + str(param) if param < 10 else str(param)
+        self._month_as_str = MonthEnum.format_day_month(param)
 
         return self
 
@@ -64,7 +64,7 @@ class TPBuilder:
             raise ValueError(f"TPBuilder.with_day : paramètre invalide {param}")
 
         self._day = param
-        self._day_as_str = "0" + str(param) if param < 10 else str(param)
+        self._day_as_str = MonthEnum.format_day_month(param)
 
         return self
 
@@ -217,7 +217,6 @@ class TPBuilder:
 
     @property
     def code(self):
-
         if self._scrapper_type not in ScrapperType.meteociel_scrappers():
             raise ValueError(f"TPBuilder.code : l'accès à cet attribut n'est autorisé que pour un scrapper meteociel.")
 
@@ -225,7 +224,6 @@ class TPBuilder:
 
     @property
     def code_num(self):
-
         if self._scrapper_type not in ScrapperType.meteociel_scrappers():
             raise ValueError(f"TPBuilder.code : l'accès à cet attribut n'est autorisé que pour un scrapper meteociel.")
 
@@ -233,7 +231,6 @@ class TPBuilder:
 
     @property
     def ind(self):
-
         if self._scrapper_type not in ScrapperType.ogimet_scrappers():
             raise ValueError(f"TPBuilder.code : l'accès à cet attribut n'est autorisé que pour un scrapper ogimet.")
 
@@ -241,7 +238,6 @@ class TPBuilder:
 
     @property
     def ndays(self):
-
         if self._scrapper_type != ScrapperType.OGIMET_HOURLY:
             raise ValueError(f"TPBuilder.ndays : l'accès à cet attribut n'est autorisé que pour un scrapper ogimet heure par heure.")
 
@@ -249,7 +245,6 @@ class TPBuilder:
 
     @property
     def country_code(self):
-
         if self._scrapper_type not in ScrapperType.wunderground_scrappers():
             raise ValueError(f"TPBuilder.code : l'accès à cet attribut n'est autorisé que pour un scrapper wunderground.")
 
@@ -257,7 +252,6 @@ class TPBuilder:
 
     @property
     def region(self):
-
         if self.scrapper_type not in ScrapperType.wunderground_scrappers():
             raise ValueError(f"TPBuilder.code : l'accès à cet attribut n'est autorisé que pour un scrapper wunderground.")
 
@@ -282,6 +276,10 @@ class TaskParameters(abc.ABC):
         self._url = ""
         self._criteria = None
         self._scrapper_type = builder.scrapper_type
+        try:
+            self._ndays = builder.ndays
+        except ValueError:
+            self._ndays = 0
 
         if builder.scrapper_type in ScrapperType.hourly_scrappers():
             self._key = f"{self._city}_{self._day_as_str}_{self._month_as_str}_{self._year_as_str}"
@@ -310,7 +308,6 @@ class TaskParameters(abc.ABC):
 
     @property
     def day(self):
-
         if self._scrapper_type not in ScrapperType.hourly_scrappers():
             raise "TaskParameters.day : l'accès à cet attribut n'est autorisé que pour un scrapper jour par jour"
 
@@ -318,11 +315,17 @@ class TaskParameters(abc.ABC):
 
     @property
     def day_as_str(self):
-
         if self._scrapper_type not in ScrapperType.hourly_scrappers():
             raise "TaskParameters.day_as_str : l'accès à cet attribut n'est autorisé que pour un scrapper jour par jour"
 
         return self._day_as_str
+
+    @property
+    def ndays(self):
+        if self._scrapper_type != ScrapperType.OGIMET_HOURLY:
+            raise ValueError(f"TaskParameters.ndays : l'accès à cet attribut n'est autorisé que pour un scrapper ogimet heure par heure.")
+
+        return self._ndays
 
     @property
     def city(self):

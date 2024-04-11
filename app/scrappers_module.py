@@ -88,14 +88,15 @@ class MeteoScrapper(ABC):
                 local_df = self._rework_data(values, col_names, tp)
                 local_df = self._add_missing_rows(local_df, tp)
                 global_df = pd.concat([global_df, local_df])
+
+                global_df = global_df[["date"] + [x for x in global_df.columns if x != "date"]]
+                global_df = global_df.sort_values(by="date")
+
             except Exception as e:
                 self.errors[tp.key] = {"url": tp.url, "erreur": str(e)}
                 continue
             finally:
                 self._update()
-
-        global_df = global_df[["date"] + [x for x in global_df.columns if x != "date"]]
-        global_df = global_df.sort_values(by="date")
 
         self._print_progress(uc)
 
@@ -361,7 +362,7 @@ class MeteocielDaily(MeteoScrapper):
         return df
 
     def _expected_dates(self, tp):
-        return [f"{tp.year_as_str}-{tp.month_as_str}-{MonthEnum.format_day_month(x)}"
+        return [f"{tp.year_as_str}-{tp.month_as_str}-{MonthEnum.format_date_time(x)}"
                 for x in range(1, MonthEnum.from_id(tp.month).ndays + 1)]
 
 
@@ -506,7 +507,7 @@ class MeteocielHourly(MeteoScrapper):
         return df
 
     def _expected_dates(self, tp):
-        return [f"{tp.year_as_str}-{tp.month_as_str}-{tp.day_as_str} {MonthEnum.format_day_month(x)}:00:00"
+        return [f"{tp.year_as_str}-{tp.month_as_str}-{tp.day_as_str} {MonthEnum.format_date_time(x)}:00:00"
                 for x in range(0, 24)]
 
 
@@ -629,7 +630,7 @@ class OgimetDaily(MeteoScrapper):
         return df
 
     def _expected_dates(self, tp):
-        return [f"{tp.year_as_str}-{tp.month_as_str}-{MonthEnum.format_day_month(x)}"
+        return [f"{tp.year_as_str}-{tp.month_as_str}-{MonthEnum.format_date_time(x)}"
                 for x in range(1, MonthEnum.from_id(tp.month).ndays + 1)]
 
 
@@ -665,7 +666,7 @@ class OgimetHourly(MeteoScrapper):
         return values
 
     def _next_dates_indexes(self, values, tp):
-        days = [MonthEnum.format_day_month(tp.day - x) for x in range(0, tp.ndays)]
+        days = [MonthEnum.format_date_time(tp.day - x) for x in range(0, tp.ndays)]
         days = [f"{tp.month_as_str}/{x}/{tp.year_as_str}" for x in days]
         dates = [x for x in values if x in days]
 
@@ -717,10 +718,10 @@ class OgimetHourly(MeteoScrapper):
         return df
 
     def _expected_dates(self, tp):
-        days = [f"{tp.year_as_str}-{tp.month_as_str}-{MonthEnum.format_day_month(tp.day - x)}"
+        days = [f"{tp.year_as_str}-{tp.month_as_str}-{MonthEnum.format_date_time(tp.day - x)}"
                 for x in range(0, tp.ndays)]
 
-        hours = [MonthEnum.format_day_month(x) for x in range(0, 24)]
+        hours = [MonthEnum.format_date_time(x) for x in range(0, 24)]
 
         return [f"{day} {hour}:00:00"
                 for day in days
@@ -862,5 +863,5 @@ class WundergroundDaily(MeteoScrapper):
         return df
 
     def _expected_dates(self, tp):
-        return [f"{tp.year_as_str}-{tp.month_as_str}-{MonthEnum.format_day_month(x)}"
+        return [f"{tp.year_as_str}-{tp.month_as_str}-{MonthEnum.format_date_time(x)}"
                 for x in range(1, MonthEnum.from_id(tp.month).ndays + 1)]

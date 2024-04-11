@@ -67,5 +67,5 @@ class MonthEnum:
         return x.numero - 1
 
     @staticmethod
-    def format_day_month(day_or_month: int) -> str:
-        return f"0{day_or_month}" if day_or_month < 10 else str(day_or_month)
+    def format_date_time(date_or_time: int) -> str:
+        return f"0{date_or_time}" if date_or_time < 10 else str(date_or_time)

@@ -48,7 +48,7 @@ class TPBuilder:
             raise ValueError(f"TPBuilder.with_month : paramètre invalide {param}")
 
         self._month = param
-        self._month_as_str = MonthEnum.format_day_month(param)
+        self._month_as_str = MonthEnum.format_date_time(param)
 
         return self
 
@@ -64,7 +64,7 @@ class TPBuilder:
             raise ValueError(f"TPBuilder.with_day : paramètre invalide {param}")
 
         self._day = param
-        self._day_as_str = MonthEnum.format_day_month(param)
+        self._day_as_str = MonthEnum.format_date_time(param)
 
         return self
 

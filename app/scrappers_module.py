@@ -79,21 +79,21 @@ class MeteoScrapper(ABC):
         self._print_progress(uc)
 
         for tp in uc.to_tps():
-            try:
-                html_data = self._load_html(tp)
-                col_names = self._scrap_columns_names(html_data)
-                values = self._scrap_columns_values(html_data)
-                local_df = self._rework_data(values, col_names, tp)
-                global_df = pd.concat([global_df, local_df])
+            #try:
+            html_data = self._load_html(tp)
+            col_names = self._scrap_columns_names(html_data)
+            values = self._scrap_columns_values(html_data)
+            local_df = self._rework_data(values, col_names, tp)
+            global_df = pd.concat([global_df, local_df])
 
-                global_df = global_df[["date"] + [x for x in global_df.columns if x != "date"]]
-                global_df = global_df.sort_values(by="date")
+            global_df = global_df[["date"] + [x for x in global_df.columns if x != "date"]]
+            global_df = global_df.sort_values(by="date")
 
-            except Exception:
-                self._errors[tp.key] = tp.url
-                continue
-            finally:
-                self._update()
+            #except Exception:
+            #    self._errors[tp.key] = tp.url
+            #    continue
+            #finally:
+            #    self._update()
 
         self._print_progress(uc)
 
@@ -176,7 +176,6 @@ class MeteocielDaily(MeteoScrapper):
              "pression": "hPa"}
 
     def _scrap_columns_names(self, table):
-
         #   (1) On récupère les noms des colonnes contenus dans la 1ère ligne du tableau.
         #   (2) Certains caractères à accents passent mal (précipitations, phénomènes).
         #     On les remplace, on enlève les "." et on remplace les espaces par des _.
@@ -185,7 +184,7 @@ class MeteocielDaily(MeteoScrapper):
 
         # (1)
         columns_names = [td.text.lower().strip() for td in table.find("tr")[0].find("td")]
-        if not columns_names or all([len(x) == 0 for x in columns_names]):
+        if len(columns_names) == 0:
             raise ScrapException()
         # (2)
         columns_names = [col.replace("ã©", "e")
@@ -219,9 +218,14 @@ class MeteocielDaily(MeteoScrapper):
     def _scrap_columns_values(self, table):
         # On récupère les valeurs des cellules de toutes les lignes,
         # sauf la 1ère (noms des colonnes) et la dernière (cumul / moyenne mensuel).
-        return [td.text.strip()
-                for tr in table.find("tr")[1:-1]
-                for td in tr.find("td")]
+        values = [td.text.strip()
+                  for tr in table.find("tr")[1:-1]
+                  for td in tr.find("td")]
+
+        if len(values) == 0:
+            raise ScrapException()
+
+        return values
 
     def _rework_data(self, values, columns_names, tp):
         #   (1) On créé le tableau de données.
@@ -267,7 +271,7 @@ class MeteocielHourly(MeteoScrapper):
     UNITS = {"visi": "km",
              "temperature": "°C",
              "point_de_rosee": "°C",
-             "humidite": "%",
+             "humi": "%",
              "vent": "km/h",
              "rafales": "km/h",
              "pression": "hPa",
@@ -280,7 +284,7 @@ class MeteocielHourly(MeteoScrapper):
         #       Le tableau compte donc n colonnes mais n-1 noms de colonnes.
         #       On rajoute donc un nom pour la colonne de la direction du vent.
         columns_names = [td.text.lower() for td in table.find("tr")[0].find("td")]
-        if not columns_names or all([len(x) == 0 for x in columns_names]):
+        if len(columns_names) == 0:
             raise ScrapException()
         # (1)
         columns_names = [col.split("\n")[0] if "\n" in col else col for col in columns_names]
@@ -306,9 +310,14 @@ class MeteocielHourly(MeteoScrapper):
 
     def _scrap_columns_values(self, table):
         # On enlève la 1ère ligne car elle contient le nom des colonnes
-        return [td.text
-                for tr in table.find("tr")[1:]
-                for td in tr.find("td")]
+        values = [td.text
+                  for tr in table.find("tr")[1:]
+                  for td in tr.find("td")]
+
+        if len(values) == 0:
+            raise ScrapException()
+
+        return values
 
     def _rework_data(self, values, columns_names, tp):
         #   (1) On créé le tableau.
@@ -367,64 +376,49 @@ class MeteocielHourly(MeteoScrapper):
 
 
 class OgimetDaily(MeteoScrapper):
-
-    NOT_NUMERIC_COLUMNS = ["date",
-                           "wind_(km/h)_dir"]
+    TEMP_SUBS = ["max", "min", "avg", "max.", "min.", "mvg."]
+    WIND_SUBS = ["dir.", "int.", "gust.", "dir", "int", "gust"]
+    NOT_NUMERIC = ["date", "wind_km/h_dir"]
 
     def _scrap_columns_names(self, table):
         #   (1) On récupère les 2 tr du thead de la table de données sur ogimet dans trs.
-        #       Le 1er contient les noms principaux des colonnes, le 2ème 6 compléments.
-        #       Les 3 premiers compléments sont pour la température, les 3 suivants pour le vent.
-        #   (2) On initialise une liste de liste, de la même longueur que la liste des noms
-        #       principaux. Ces listes contiendront les subnames associés à chaque main name.
-        #       Pour température et vent, on a max 3 subnames chacun. Les autres listes sont vides.
-        #       On remplit les listes avec les valeurs de subnames associés.
-        #   (3) On établit la liste des noms de colonnes en associant les noms prinicpaux
-        #       et leurs compléments. On remplace les sauts de lignes et les espaces par des _ .
-        #       On passe en minuscules avec lower et on supprime les espaces avec strip.
-        #       On reforme l'unité de température.
+        #       Le 1er contient les noms principaux des colonnes, le 2ème des compléments.
+        #       Max 3 des compléments sont pour la température, max 3 autres pour le vent.
+        #   (2) On ajoute chaque nom principal à la liste des noms de colonnes, en lui associant
+        #       son complément s'il y a lieu.
+        #   (3) On formate les noms et les unités correctement.
         #   (4) La colonne daily_weather_summary compte pour 8, on n'a qu'1 nom sur les 8.
         #       On en rajoute 7.
-        # (1)
-        try:
-            trs = table.find("thead")[0]\
-                       .find("tr")
-            main_names = [th.text for th in trs[0].find("th")]
-            complements = [th.text for th in trs[1].find("th")]
 
-        except (AttributeError,
-                IndexError):
+        # (1)
+        trs = table.find("thead")[0].find("tr")
+        main_names = [th.text.strip().lower() for th in trs[0].find("th")]
+        all_subs = [th.text.strip().lower() for th in trs[1].find("th")]
+        actual_temp_subs = [x for x in all_subs if x in self.TEMP_SUBS]
+        actual_wind_subs = [x for x in all_subs if x in self.WIND_SUBS]
+        columns_names = []
+
+        if len(trs) == 0 or len(main_names) == 0:
             raise ScrapException()
 
         # (2)
-        sub_names = [[""] for _ in range(len(main_names))]
-        try:
-            temperature_index = main_names.index([x
-                                                  for x in main_names
-                                                  if "Temperature" in x][0])
-            sub_names[temperature_index] = [x
-                                            for x in complements
-                                            if x in ["Max", "Min", "Avg", "Max.", "Min.", "Avg."]]
-        except IndexError:
-            pass
-        try:
-            wind_index = main_names.index([x
-                                           for x in main_names
-                                           if "Wind" in x][0])
-            sub_names[wind_index] = [x
-                                     for x in complements
-                                     if x in ["Dir.", "Int.", "Gust.", "Dir", "Int", "Gust"]]
-        except IndexError:
-            pass
+        for main_name in main_names:
+            if "temperature" in main_name:
+                to_add = [f"{main_name}_{sub}" for sub in actual_temp_subs]
+            elif "wind" in main_name:
+                to_add = [f"{main_name}_{sub}" for sub in actual_wind_subs]
+            else:
+                to_add = [main_name]
+
+            columns_names.extend(to_add)
         # (3)
-        columns_names = [f"{main.strip()} {sub.strip()}".strip()
-                                                        .lower()
-                                                        .replace("\n", "_")
-                                                        .replace(" ", "_")
-                                                        .replace("(c)", "(°C)")
-                                                        .replace(".", "")
-                         for main, subs in zip(main_names, sub_names)
-                         for sub in subs]
+        columns_names = [x.replace("\n", "_")
+                          .replace(" ", "_")
+                          .replace("(c)", "(°C)")
+                          .replace(".", "")
+                          .replace("(", "")
+                          .replace(")", "")
+                         for x in columns_names]
         # (4)
         if "daily_weather_summary" in columns_names:
             columns_names += [f"daily_weather_summary_{i}" for i in range(7)]
@@ -432,18 +426,51 @@ class OgimetDaily(MeteoScrapper):
         return columns_names
 
     def _scrap_columns_values(self, table):
-        try:
-            return [td.text for td in table.find("tbody")[0]
-                                           .find("td")]
-        except IndexError:
+        values = [td.text for td in table.find("tbody")[0].find("td")]
+
+        if len(values) == 0:
             raise ScrapException()
 
-    def _next_dates_indexes(self, values, tp):
-        dates = [x for x in values if f"{tp.month_as_str}/" in x]
-        first_index = values.index(dates[0])
-        second_index = -1 if len(dates) == 1 else values.index(dates[1])
+        return values
 
-        return (first_index, second_index)
+    @staticmethod
+    def _fill_partial_rows(values: "List[str]",
+                           n_cols: int,
+                           tp: TaskParameters):
+        """Complète les lignes auxquelles il manque des valeurs avec des str vides."""
+
+        #   (1) values contient des lignes incomplètes si sa taille n'est pas un multiple de n_cols.
+        #     Si toutes les lignes sont complètes, on a rien à faire.
+        #   (2) A chaque tour de boucle, on trouve l'indexe des 2 prochaines dates.
+        #   (3) On sélectionne les valeurs entre la 1ère date incluse et la 2ème exclue dans row.
+        #       On retire ces valeurs de values.
+        #   (4) On complète row avec autant de str que nécessaire pour avoir n_cols valeurs dedans,
+        #       et on l'ajoute aux valeurs traitées.
+        # https://www.ogimet.com/cgi-bin/gsynres?lang=en&ind=08180&ano=2017&mes=7&day=31&hora=23&ndays=31
+
+        # (1)
+        if len(values) % n_cols == 0:
+            return values
+
+        done = []
+        while len(values) > 0:
+            # (2)
+            remaining_dates = [x for x in values if f"{tp.month_as_str}/" in x]
+            first_index = values.index(remaining_dates[0])
+            second_index = -1 if len(remaining_dates) == 1 else values.index(remaining_dates[1])
+            # (3)
+            if second_index == -1:
+                row = values[first_index:]
+                values = []
+            else:
+                row = values[first_index:second_index]
+                values = values[second_index:]
+            # (4)
+            actual_row_length = len(row)
+            row.extend([""] * (n_cols - actual_row_length))
+            done.extend(row)
+
+        return done
 
     def _rework_data(self, values, columns_names, tp):
         #   (1) Création du dataframe.
@@ -455,25 +482,24 @@ class OgimetDaily(MeteoScrapper):
         #       colonnes qui n'ont pas daily_weather_summary dans leur nom.
 
         # (1)
-        try:
-            df = pd.DataFrame(np.array(values)
-                              .reshape(-1, len(columns_names)),
-                              columns=columns_names)
-        except ValueError:
-            raise ReworkException()
+        n_cols = len(columns_names)
+        values = self._fill_partial_rows(values, n_cols, tp)
+        df = pd.DataFrame(np.array(values)
+                            .reshape(-1, n_cols),
+                          columns=columns_names)
         # (2)
         df["date"] = tp.year_as_str + "/" + df["date"]
         df["date"] = pd.to_datetime(df["date"])
         # (3)
         numeric_cols = [col
                         for col in df.columns
-                        if col not in self.NOT_NUMERIC_COLUMNS]
+                        if col not in self.NOT_NUMERIC]
 
         for col in numeric_cols:
             df[col] = pd.to_numeric(df[col], errors="coerce")
         # (4)
         try:
-            col = "wind_(km/h)_dir"
+            col = "wind_km/h_dir"
             indexes = df[df[col].str.contains("-")].index
             df.loc[indexes, col] = ""
         except KeyError:
@@ -484,26 +510,25 @@ class OgimetDaily(MeteoScrapper):
                  if "daily_weather_summary" not in col]]
         return df
 
-    def _expected_dates(self, tp):
-        return [f"{tp.year_as_str}-{tp.month_as_str}-{MonthEnum.format_date_time(x)}"
-                for x in range(1, MonthEnum.from_id(tp.month).ndays + 1)]
-
 
 class OgimetHourly(MeteoScrapper):
 
     REGEX_FOR_DATES = r'\d+/\d+/\d+'
+    UNWANTED_COLUMNS = ["ww", "w1", "w2"]
 
     def _scrap_columns_names(self, table):
-        try:
-            col_names = [th.text for th in table.find("tr")[0]
-                                                .find("th")]
-        except IndexError:
+        # La colonne date est subdivisée en 2, une colonne date et une colonne time.
+        # On ajoute la colonne time.
+        col_names = [th.text for th in table.find("tr")[0]
+                                            .find("th")]
+        if len(col_names) == 0:
             raise ScrapException()
 
-        col_names = ["_".join(colname.split("\n")) for colname in col_names]
         col_names = [colname.lower()
+                            .replace("\n", "_")
                             .replace("(c)", "°C")
                             .replace("(mm)", "mm")
+                            .replace("kmh", "km/h")
                             .replace(" ", "_")
                      for colname in col_names]
 
@@ -518,19 +543,49 @@ class OgimetHourly(MeteoScrapper):
                   for tr in table.find("tr")[1:-1]
                   for td in tr.find("td")]
 
+        if len(values) == 0:
+            raise ScrapException()
+
         return values
 
-    def _next_dates_indexes(self, values, tp):
-        days = [MonthEnum.format_date_time(tp.day - x) for x in range(0, tp.ndays)]
-        days = [f"{tp.month_as_str}/{x}/{tp.year_as_str}" for x in days]
-        dates = [x for x in values if x in days]
+    @staticmethod
+    def _fill_partial_rows(values: "List[str]",
+                           n_cols: int,
+                           tp: TaskParameters):
+        """Complète les lignes auxquelles il manque des valeurs avec des str vides."""
 
-        first_index = values.index(dates[0])
-        # on retire la 1ère valeur trouvée dans values étant donné qu'on cherche potentiellement
-        # la 2ème occurrence d'une même date. On rajoite 1 au 2ème indexe pour compenser.
-        second_index = -1 if len(dates) == 1 else values[first_index + 1:].index(dates[1]) + 1
+        #   (1) values contient des lignes incomplètes si sa taille n'est pas un multiple de n_cols.
+        #     Si toutes les lignes sont complètes, on a rien à faire.
+        #   (2) A chaque tour de boucle, on trouve l'indexe des 2 prochaines dates.
+        #   (3) On sélectionne les valeurs entre la 1ère date incluse et la 2ème exclue dans row.
+        #       On retire ces valeurs de values.
+        #   (4) On complète row avec autant de str que nécessaire pour avoir n_cols valeurs dedans,
+        #       et on l'ajoute aux valeurs traitées.
+        # https://www.ogimet.com/cgi-bin/gsynres?lang=en&ind=08180&ano=2017&mes=7&day=31&hora=23&ndays=31
 
-        return (first_index, second_index)
+        # (1)
+        if len(values) % n_cols == 0:
+            return values
+
+        done = []
+        while len(values) > 0:
+            # (2)
+            remaining_dates = [x for x in values if f"{tp.month_as_str}/" in x]
+            first_index = values.index(remaining_dates[0])
+            second_index = -1 if len(remaining_dates) == 1 else values.index(remaining_dates[1])
+            # (3)
+            if second_index == -1:
+                row = values[first_index:]
+                values = []
+            else:
+                row = values[first_index:second_index]
+                values = values[second_index:]
+            # (4)
+            actual_row_length = len(row)
+            row.extend([""] * (n_cols - actual_row_length))
+            done.extend(row)
+
+        return done
 
     def _rework_data(self, values, columns_names, tp):
         #   (1) On créé le dataframe.
@@ -542,17 +597,14 @@ class OgimetHourly(MeteoScrapper):
         #   (5) On convertit les données au format numérique.
 
         # (1)
-        try:
-            df = pd.DataFrame(np.array(values)
-                              .reshape(-1, len(columns_names)),
-                              columns=columns_names)
-        except ValueError:
-            raise ReworkException()
+        df = pd.DataFrame(np.array(values)
+                          .reshape(-1, len(columns_names)),
+                          columns=columns_names)
         # (2)
-        df = df[[x for x in df.columns if x not in ["ww", "w1", "w2"]]]
+        df = df[[x for x in df.columns if x not in self.UNWANTED_COLUMNS]]
         # (3)
         try:
-            df["datetime"] = df["date"] + ":" + df["time"]
+            df["date"] = df["date"] + ":" + df["time"]
         except:  # exception inconnue levée parfois
             df["datetime"] = []
 

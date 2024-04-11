@@ -282,9 +282,9 @@ class TaskParameters(abc.ABC):
             self._ndays = 0
 
         if builder.scrapper_type in ScrapperType.hourly_scrappers():
-            self._key = f"{self._city}_{self._day_as_str}_{self._month_as_str}_{self._year_as_str}"
+            self._key = f"{self._scrapper_type}_{self._city}_{self._day_as_str}_{self._month_as_str}_{self._year_as_str}"
         else:
-            self._key = f"{self._city}_{self._month_as_str}_{self._year_as_str}"
+            self._key = f"{self._scrapper_type}_{self._city}_{self._month_as_str}_{self._year_as_str}"
 
     @property
     def scrapper_type(self):

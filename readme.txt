@@ -85,8 +85,8 @@ Performances
     => a généré un CSV de 4 018 lignes en 916s, sans fichier d'erreur
 
     meteociel jour par jour
-    { "code_num":"2", "code": "7249", "ville":"orleans", "annees":[2013, 2023], "mois":[1, 12] }
-    => a généré un CSV de 4 018 lignes en 533s, sans fichier d'erreur
+    { "code_num":"2", "code": "7249", "ville":"orleans", "annees":[1975, 2023], "mois":[1, 12] }
+    => a généré un CSV de 17 897 lignes (100% des données) en 2 364, sans fichier d'erreur
 
 
 Structure du fichier config.json:

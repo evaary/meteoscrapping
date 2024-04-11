@@ -4,8 +4,7 @@ import numpy as np
 import pandas as pd
 from abc import (ABC,
                  abstractmethod)
-from typing import (List,
-                    Tuple)
+from typing import List
 from time import perf_counter
 
 from app.exceptions.scrapping_exceptions import (ReworkException,
@@ -84,16 +83,14 @@ class MeteoScrapper(ABC):
                 html_data = self._load_html(tp)
                 col_names = self._scrap_columns_names(html_data)
                 values = self._scrap_columns_values(html_data)
-                values = self._fill_partial_rows(values, len(col_names), tp)
                 local_df = self._rework_data(values, col_names, tp)
-                local_df = self._add_missing_rows(local_df, tp)
                 global_df = pd.concat([global_df, local_df])
 
                 global_df = global_df[["date"] + [x for x in global_df.columns if x != "date"]]
                 global_df = global_df.sort_values(by="date")
 
-            except Exception as e:
-                self.errors[tp.key] = {"url": tp.url, "erreur": str(e)}
+            except Exception:
+                self._errors[tp.key] = tp.url
                 continue
             finally:
                 self._update()
@@ -158,51 +155,6 @@ class MeteoScrapper(ABC):
         """Renvoie les données contenues dans la table."""
         pass
 
-    def _fill_partial_rows(self,
-                           values: List[str],
-                           n_cols: int,
-                           tp: TaskParameters) -> List[str]:
-        """Complète les lignes auxquelles il manque des valeurs avec des str vides."""
-
-        # (1) values contient des lignes incomplètes si sa taille n'est pas un multiple de n_cols.
-        #     Si toutes les lignes sont complètes, on a rien à faire.
-        # (2) A chaque tour de boucle, on trouve l'indexe des 2 prochaines dates et
-        #     on sélectionne les valeurs entre la 1ère date incluse et la 2ème exclue dans row.
-        # (3) On complète row avec autant de str que nécessaire pour avoir n_cols valeurs dedans,
-        #     on l'ajoute aux valeurs traitées,
-        #     on la retire des valeurs à traiter.
-
-        # (1)
-        if     len(values) == 0 \
-            or len(values) % n_cols == 0:
-            return values
-
-        print("_fill_partial_rows : " + tp.url)
-
-        done = []
-        while len(values) > 0:
-            # (2)
-            first_index, second_index = self._next_dates_indexes(values, tp)
-            if second_index == -1:
-                row = values[first_index:]
-            else:
-                row = values[first_index:second_index]
-            # (3)
-            actual_row_length = len(row)
-            row.extend([""] * (n_cols - actual_row_length))
-            done.extend(row)
-            values = values[actual_row_length:]
-
-        return done
-
-    @abstractmethod
-    def _next_dates_indexes(self,
-                            values: List[str],
-                            tp: TaskParameters) -> Tuple[int, int]:
-        """Renvoie le tuple des indexes des 2 prochaines dates de values,
-        pour la reconstruction des lignes incomplètes"""
-        pass
-
     @abstractmethod
     def _rework_data(self,
                      values: List[str],
@@ -211,163 +163,107 @@ class MeteoScrapper(ABC):
         """Mise en forme du tableau de tableau, conversions des unités si besoin."""
         pass
 
-    def _add_missing_rows(self,
-                          df: pd.DataFrame,
-                          tp: TaskParameters) -> pd.DataFrame:
-        """Complète le dataframe si des lignes manquent."""
-
-        # (1) Si le dataframe contient autant de lignes qu'attendu, on a rien à faire.
-        # (2) Sinon, on initialise un DataFrame totalement vide, des dimensions attendues,
-        #     avec les mêmes colonnes que df.
-        # (3) On place la date de chacun des dfs en indexe et on retire de missings tous les indexes de df.
-        #     Il ne reste que les lignes manquantes.
-        # (4) On ajoute ces lignes aux résultats et on remet la date en colonne.
-
-        # (1)
-        n_rows = df.shape[0]
-        expected_dates = self._expected_dates(tp)
-        if n_rows == len(expected_dates):
-            return df
-
-        print("_fill_partial_rows : " + tp.url)
-        # (2)
-        missings = pd.DataFrame(np.full((len(expected_dates), df.shape[1]), np.NaN),
-                                columns=df.columns)
-        missings["date"] = pd.to_datetime(expected_dates)
-        # (3)
-        df = df.set_index("date")
-        missings = missings.set_index("date")
-        missings = missings.drop(df.index, axis="rows")
-        # (4)
-        df = pd.concat([df, missings])
-        df = df.reset_index()
-
-        return df
-
-    @abstractmethod
-    def _expected_dates(self, tp: TaskParameters) -> List[str]:
-        """Renvoie la liste des dates attendues pour le tp courant dans le dataframe,
-        pour l'ajout des lignes manquantes."""
-        pass
-
 
 class MeteocielDaily(MeteoScrapper):
 
-    UNITS = {"temperature": "°C",
-             "temp": "°C",
-             "precipitations": "mm",
-             "prec": "mm",
-             "ensoleillement": "h",
-             "vent": "kmh",
-             "rafales": "kmh",
-             "pression": "hpa"}
-
-    DAYS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"]
     UNWANTED_COLUMNS = ["to_delete", "phenomenes"]
-
-    # Regex pour récupérer uniquement les float d'une string.
     REGEX_FOR_NUMERICS = r'-?\d+\.?\d*'
+    UNITS = {"temperature": "°C",
+             "precipitations": "mm",
+             "ensoleillement": "h",
+             "vent": "km/h",
+             "rafales": "km/h",
+             "pression": "hPa"}
 
     def _scrap_columns_names(self, table):
 
-        # (1) On récupère les noms des colonnes contenus dans la 1ère ligne du tableau.
-        # (2) Certains caractères à accents passent mal (précipitations, phénomènes).
+        #   (1) On récupère les noms des colonnes contenus dans la 1ère ligne du tableau.
+        #   (2) Certains caractères à accents passent mal (précipitations, phénomènes).
         #     On les remplace, on enlève les "." et on remplace les espaces par des _.
-        #
-        # (3) On renomme la colonne jour en date, et la dernière colonne qui n'a pas de nom en to_delete.
-        # (4) On ajoute au nom de la colonne son unité.
+        #   (3) On renomme la colonne jour en date, et la dernière colonne qui n'a pas de nom en to_delete.
+        #   (4) On ajoute au nom de la colonne son unité.
+
+        # (1)
+        columns_names = [td.text.lower().strip() for td in table.find("tr")[0].find("td")]
+        if not columns_names or all([len(x) == 0 for x in columns_names]):
+            raise ScrapException()
+        # (2)
+        columns_names = [col.replace("ã©", "e")
+                            .replace("ã¨", "e")
+                            .replace(".", "")
+                            .replace(" ", "_")
+                            .replace("temp_", "temperature_")
+                            .replace("prec_", "precipitations_")
+                         for col in columns_names]
+        # (3)
+        index = columns_names.index("jour")
+        columns_names[index] = "date"
 
         try:
-            # (1)
-            columns_names = [td.text.lower().strip() for td in table.find("tr")[0].find("td")]
-            # (2)
-            columns_names = [col.replace("ã©", "e")
-                                .replace("ã¨", "e")
-                                .replace(".", "")
-                                .replace(" ", "_")
-                             for col in columns_names]
-            # (3)
-            columns_names = ["date" if col == "jour" else col for col in columns_names]
-            columns_names = ["to_delete" if col == "" else col for col in columns_names]
-            # (4)
-            cols_units = [col.split('_')[0] for col in columns_names]
-            cols_units = ["" if colunit not in self.UNITS.keys()
-                          else self.UNITS[colunit]
-                          for colunit in cols_units]
+            index = columns_names.index("")
+            columns_names[index] = "to_delete"
+        except ValueError:
+            pass
+        # (4)
+        cols_units = [col.split('_')[0] for col in columns_names]
+        cols_units = ["" if colunit not in self.UNITS.keys()
+                      else self.UNITS[colunit]
+                      for colunit in cols_units]
 
-            columns_names = [colname if colunit == ""
-                             else f"{colname}_{colunit}"
-                             for colname, colunit in zip(columns_names,
-                                                         cols_units)]
-        except (AttributeError,
-                IndexError):
-            raise ScrapException()
-
+        columns_names = [colname if not colunit
+                         else f"{colname}_{colunit}"
+                         for colname, colunit in zip(columns_names,
+                                                     cols_units)]
         return columns_names
 
     def _scrap_columns_values(self, table):
         # On récupère les valeurs des cellules de toutes les lignes,
         # sauf la 1ère (noms des colonnes) et la dernière (cumul / moyenne mensuel).
-        try:
-            return [td.text.strip()
-                    for tr in table.find("tr")[1:-1]
-                    for td in tr.find("td")]
-        except (AttributeError,
-                IndexError):
-            raise ScrapException()
-
-    def _next_dates_indexes(self, values, tp):
-        dates = [x for x in values if x.split(".")[0] in self.DAYS]
-        first_index = values.index(dates[0])
-        second_index = -1 if len(dates) == 1 else values.index(dates[1])
-
-        return (first_index, second_index)
+        return [td.text.strip()
+                for tr in table.find("tr")[1:-1]
+                for td in tr.find("td")]
 
     def _rework_data(self, values, columns_names, tp):
-        # (1) On créé le tableau de données.
-        # (2) Suppression des colonnes inutiles. On passe par une compréhension pour éviter les KeyError.
-        # (3) Le tableau ne contient que des string composées d'une valeur et d'une unité.
-        #     La fonction lambda renvoie la valeur trouvée dans une string, convertie en float si elle existe, ou nan.
-        #     On définit aussi une fonction lambda vectorisée qui met la date en forme.
-        # (4) On reconstruit les dates à partir des numéros des jours extraits de la colonne des dates.
-        # (5) On extrait les valeurs des autres colonnes.
+        #   (1) On créé le tableau de données.
+        #   (2) Suppression des colonnes inutiles. On passe par une compréhension pour éviter les KeyError.
+        #   (3) Le tableau ne contient que des string composées d'une valeur et d'une unité.
+        #       La fonction lambda renvoie la valeur trouvée dans une string, convertie en float si elle existe, ou nan.
+        #       On définit aussi une fonction lambda vectorisée qui met la date en forme.
+        #   (4) On reconstruit les dates à partir des numéros des jours extraits de la colonne des dates.
+        #       On extrait les valeurs des autres colonnes.
 
         # (1)
-        try:
-            df = pd.DataFrame(np.array(values)
-                                .reshape(-1, len(columns_names)),
-                              columns=columns_names)
-        except ValueError:
-            raise ReworkException()
+        df = pd.DataFrame(np.array(values)
+                            .reshape(-1, len(columns_names)),
+                          columns=columns_names)
         # (2)
         df = df[[x for x in df.columns if x not in self.UNWANTED_COLUMNS]]
         # (3)
-        f_num_extract = np.vectorize(lambda string: np.NaN if string in ("---", "")
-                                                    else 0 if string in ("aucune", "traces")
-                                                    else float(re.findall(self.REGEX_FOR_NUMERICS, string)[0]))
+        f_num_extract = np.vectorize(self._extract_numeric_value)
+        f_rework_dates = np.vectorize(lambda day: f"{tp.year_as_str}-{tp.month_as_str}-{MonthEnum.format_date_time(int(day))}")
 
-        f_rework_dates = np.vectorize(lambda day:      f"{tp.year_as_str}-{tp.month_as_str}-0{int(day)}" if day < 10
-                                                  else f"{tp.year_as_str}-{tp.month_as_str}-{int(day)}")
-        try:
-            # (4)
-            df["date"] = f_num_extract(df["date"])
-            df["date"] = f_rework_dates(df["date"])
-            df["date"] = pd.to_datetime(df["date"])
-            # (5)
-            df.iloc[:, 1:] = f_num_extract(df.iloc[:, 1:])
-
-        except ValueError:
-            raise ReworkException()
+        # (4)
+        df["date"] = f_num_extract(df["date"])
+        df["date"] = f_rework_dates(df["date"])
+        df["date"] = pd.to_datetime(df["date"])
+        df.iloc[:, 1:] = f_num_extract(df.iloc[:, 1:])
 
         return df
 
-    def _expected_dates(self, tp):
-        return [f"{tp.year_as_str}-{tp.month_as_str}-{MonthEnum.format_date_time(x)}"
-                for x in range(1, MonthEnum.from_id(tp.month).ndays + 1)]
+    def _extract_numeric_value(self, str_value: str):
+        if str_value in ("---", ""):
+            return np.NaN
+        elif str_value in ("aucune", "traces"):
+            return 0
+        else:
+            return float(re.findall(self.REGEX_FOR_NUMERICS, str_value)[0])
 
 
 class MeteocielHourly(MeteoScrapper):
 
+    UNWANTED_COLUMNS = ["winddir", "temps", "vent_rafales"]
+    NOT_NUMERIC = ["date", "neb"]
+    REGEX_FOR_NUMERICS = r'-?\d+\.?\d*'
     UNITS = {"visi": "km",
              "temperature": "°C",
              "point_de_rosee": "°C",
@@ -377,59 +273,42 @@ class MeteocielHourly(MeteoScrapper):
              "pression": "hPa",
              "precip": "mm"}
 
-    # Regex pour récupérer uniquement les float d'une string.
-    REGEX_FOR_NUMERICS = r'-?\d+\.?\d*'
-
     def _scrap_columns_names(self, table):
-        #   (1) Certains caractères à accents passent mal, on les remplace par leur version sans accent.
-        #   (2) Certains noms sont sur 2 lignes, on peut se passer de la 2ème.
-        #   (3) On renomme humi en humidite et point de rosee en point_de_rosee
-        #   (4) La colonne vent est composée de 2 sous colonnes: direction et vitesse.
+        #   (1) Certains noms sont sur 2 lignes, on peut se passer de la 2ème.
+        #   (2) Certains caractères à accents passent mal, on les remplace par leur version sans accent.
+        #   (3) La colonne vent est composée de 2 sous colonnes: direction et vitesse.
         #       Le tableau compte donc n colonnes mais n-1 noms de colonnes.
         #       On rajoute donc un nom pour la colonne de la direction du vent.
-        try:
-            columns_names = [td.text.lower() for td in table.find("tr")[0].find("td")]
-            # (1)
-            columns_names = [col.replace("ã©", "e")
-                                .replace(".", "")
-                             for col in columns_names]
-            # (2)
-            columns_names = [col.split("\n")[0] if "\n" in col else col for col in columns_names]
-
-        except IndexError:
+        columns_names = [td.text.lower() for td in table.find("tr")[0].find("td")]
+        if not columns_names or all([len(x) == 0 for x in columns_names]):
             raise ScrapException()
+        # (1)
+        columns_names = [col.split("\n")[0] if "\n" in col else col for col in columns_names]
+        # (2)
+        columns_names = [col.replace("ã©", "e")
+                            .replace("ã¨", "e")
+                            .replace(".", "")
+                            .replace(" ", "_")
+                            .replace("(", "")
+                            .replace(")", "")
+                         for col in columns_names]
         # (3)
-        try:
-            indexe = columns_names.index("humi")
-            columns_names[indexe] = "humidite"
-        except ValueError:
-            pass
-        try:
-            indexe = columns_names.index("point de rosee")
-            columns_names[indexe] = "point_de_rosee"
-        except ValueError:
-            pass
+        index = columns_names.index("heure")
+        columns_names[index] = "date"
         # (4)
-        indexe = columns_names.index("vent (rafales)")
-        columns_names.insert(indexe, "winddir")
+        try:
+            indexe = columns_names.index("vent_rafales")
+            columns_names.insert(indexe, "winddir")
+        except ValueError:
+            pass
 
         return columns_names
 
     def _scrap_columns_values(self, table):
         # On enlève la 1ère ligne car elle contient le nom des colonnes
-        try:
-            return [td.text
-                    for tr in table.find("tr")[1:]
-                    for td in tr.find("td")]
-        except IndexError:
-            raise ScrapException()
-
-    def _next_dates_indexes(self, values, tp):
-        dates = [f"{x} h" for x in values if x in range(0, 24)]
-        first_index = values.index(dates[0])
-        second_index = -1 if len(dates) == 1 else values.index(dates[1])
-
-        return (first_index, second_index)
+        return [td.text
+                for tr in table.find("tr")[1:]
+                for td in tr.find("td")]
 
     def _rework_data(self, values, columns_names, tp):
         #   (1) On créé le tableau.
@@ -446,69 +325,45 @@ class MeteocielHourly(MeteoScrapper):
         #   (6) On ajoute au nom de la colonne son unité.
 
         # (1)
-        try:
-            df = pd.DataFrame(np.array(values)
-                                .reshape(-1, len(columns_names)),
-                              columns=columns_names)
-        except ValueError:
-            raise ReworkException()
+        df = pd.DataFrame(np.array(values)
+                            .reshape(-1, len(columns_names)),
+                          columns=columns_names)
         # (2)
-        vent_rafale = df[["heure", "vent (rafales)"]].copy(deep=True)
+        try:
+            splitted = df["vent_rafales"].str.split("(")
+            df["vent"] = [x[0] for x in splitted]
+            df["rafales"] = ["" if len(x) == 1 else x[1] for x in splitted]
+            del splitted
+        except KeyError:
+            pass
         df = df[[col
                  for col in df.columns
-                 if col not in ("vent (rafales)", "winddir", "temps")]]
+                 if col not in self.UNWANTED_COLUMNS]]
         # (3)
-        not_numeric = ["date", "heure", "neb"]
-        numerics = [x for x in df.columns if x not in not_numeric]
-
-        f_num_extract = np.vectorize(lambda string: np.NaN if string in ("---", "")
-                                                    else 0 if string in ("aucune", "traces")
-                                                    else float(re.findall(self.REGEX_FOR_NUMERICS, string)[0]))
-
-        f_rework_dates = np.vectorize(lambda heure:      f"{tp.year_as_str}-{tp.month_as_str}-{tp.day_as_str} 0{int(heure)}:00:00" if heure < 10
-                                                    else f"{tp.year_as_str}-{tp.month_as_str}-{tp.day_as_str} {int(heure)}:00:00")
-        try:
-            df["date"] = f_num_extract(df["heure"])
-            df["date"] = f_rework_dates(df["date"])
-            df["date"] = pd.to_datetime(df["date"])
-            df[numerics] = f_num_extract(df[numerics])
-        except ValueError:
-            raise ReworkException()
-
-        df = df[not_numeric + numerics]  # juste pour l'ordre des colonne, avoir la date en 1er
+        f_num_extract = np.vectorize(self._extract_numeric_value)
+        f_rework_dates = np.vectorize(lambda heure: f"{tp.year_as_str}-{tp.month_as_str}-{tp.day_as_str} {MonthEnum.format_date_time(int(heure))}:00:00")
 
         # (4)
-        separated = [x.split("(") for x in vent_rafale["vent (rafales)"].values]
-        for x in separated:
-            if len(x) != 2:
-                x.append("")
-        try:
-            separated = np.array(separated)
-            separated = f_num_extract(separated)
-            separated = pd.DataFrame(separated, columns=["vent", "rafales"])
-            separated["heure"] = vent_rafale["heure"]
-        except ValueError:
-            raise ReworkException()
+        numerics = [x for x in df.columns if x not in self.NOT_NUMERIC]
+        df["date"] = f_num_extract(df["date"])
+        df["date"] = f_rework_dates(df["date"])
+        df["date"] = pd.to_datetime(df["date"])
+        df[numerics] = f_num_extract(df[numerics])
+
         # (5)
-        df = pd.merge(df,
-                      separated,
-                      on="heure",
-                      how="inner")
-
-        df = df.drop(["heure"], axis=1)
-        df = df.sort_values(by="date")
-
-        # (6)
         df.columns = [f"{col}_{self.UNITS[col]}"
-                      if    col not in ("date", "neb", "humidex", "windchill")
-                        and col in self.UNITS.keys()
+                      if col in self.UNITS.keys()
                       else col
                       for col in df.columns]
         return df
 
-    def _expected_dates(self, tp):
-        return [f"{tp.year_as_str}-{tp.month_as_str}-{tp.day_as_str} {MonthEnum.format_date_time(x)}:00:00"
-                for x in range(0, 24)]
+    def _extract_numeric_value(self, str_value: str):
+        if str_value in ("---", ""):
+            return np.NaN
+        elif str_value in ("aucune", "traces"):
+            return 0
+        else:
+            return float(re.findall(self.REGEX_FOR_NUMERICS, str_value)[0])
 
 
 class OgimetDaily(MeteoScrapper):

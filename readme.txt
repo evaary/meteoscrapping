@@ -2,7 +2,7 @@ Un programme de webscrapping pour récupérer des données météorologiques dep
 
 Exemples de tableaux récupérés:
     1 - https://www.ogimet.com/cgi-bin/gsynres?lang=en&ind=08180&ano=2017&mes=7&day=31&hora=23&ndays=31
-    2-  https://www.ogimet.com/cgi-bin/gsynres?ind=07149&ndays=31&ano=2020&mes=2&day=31&hora=23&lang=en&decoded=yes
+    2-  https://www.ogimet.com/cgi-bin/gsynres?ind=07149&ndays=28&ano=2020&mes=2&day=28&hora=23&lang=en&decoded=yes
     3 - https://www.wunderground.com/history/monthly/it/bergamo/LIME/date/2020-3
     4 - https://www.meteociel.com/climatologie/obs_villes.php?code2=7249&mois=1&annee=2021
     5 - https://www.meteociel.com/temps-reel/obs_villes.php?code2=7249&jour2=1&mois2=0&annee2=2020

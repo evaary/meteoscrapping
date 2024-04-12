@@ -514,7 +514,8 @@ class OgimetDaily(MeteoScrapper):
 class OgimetHourly(MeteoScrapper):
 
     REGEX_FOR_DATES = r'\d+/\d+/\d+'
-    UNWANTED_COLUMNS = ["ww", "w1", "w2"]
+    UNWANTED_COLUMNS = ["ww", "w1", "w2", "time"]
+    NOT_NUMERIC = ["date", "ddd", "prec_mm"]
 
     def _scrap_columns_names(self, table):
         # La colonne date est subdivisée en 2, une colonne date et une colonne time.
@@ -529,6 +530,7 @@ class OgimetHourly(MeteoScrapper):
                             .replace("(c)", "°C")
                             .replace("(mm)", "mm")
                             .replace("kmh", "km/h")
+                            .replace("_hpa", "_hPa")
                             .replace(" ", "_")
                      for colname in col_names]
 
@@ -561,7 +563,6 @@ class OgimetHourly(MeteoScrapper):
         #       On retire ces valeurs de values.
         #   (4) On complète row avec autant de str que nécessaire pour avoir n_cols valeurs dedans,
         #       et on l'ajoute aux valeurs traitées.
-        # https://www.ogimet.com/cgi-bin/gsynres?lang=en&ind=08180&ano=2017&mes=7&day=31&hora=23&ndays=31
 
         # (1)
         if len(values) % n_cols == 0:
@@ -570,9 +571,13 @@ class OgimetHourly(MeteoScrapper):
         done = []
         while len(values) > 0:
             # (2)
-            remaining_dates = [x for x in values if f"{tp.month_as_str}/" in x]
+            remaining_dates = [MonthEnum.format_date_time(tp.day - x) for x in range(0, tp.ndays)]
+            remaining_dates = [f"{tp.month_as_str}/{x}/{tp.year_as_str}" for x in remaining_dates]
+            remaining_dates = [x for x in values if x in remaining_dates]
+
             first_index = values.index(remaining_dates[0])
-            second_index = -1 if len(remaining_dates) == 1 else values.index(remaining_dates[1])
+            remaining_dates = remaining_dates[first_index + 1:]
+            second_index = -1 if len(remaining_dates) == 1 else values[first_index + 1:].index(remaining_dates[1]) + first_index + 1
             # (3)
             if second_index == -1:
                 row = values[first_index:]
@@ -589,50 +594,38 @@ class OgimetHourly(MeteoScrapper):
 
     def _rework_data(self, values, columns_names, tp):
         #   (1) On créé le dataframe.
-        #   (2) Les colonnes ww, w1 et w2 ne nous intéresse pas.
-        #   (3) la date est divisée en 2 colonnes date et heure, on les rassemble, et on formate correctement.
+        #   (2) La date est divisée en 2 colonnes date et heure, on les rassemble, et on formate correctement.
+        #   (3) On retire les colonnes qui ne nous intéressent pas.
         #   (4) Le format des précipitations est bizarre, on choisit de le laisser sous forme de str.
         #       Parfois la cellule contient 2 données, séparée par un retour à la ligne, on les met bout à bout.
-        #       => https://www.ogimet.com/cgi-bin/gsynres?ind=07149&ndays=31&ano=2020&mes=2&day=31&hora=23&lang=en&decoded=yes
+        #       => https://www.ogimet.com/cgi-bin/gsynres?ind=07149&ndays=28&ano=2020&mes=2&day=28&hora=23&lang=en&decoded=yes
         #   (5) On convertit les données au format numérique.
 
         # (1)
+        n_cols = len(columns_names)
+        values = self._fill_partial_rows(values, n_cols, tp)
         df = pd.DataFrame(np.array(values)
-                          .reshape(-1, len(columns_names)),
+                          .reshape(-1, n_cols),
                           columns=columns_names)
         # (2)
-        df = df[[x for x in df.columns if x not in self.UNWANTED_COLUMNS]]
-        # (3)
-        try:
-            df["date"] = df["date"] + ":" + df["time"]
-        except:  # exception inconnue levée parfois
-            df["datetime"] = []
-
-        df = df.drop(["date", "time"], axis="columns")\
-               .rename(columns={"datetime": "date"})
-
+        df["date"] = df["date"] + ":" + df["time"]
         df["date"] = pd.to_datetime(df["date"],
                                     format="%m/%d/%Y:%H:%M")
+        # (3)
+        df = df[[x for x in df.columns if x not in self.UNWANTED_COLUMNS]]
         # (4)
-        df["prec_mm"] = ["" if "--" in x
-                         else "_".join(x.split("\n"))
-                         for x in df["prec_mm"].values]
+        try:
+            df["prec_mm"] = ["" if "--" in x
+                             else "_".join(x.split("\n"))
+                             for x in df["prec_mm"].values]
+        except KeyError:
+            pass
         # (5)
-        numeric_columns = [x for x in df.columns if x not in ["date", "ddd", "prec_mm"]]
+        numeric_columns = [x for x in df.columns if x not in self.NOT_NUMERIC]
         for numeric_column in numeric_columns:
             df[numeric_column] = pd.to_numeric(df[numeric_column],
                                                errors="coerce")
         return df
-
-    def _expected_dates(self, tp):
-        days = [f"{tp.year_as_str}-{tp.month_as_str}-{MonthEnum.format_date_time(tp.day - x)}"
-                for x in range(0, tp.ndays)]
-
-        hours = [MonthEnum.format_date_time(x) for x in range(0, 24)]
-
-        return [f"{day} {hour}:00:00"
-                for day in days
-                for hour in hours]
 
 
 class WundergroundDaily(MeteoScrapper):

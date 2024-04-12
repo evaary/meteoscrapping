@@ -7,8 +7,7 @@ from abc import (ABC,
 from typing import List
 from time import perf_counter
 
-from app.exceptions.scrapping_exceptions import (ReworkException,
-                                                 ScrapException,
+from app.exceptions.scrapping_exceptions import (ScrapException,
                                                  HtmlPageException)
 from app.ucs_module import ScrapperUC
 from app.tps_module import TaskParameters
@@ -630,33 +629,44 @@ class OgimetHourly(MeteoScrapper):
 
 class WundergroundDaily(MeteoScrapper):
 
-    UNITS_CONVERSION = {
-
-        "dew": {"new_name": "dew_point_°C",
-                "func": (lambda x: (x - 32) * 5/9)},
-
-        "wind": {"new_name": "wind_speed_(km/h)",
-                 "func": (lambda x: x * 1.609344)},
-
-        "pressure": {"new_name": "pressure_(hPa)",
-                     "func": (lambda x: x * 33.86388)},
-
-        "humidity": {"new_name": "humidity_(%)",
-                     "func": (lambda x: x)},
-
-        "temperature": {"new_name": "temperature_°C",
-                        "func": (lambda x: (x - 32) * 5/9)},
-
-        "precipitation": {"new_name": "precipitation_(mm)",
-                          "func": (lambda x: x * 25.4)}
-    }
+    SUB_NAMES = ["max", "avg", "min", "total"]
+    UNITS_CONVERSION = {"dew": (lambda x: (x - 32) * 5/9),
+                        "wind": (lambda x: x * 1.609344),
+                        "pressure": (lambda x: x * 33.86388),
+                        "humidity": (lambda x: x),
+                        "temperature": (lambda x: (x - 32) * 5/9),
+                        "precipitation": (lambda x: x * 25.4)}
 
     def _scrap_columns_names(self, table):
-        try:
-            return [td.text for td in table.find("thead")[0]
-                                           .find("td")]
-        except IndexError:
+        columns_names =  [td.text for td in table.find("thead")[0].find("td")]
+
+        if len(columns_names) == 0:
             raise ScrapException()
+
+        columns_names = [x.lower()
+                          .strip()
+                          .replace(" ", "_")
+                          .replace("_(°f)", "_°C")
+                          .replace("_(%)", "_%")
+                          .replace("_(mph)", "_km/h")
+                         for x in columns_names]
+
+        index = columns_names.index("time")
+        columns_names[index] = "date"
+
+        try:
+            index = columns_names.index("pressure_(in)")
+            columns_names[index] = "pressure_hPa"
+        except ValueError:
+            pass
+
+        try:
+            index = columns_names.index("precipitation_(in)")
+            columns_names[index] = "precipitation_mm"
+        except ValueError:
+            pass
+
+        return columns_names
 
     def _scrap_columns_values(self, table):
         # La structure html du tableau est tordue, ce qui conduit à des doublons dans values.
@@ -669,19 +679,15 @@ class WundergroundDaily(MeteoScrapper):
         # la nième valeur contient les données de la nième colonne principale,
         # et donc de toutes ses sous-colonnes.
         # On récupère ces 7 valeurs additionnelles qui contiennent le caractère \n.
-        try:
-            return [td.text
-                    for td in table.find("tbody")[0]
-                                   .find("td")
-                    if "\n" in td.text]
-        except (AttributeError,
-                IndexError):
+        values = [td.text
+                  for td in table.find("tbody")[0]
+                                 .find("td")
+                  if "\n" in td.text]
+
+        if len(values) == 0:
             raise ScrapException()
 
-    def _next_dates_indexes(self, values, tp):
-        # Il est impossible de renvoyer les indexes car on ne peut pas différencier les dates
-        # des autres valeurs.
-        raise NotImplementedError("WundergroundDaily : _next_dates_indexes n'est pas implémentée")
+        return values
 
     def _rework_data(self, values, columns_names, tp):
         #   (1) values est une liste de str. Chaque str contient toutes les données d'1 colonne principale
@@ -692,76 +698,54 @@ class WundergroundDaily(MeteoScrapper):
         #   (2) On initialise la matrice qui constituera le dataframe final avec la 1ère liste (Time)
         #       transformée en vecteur colonne.
         #   (3) Le dataframe aura besoin de noms pour ses colonnes. Le nom final est composé d'un nom
-        #       principal et d'un complément, sauf pour les colonnes Time et Précipitations.
+        #       principal et d'un complément, sauf pour la colonne Time.
         #       Les noms principaux sont contenus dans main_names, les compléments correspondent aux 1 ou 3
-        #       premières valeurs des listes dans values. Pour chaque liste, on détermine le nombre de colonnes
-        #       qu'elle contient, et on récupère les compléments (si elle compte pour 3 colonnes, on prend les 3
-        #       premières valeurs). On transforme la liste courante en vecteur colonne ou en matrice à 3 colonnes,
+        #       premières valeurs des listes dans values. Pour chaque liste, on récupère les compléments.
+        #       On transforme la liste courante en vecteur colonne ou en matrice à 3 colonnes,
         #       puis on accolle ces colonnes au dataframe principal.
-        #   (4) Les main_names ne vont pas, les unités précisées ne vont pas, il y a des majuscules et des espaces.
-        #       On veut tout en minsucule, avec des _ et dans les bonnes unités.
-        #       On remplace les main_names par leurs nouvelles valeurs : si la clé du dict UNITS_CONVERSION est présente
-        #       dans le main_name, on remplace et on passe au main_name suivant.
-        #       Ensuite, on associe les main_names avec leurs sub_names.
-        #       Enfin, le nom de la colonne des dates est actuellement Time. On le remplace par date.
+        #   (4) On associe les main_names avec leurs sub_names.
         #   (5) On créé le dataframe final à partir de la matrice et des noms de colonnes. La 1ère ligne,
         #       contenant les compléments, est supprimée.
-        #   (6) La colonne date ne contient que les numéros du jour du mois (1 à 31, ou moins). On remplace
-        #       par la date au format AAAA-MM-JJ et on trie.
+        #   (6) On formate les dates correctement, au format AAAA-MM-JJ.
         #   (7) Jusqu'ici les valeur du dataframe sont au format str. On les convertit en numérique.
         #   (8) On convertit vers les unités classiques .
 
         # (1)
         values = [string.split("\n") for string in values]
-        n_rows = len(values[0])
         # (2)
-        df = np.array(values[0]).reshape(n_rows, 1)
+        df = np.array(values[0])\
+               .reshape(-1, 1)
         # (3)
-        sub_names = [[""]]
-        for values_list in values[1:]:
-            n_cols = len(values_list) // n_rows
-            sub_names += [values_list[0:n_cols]]
-            new_columns = np.array(values_list).reshape(n_rows, n_cols)
-            df = np.hstack((df, new_columns))
+        all_sub_names = [[""]]
+        for current_column_values in values[1:]:
+            current_column_sub_names = [x.strip().lower()
+                                        for x in current_column_values
+                                        if x.strip().lower() in self.SUB_NAMES]
+            all_sub_names.append(current_column_sub_names)
+            current_column_values = np.array(current_column_values)\
+                                      .reshape(-1, len(current_column_sub_names))
+            df = np.hstack((df, current_column_values))
         # (4)
-        for index, main_name in enumerate(columns_names):
-
-            for key in self.UNITS_CONVERSION.keys():
-
-                if key in main_name.lower()\
-                                   .strip():
-                    columns_names[index] = self.UNITS_CONVERSION[key]["new_name"]
-                    break
-
-        final_col_names = ["_".join([main, sub.strip().lower()])
-                           if sub else main
-                           for main, subs in zip(columns_names, sub_names)
-                           for sub in subs]
-        final_col_names[0] = "date"
-
+        columns_names = ["_".join([main, sub]) if sub
+                         else main
+                         for main, subs in zip(columns_names, all_sub_names)
+                         for sub in subs]
         # (5)
-        df = pd.DataFrame(df, columns=final_col_names)
+        df = pd.DataFrame(df, columns=columns_names)
         df = df.drop([0], axis="index")
 
         # (6)
-        df["date"] = [f"{tp.year_as_str}/{tp.month_as_str}/0{day}"
-                      if int(day) < 10
-                      else f"{tp.year_as_str}/{tp.month_as_str}/{day}"
+        df["date"] = [f"{tp.year_as_str}/{tp.month_as_str}/{MonthEnum.format_date_time(int(day))}"
                       for day in df.date]
 
         df["date"] = pd.to_datetime(df["date"])
-        df = df.sort_values(by="date")
 
         # (7)
         for col in df.columns[1:]:
             df[col] = pd.to_numeric(df[col])
         # (8)
-        for variable, dico in self.UNITS_CONVERSION.items():
+        for variable, convertor in self.UNITS_CONVERSION.items():
             cols_to_convert = [col for col in df.columns if variable in col]
-            df[cols_to_convert] = np.round(dico["func"](df[cols_to_convert]), 1)
+            df[cols_to_convert] = np.round(convertor(df[cols_to_convert]), 1)
 
         return df
-
-    def _expected_dates(self, tp):
-        return [f"{tp.year_as_str}-{tp.month_as_str}-{MonthEnum.format_date_time(x)}"
-                for x in range(1, MonthEnum.from_id(tp.month).ndays + 1)]

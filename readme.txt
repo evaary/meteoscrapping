@@ -44,7 +44,6 @@ Où trouver les paramètres ?
           https://     [...]                                  code<code_num>=<code>&jour2=   [...]
         - /!\/!\ Les mois dans l'URL sont numérotés différement. Dans la config, utiliser les numéros usuels.
         - La colonne "vent (rafale)" est séparée en 2 colonnes distinctes.
-        - L'heure est convertie en date et heure.
 
 Informations importantes
 

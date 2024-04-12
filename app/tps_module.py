@@ -172,15 +172,26 @@ class TPBuilder:
                 raise ValueError("TPBuilder.build : ind et city doivent être valorisés pour un scrapper Ogimet.")
 
             if (    self._scrapper_type == ScrapperType.OGIMET_HOURLY
-                and self._ndays == 0):
+                and self._ndays == 0
+            ):
                 raise ValueError("TPBuilder.build : ndays doit être valorisé pour un scrapper Ogimet heure par heure.")
+
+            # Bizarrement, on ne peut pas requêter une page qui contient le 1er janvier sans perdre toutes les données.
+            # Si le 1er janvier est inclus dans la demande de l'utilisateur, on force son exclusion.
+            wanted_month = MonthEnum.from_id(self._month)
+            if(     self._scrapper_type == ScrapperType.OGIMET_HOURLY
+                and wanted_month == MonthEnum.JANVIER
+                and self._day - self._ndays == 0
+            ):
+                self._ndays -= 1
 
             return OgimetTP(self)
 
         if self._scrapper_type in ScrapperType.wunderground_scrappers():
             if any([x is None or len(x) == 0 for x in [self.region,
                                                        self.country_code,
-                                                       self.city]]):
+                                                       self.city]]
+            ):
                 raise ValueError("TPBuilder.build : region, country_code et city doivent être valorisés pour un scrapper Wunderground.")
 
             return WundergroundTP(self)

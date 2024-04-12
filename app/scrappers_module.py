@@ -78,21 +78,22 @@ class MeteoScrapper(ABC):
         self._print_progress(uc)
 
         for tp in uc.to_tps():
-            #try:
-            html_data = self._load_html(tp)
-            col_names = self._scrap_columns_names(html_data)
-            values = self._scrap_columns_values(html_data)
-            local_df = self._rework_data(values, col_names, tp)
-            global_df = pd.concat([global_df, local_df])
+            print(tp.url)
+            try:
+                html_data = self._load_html(tp)
+                col_names = self._scrap_columns_names(html_data)
+                values = self._scrap_columns_values(html_data)
+                local_df = self._rework_data(values, col_names, tp)
+                global_df = pd.concat([global_df, local_df])
 
-            global_df = global_df[["date"] + [x for x in global_df.columns if x != "date"]]
-            global_df = global_df.sort_values(by="date")
+                global_df = global_df[["date"] + [x for x in global_df.columns if x != "date"]]
+                global_df = global_df.sort_values(by="date")
 
-            #except Exception:
-            #    self._errors[tp.key] = tp.url
-            #    continue
-            #finally:
-            #    self._update()
+            except Exception:
+                self._errors[tp.key] = tp.url
+                continue
+            finally:
+                self._update()
 
         self._print_progress(uc)
 
@@ -528,6 +529,7 @@ class OgimetHourly(MeteoScrapper):
                             .replace("\n", "_")
                             .replace("(c)", "°C")
                             .replace("(mm)", "mm")
+                            .replace("(cm)", "cm")
                             .replace("kmh", "km/h")
                             .replace("_hpa", "_hPa")
                             .replace(" ", "_")

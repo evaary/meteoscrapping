@@ -23,14 +23,10 @@ class MeteoScrapper(ABC):
 
     def __init__(self):
         self._errors = dict()
-        # date de départ de lancement des jobs
-        self._start = 0
-        # quantité de jobs traités
-        self._done = 0
-        # quantité de jobs à traiter
-        self._todo = 0
-        # % de jobs traités
-        self._progress = 0
+        self._start = 0     # date de départ de lancement des jobs
+        self._done = 0      # quantité de TPs traités
+        self._todo = 0      # quantité de TPs à traiter
+        self._progress = 0  # % de TPs traités
 
     @property
     def errors(self):
@@ -40,9 +36,10 @@ class MeteoScrapper(ABC):
         self._done += 1
         self._progress = round(self._done / self._todo * 100, 0)
 
-    def _print_progress(self,  uc: ScrapperUC) -> None:
+    def _print_progress(self,  uc: ScrapperUC, forced=False) -> None:
 
-        print(f"{uc} - {self._progress}% - {round(perf_counter() - self._start, 0)}s \n")
+        if self._progress < 100 or forced:
+            print(f"{uc} - {self._progress}% - {round(perf_counter() - self._start, 0)}s \n")
 
         if self._progress == 100:
             return
@@ -78,6 +75,7 @@ class MeteoScrapper(ABC):
         self._print_progress(uc)
 
         for tp in uc.to_tps():
+            print(tp.url)
             try:
                 html_data = self._load_html(tp)
                 col_names = self._scrap_columns_names(html_data)
@@ -94,7 +92,7 @@ class MeteoScrapper(ABC):
             finally:
                 self._update()
 
-        self._print_progress(uc)
+        self._print_progress(uc, forced=True)
 
         return global_df
 
@@ -119,6 +117,7 @@ class MeteoScrapper(ABC):
             except Exception:
                 html_loading_trials -= 1
                 html_page = None
+                tp.update_waiting()
 
         if html_page is None:
             raise HtmlPageException()
@@ -256,7 +255,7 @@ class MeteocielDaily(MeteoScrapper):
     def _extract_numeric_value(self, str_value: str):
         if str_value in ("---", ""):
             return np.NaN
-        elif str_value in ("aucune", "traces"):
+        elif "aucune" in str_value or "trace" in str_value:
             return 0
         else:
             return float(re.findall(self.REGEX_FOR_NUMERICS, str_value)[0])
@@ -295,10 +294,9 @@ class MeteocielHourly(MeteoScrapper):
                             .replace("(", "")
                             .replace(")", "")
                          for col in columns_names]
-        # (3)
         index = columns_names.index("heure")
         columns_names[index] = "date"
-        # (4)
+        # (3)
         try:
             indexe = columns_names.index("vent_rafales")
             columns_names.insert(indexe, "winddir")
@@ -320,17 +318,16 @@ class MeteocielHourly(MeteoScrapper):
 
     def _rework_data(self, values, columns_names, tp):
         #   (1) On créé le tableau.
-        #   (2) On met de coté la colonne vent car il faut la séparer en 2.
-        #       On supprime les colonnes inutiles.
-        #   (3) On convertit les valeurs du format string vers le format qui leur vont.
-        #   (4) Séparation de la colonne "vent (rafales)" en 2 colonnes "vent" et "rafales".
+        #   (2) On sépare la colonne vent_rafales en 2
         #       Les valeurs contenues dans "vent (rafales)" sont normalement de la forme :
         #         - x km/h (y km/h)
         #         - x km/h
         #       On splite selon la ( pour avoir les 2 valeurs dans 2 str différentes.
-        #       Si le split rend une liste d'1 seule valeur, on rajoute une str vide pour bien avoir 2 valeurs.
-        #   (5) On réunit les données, on met en forme le tableau.
-        #   (6) On ajoute au nom de la colonne son unité.
+        #       Si le split rend une liste d'1 seule valeur, on met une str vide dans les rafales.
+        #       Puis on supprime les colonnes inutiles.
+        #   (3) On définit 2 fonctions vectorisées qui serviront à extraire les données numérique et formater les dates.
+        #   (4) On convertit les valeurs du format string vers le format qui leur vont.
+        #   (5) On ajoute au nom de la colonne son unité.
 
         # (1)
         df = pd.DataFrame(np.array(values)
@@ -437,7 +434,14 @@ class OgimetDaily(MeteoScrapper):
                            n_cols: int,
                            tp: TaskParameters):
         """Complète les lignes auxquelles il manque des valeurs avec des str vides."""
-
+        #   Ogimet gère mal les données manquantes.
+        #   Si certaines valeurs manquent en début ou milieu de ligne,
+        #   elle sont comblées par "---", et tout va bien, on a des valeurs quand même.
+        #
+        #   Si les valeurs manquantes sont à la fin, la ligne s'arrête prématurément.
+        #   Elle compte moins de valeurs qu'attendu, on ne peut pas reconstruire le tableau.
+        #       => https://www.ogimet.com/cgi-bin/gsynres?lang=en&ind=08180&ano=2017&mes=7&day=31&hora=23&ndays=31
+        #
         #   (1) values contient des lignes incomplètes si sa taille n'est pas un multiple de n_cols.
         #     Si toutes les lignes sont complètes, on a rien à faire.
         #   (2) A chaque tour de boucle, on trouve l'indexe des 2 prochaines dates.
@@ -445,7 +449,6 @@ class OgimetDaily(MeteoScrapper):
         #       On retire ces valeurs de values.
         #   (4) On complète row avec autant de str que nécessaire pour avoir n_cols valeurs dedans,
         #       et on l'ajoute aux valeurs traitées.
-        # https://www.ogimet.com/cgi-bin/gsynres?lang=en&ind=08180&ano=2017&mes=7&day=31&hora=23&ndays=31
 
         # (1)
         if len(values) % n_cols == 0:
@@ -555,7 +558,13 @@ class OgimetHourly(MeteoScrapper):
                            n_cols: int,
                            tp: TaskParameters):
         """Complète les lignes auxquelles il manque des valeurs avec des str vides."""
-
+        #   Ogimet gère mal les données manquantes.
+        #   Si certaines valeurs manquent en début ou milieu de ligne,
+        #   elle sont comblées par "---", et tout va bien, on a des valeurs quand même.
+        #
+        #   Si les valeurs manquantes sont à la fin, la ligne s'arrête prématurément.
+        #   Elle compte moins de valeurs qu'attendu, on ne peut pas reconstruire le tableau.
+        #
         #   (1) values contient des lignes incomplètes si sa taille n'est pas un multiple de n_cols.
         #     Si toutes les lignes sont complètes, on a rien à faire.
         #   (2) A chaque tour de boucle, on trouve l'indexe des 2 prochaines dates.
@@ -605,7 +614,7 @@ class OgimetHourly(MeteoScrapper):
         n_cols = len(columns_names)
         values = self._fill_partial_rows(values, n_cols, tp)
         df = pd.DataFrame(np.array(values)
-                          .reshape(-1, n_cols),
+                            .reshape(-1, n_cols),
                           columns=columns_names)
         # (2)
         df["date"] = df["date"] + ":" + df["time"]
@@ -639,7 +648,7 @@ class WundergroundDaily(MeteoScrapper):
                         "precipitation": (lambda x: x * 25.4)}
 
     def _scrap_columns_names(self, table):
-        columns_names =  [td.text for td in table.find("thead")[0].find("td")]
+        columns_names = [td.text for td in table.find("thead")[0].find("td")]
 
         if len(columns_names) == 0:
             raise ScrapException()

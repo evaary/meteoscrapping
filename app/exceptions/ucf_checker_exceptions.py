@@ -54,7 +54,7 @@ class SpecificStrFieldException(UCFCheckerException):
 
         if ucfpem == UCFParameter.METEOCIEL:
             first_param = UCFParameter.CODE.name
-            second_param = UCFParameter.CODE_NUM.name
+            second_param = ""
 
         elif ucfpem == UCFParameter.WUNDERGROUND:
             first_param = UCFParameter.REGION.name

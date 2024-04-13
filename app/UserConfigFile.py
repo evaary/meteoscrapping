@@ -1,4 +1,6 @@
 import copy
+from typing import List
+
 from app.boite_a_bonheur.UCFParameterEnum import UCFParameter
 from app.UCFChecker import UCFChecker
 from app.ucs_module import ScrapperUC
@@ -12,15 +14,15 @@ class UserConfigFile:
         self._wunderground_ucs = []
 
     @property
-    def ogimet_ucs(self) -> "list[ScrapperUC]":
+    def ogimet_ucs(self) -> List[ScrapperUC]:
         return [copy.deepcopy(uc) for uc in self._ogimet_ucs]
 
     @property
-    def meteociel_ucs(self) -> "list[ScrapperUC]":
+    def meteociel_ucs(self) -> List[ScrapperUC]:
         return [copy.deepcopy(uc) for uc in self._meteociel_ucs]
 
     @property
-    def wunderground_ucs(self) -> "list[ScrapperUC]":
+    def wunderground_ucs(self) -> List[ScrapperUC]:
         return [copy.deepcopy(uc) for uc in self._wunderground_ucs]
 
     @classmethod
@@ -49,7 +51,7 @@ class UserConfigFile:
 
         return ucf
 
-    def get_all_ucs(self) -> "list[ScrapperUC]":
+    def get_all_ucs(self) -> List[ScrapperUC]:
         all_ucs = []
         all_ucs.extend(self.ogimet_ucs)
         all_ucs.extend(self.meteociel_ucs)

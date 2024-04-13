@@ -123,7 +123,6 @@ class MeteocielUC(ScrapperUC):
 
     _PARAMETERS = {UCFParameter.CITY: "_city",
                    UCFParameter.CODE: "_code",
-                   UCFParameter.CODE_NUM: "_code_num",
                    UCFParameter.YEARS: "_years",
                    UCFParameter.MONTHS: "_months",
                    UCFParameter.DAYS: "_days"}
@@ -131,7 +130,6 @@ class MeteocielUC(ScrapperUC):
     def __init__(self):
         super().__init__()
         self._code = ""
-        self._code_num = ""
 
     @classmethod
     def from_json_object(cls, jsono, should_check_parameter: bool = True):
@@ -143,7 +141,6 @@ class MeteocielUC(ScrapperUC):
 
         muc._city = jsono[UCFParameter.CITY.name]
         muc._code = jsono[UCFParameter.CODE.name]
-        muc._code_num = jsono[UCFParameter.CODE_NUM.name]
         muc._years = jsono[UCFParameter.YEARS.name]
         muc._months = jsono[UCFParameter.MONTHS.name]
 
@@ -160,7 +157,6 @@ class MeteocielUC(ScrapperUC):
         if self.scrapper_type == ScrapperType.METEOCIEL_DAILY:
 
             return (TPBuilder(self.scrapper_type).with_code(self._code)
-                                                 .with_code_num(self._code_num)
                                                  .with_city(self._city)
                                                  .with_year(year)
                                                  .with_month(month)
@@ -174,7 +170,6 @@ class MeteocielUC(ScrapperUC):
         elif self.scrapper_type == ScrapperType.METEOCIEL_HOURLY:
 
             return (TPBuilder(self.scrapper_type).with_code(self._code)
-                                                 .with_code_num(self._code_num)
                                                  .with_city(self._city)
                                                  .with_year(year)
                                                  .with_month(month)

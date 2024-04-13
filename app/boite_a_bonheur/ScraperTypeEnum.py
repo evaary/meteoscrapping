@@ -1,3 +1,6 @@
+from typing import List
+
+
 class ScrapperTypeEnumMember:
 
     def __init__(self, numero: int, name: str):
@@ -49,13 +52,13 @@ class ScrapperType:
                 cls.WUNDERGROUND_DAILY]
 
     @classmethod
-    def hourly_scrappers(cls) -> list[ScrapperTypeEnumMember]:
+    def hourly_scrappers(cls) -> List[ScrapperTypeEnumMember]:
         return [cls.METEOCIEL_HOURLY,
                 cls.OGIMET_HOURLY,
                 cls.WUNDERGROUND_HOURLY]
 
     @classmethod
-    def daily_scrappers(cls) -> list[ScrapperTypeEnumMember]:
+    def daily_scrappers(cls) -> List[ScrapperTypeEnumMember]:
         return [cls.METEOCIEL_DAILY,
                 cls.OGIMET_DAILY,
                 cls.WUNDERGROUND_DAILY]

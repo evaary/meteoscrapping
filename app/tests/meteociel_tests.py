@@ -8,7 +8,7 @@ class MeteocielDailyTester(TestCase):
 
     SCRAPPER = MeteocielDaily()
     UCF_PATH = "./app/tests/ucfs/meteociel_daily.json"
-    URL_REF = "https://www.meteociel.com/climatologie/obs_villes.php?code2=7249&mois=1&annee=2021"
+    URL_REF = "https://www.meteociel.com/climatologie/obs_villes.php?code=7249&mois=1&annee=2021"
 
     RESULTATS = pd.DataFrame(
         [["2021-01-01",  2.1, -3.6,  0.0, 3.9],
@@ -63,6 +63,7 @@ class MeteocielDailyTester(TestCase):
         differences_df = data - self.RESULTATS
 
         self.assertEqual(differences_df.sum().sum(), 0)
+        self.assertEqual(data.shape, self.RESULTATS.shape)
 
 
 class MeteocielHourlyTester(TestCase):
@@ -97,7 +98,7 @@ class MeteocielHourlyTester(TestCase):
          ["2020-01-01 01:00:00", "8/8", 0.5, 1.7, 100, 1.7, 1.7, -0.4,  7, 10, 1031.8, 0.0],
          ["2020-01-01 00:00:00", "8/8", 0.3, 1.4, 100, 1.4, 1.4, -0.4,  6, 10, 1032.1, 0.0]],
 
-        columns=["date", "neb", "visi_km", "temperature_°C", "humidite_%", "point_de_rosee_°C", "humidex",
+        columns=["date", "neb", "visi_km", "temperature_°C", "humi_%", "point_de_rosee_°C", "humidex",
                  "windchill", "vent_km/h", "rafales_km/h", "pression_hPa", "precip_mm"]
     )
 

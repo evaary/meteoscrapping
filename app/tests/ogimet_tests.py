@@ -44,10 +44,10 @@ class OgimetDailyTester(TestCase):
          ["2021-02-28",  13.0,  6.0,  8.9,  0.0,  52.4,  "NE",  8.5,  1032.5, np.NaN, 0.8,    2.0,  16.4]],
 
         columns=["date",
-                 "temperature_(°C)_max", "temperature_(°C)_min", "temperature_(°C)_avg",
-                 "td_avg_(°C)", "hr_avg_(%)",
-                 "wind_(km/h)_dir", "wind_(km/h)_int",
-                 "pres_slev_(hp)", "prec_(mm)",
+                 "temperature_°C_max", "temperature_°C_min", "temperature_°C_avg",
+                 "td_avg_°C", "hr_avg_%",
+                 "wind_km/h_dir", "wind_km/h_int",
+                 "pres_slev_hp", "prec_mm",
                  "tot_cl_oct", "low_cl_oct",
                  "vis_km"]
     )
@@ -64,7 +64,7 @@ class OgimetDailyTester(TestCase):
 
         numerics = self.RESULTATS\
                        .columns\
-                       .difference(["wind_(km/h)_dir", "date", "prec_(mm)"])
+                       .difference(["wind_km/h_dir", "date", "prec_mm"])
 
         differences_df = data[numerics] - self.RESULTATS[numerics]
 
@@ -107,8 +107,8 @@ class OgimetHourlyTester(TestCase):
                   "t_°C", "td_°C",
                   "hr_%",
                   "tmax_°C", "tmin_°C",
-                  "ddd", "ff_kmh", "gust_kmh",
-                  "p0_hpa", "p_sea_hpa", "p_tnd",
+                  "ddd", "ff_km/h", "gust_km/h",
+                  "p0_hPa", "p_sea_hPa", "p_tnd",
                   "prec_mm", "n_t", "n_h", "h_km", "inso_d-1", "vis_km"]
     )
 

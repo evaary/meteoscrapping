@@ -32,14 +32,11 @@ class UCFChecker:
                          date_field: UCFParameterEnumMember,
                          scrapper_name: UCFParameterEnumMember) -> None:
         """Détermine si un champ date est valide ou pas."""
-
-        """
-        (1) Wunderground n'est pas disponible en version jour par jour.
-        (2) Les champs date doivent être des listes ordonnées de max 2 entiers positifs.
-            Les années doivent valoir au minimum 1800.
-            Les mois doivent être compris entre 1 et 12.
-            Les jours doivent être compris entre 1 et 31.
-        """
+        #   (1) Wunderground n'est pas disponible en version jour par jour.
+        #   (2) Les champs date doivent être des listes ordonnées de max 2 entiers positifs.
+        #       Les années doivent valoir au minimum 1800.
+        #       Les mois doivent être compris entre 1 et 12.
+        #       Les jours doivent être compris entre 1 et 31.
 
         if date_field not in UCFParameter.dates_parameters():
             raise ValueError("UCFChecker.check_date_field : {f} doit être {y}, {m}, ou {d}".format(f=date_field.name,
@@ -90,14 +87,13 @@ class UCFChecker:
 
     @staticmethod
     def check_ucf_structure(path_to_config: str) -> dict:
-        """"""
-        """
-        (1) On tente de lire le fichier config.
-        (2) Le fichier config doit contenir un dict.
-        (3) Les paramètres pour chaque scrapper doivent être des listes.
-            scrapper_presence associe ces paramètres à leur état de présence (True = présent, par défaut)
-        (4) Chacun de ces paramètres est optionnel, mais il en faut au moins 1.
-        """
+        """Contrôle de la validité du fichier config"""
+        #   (1) On tente de lire le fichier config.
+        #   (2) Le fichier config doit contenir un dict.
+        #   (3) Les paramètres pour chaque scrapper doivent être des listes.
+        #       scrapper_presence associe ces paramètres à leur état de présence (True = présent, par défaut)
+        #   (4) Chacun de ces paramètres est optionnel, mais il en faut au moins 1.
+
         # (1)
         try:
             config_file: dict = from_json(path_to_config)
@@ -125,12 +121,10 @@ class UCFChecker:
 
     @staticmethod
     def check_scrappers(config: dict) -> None:
-        """"""
-        """
-        Chacun des paramètres meteociel, ogimet et wunderground sont optionnels,
-        mais s'ils sont présents, ils doivent contenir des objets JSON non vides.
-        Au moins un des champs présents ne doit pas être vide.
-        """
+        """Contrôle la validité de la structures des paramètres des scrappers"""
+        # Chacun des paramètres meteociel, ogimet et wunderground sont optionnels,
+        # mais s'ils sont présents, ils doivent contenir des objets JSON non vides.
+        # Au moins un des champs présents ne doit pas être vide.
 
         all_configs = []
         for ucfparameter in [UCFParameter.METEOCIEL,
@@ -166,17 +160,12 @@ class UCFChecker:
     @classmethod
     def check_uc(cls, uc, scrapper_name: UCFParameterEnumMember):
         """Détermine si un UC du fichier de configuration est valide ou pas"""
-
-        """
-        (1) On vérifie que les champs str spécifiques au scrapper sont bien remplis.
-        (2) On vérifie que les champs str communs sont bien remplis.
-        (3) On vérifie que tous les champs dates sont bien présents. Jours n'est pas obligatoire.
-        """
+        #   (1) On vérifie que les champs str spécifiques au scrapper sont bien remplis.
+        #   (2) On vérifie que les champs str communs sont bien remplis.
+        #   (3) On vérifie que tous les champs dates sont bien présents. Jours n'est pas obligatoire.
         if scrapper_name not in UCFParameter.scrappers_parameters():
-            raise ValueError("UCFChecker.check_individual_uc : {x} doit être {m}, {o}, ou {w}".format(x=scrapper_name.name,
-                                                                                                      m=UCFParameter.METEOCIEL.name,
-                                                                                                      o=UCFParameter.OGIMET.name,
-                                                                                                      w=UCFParameter.WUNDERGROUND.name))
+            raise ValueError("UCFChecker.check_individual_uc : scrapper_name doit être un scrapper")
+
         try:
             specific_str_fields = UCFParameter.specific_fields_by_scrapper(scrapper_name)
         except KeyError:

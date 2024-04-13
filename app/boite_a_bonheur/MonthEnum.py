@@ -1,7 +1,11 @@
 class MonthEnumMember:
-    def __init__(self, numero: int, ndays: int):
+    def __init__(self,
+                 numero: int,
+                 ndays: int,
+                 name: str):
         self._numero = numero
         self._ndays = ndays
+        self._name = name
 
     @property
     def numero(self):
@@ -11,6 +15,10 @@ class MonthEnumMember:
     def ndays(self):
         return self._ndays
 
+    @property
+    def name(self):
+        return self._name
+
     def __eq__(self, other):
         if other is None or not isinstance(other, MonthEnumMember):
             return False
@@ -19,22 +27,25 @@ class MonthEnumMember:
 
     def __copy__(self):
         return MonthEnumMember(self._numero, self._ndays)
-        
-        
+
+    def __repr__(self):
+        return self._name
+
+
 class MonthEnum:
 
-    JANVIER = MonthEnumMember(1, 31)
-    FEVRIER = MonthEnumMember(2, 28)
-    MARS = MonthEnumMember(3, 31)
-    AVRIL = MonthEnumMember(4, 30)
-    MAI = MonthEnumMember(5, 31)
-    JUIN = MonthEnumMember(6, 30)
-    JUILLET = MonthEnumMember(7, 31)
-    AOUT = MonthEnumMember(8, 31)
-    SEPTEMBRE = MonthEnumMember(9, 30)
-    OCTOBRE = MonthEnumMember(10, 31)
-    NOVEMBRE = MonthEnumMember(11, 30)
-    DECEMBRE = MonthEnumMember(12, 31)
+    JANVIER = MonthEnumMember(1, 31, "JANVIER")
+    FEVRIER = MonthEnumMember(2, 28, "FEVRIER")
+    MARS = MonthEnumMember(3, 31, "MARS")
+    AVRIL = MonthEnumMember(4, 30, "AVRIL")
+    MAI = MonthEnumMember(5, 31, "MAI")
+    JUIN = MonthEnumMember(6, 30, "JUIN")
+    JUILLET = MonthEnumMember(7, 31, "JUILLET")
+    AOUT = MonthEnumMember(8, 31, "AOUT")
+    SEPTEMBRE = MonthEnumMember(9, 30, "SEPTEMBRE")
+    OCTOBRE = MonthEnumMember(10, 31, "OCTOBRE")
+    NOVEMBRE = MonthEnumMember(11, 30, "NOVEMBRE")
+    DECEMBRE = MonthEnumMember(12, 31, "DECEMBRE")
 
     @classmethod
     def values(cls) -> list[MonthEnumMember]:
@@ -65,3 +76,7 @@ class MonthEnum:
          3 => 2    6 => 5     9 => 8     12 => 11
         """
         return x.numero - 1
+
+    @staticmethod
+    def format_date_time(date_or_time: int) -> str:
+        return f"0{date_or_time}" if date_or_time < 10 else str(date_or_time)

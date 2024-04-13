@@ -2,7 +2,7 @@ Un programme de webscrapping pour récupérer des données météorologiques dep
 
 Exemples de tableaux récupérés:
     1 - https://www.ogimet.com/cgi-bin/gsynres?lang=en&ind=08180&ano=2017&mes=7&day=31&hora=23&ndays=31
-    2-  https://www.ogimet.com/cgi-bin/gsynres?ind=07149&ndays=31&ano=2020&mes=2&day=31&hora=23&lang=en&decoded=yes
+    2-  https://www.ogimet.com/cgi-bin/gsynres?ind=07149&ndays=28&ano=2020&mes=2&day=28&hora=23&lang=en&decoded=yes
     3 - https://www.wunderground.com/history/monthly/it/bergamo/LIME/date/2020-3
     4 - https://www.meteociel.com/climatologie/obs_villes.php?code2=7249&mois=1&annee=2021
     5 - https://www.meteociel.com/temps-reel/obs_villes.php?code2=7249&jour2=1&mois2=0&annee2=2020
@@ -28,6 +28,8 @@ Où trouver les paramètres ?
     Pour les jobs ogimet jour par jour et heure par heure:
         - http://www.ogimet.com/cgi-bin/gsynres?lang=en&ind=08180&ano=2017&mes=8&day=0&hora=0&min=0&ndays=31
           http:      [...]                              ind=<ind>          [...]
+        - ogimet heure par heure : empiriquement, une url qui inclus le 1er janvier n'affiche aucune donnée.
+          Le 1er janvier sera toujours exclu automatiquement des résultats.
 
     Pour les jobs wunderground:
         - https://www.wunderground.com/history/monthly/it/bergamo/LIME/date/2020-3
@@ -36,15 +38,14 @@ Où trouver les paramètres ?
                 températures (°F -> °C),    vitesses (mph -> km/h), précipitations (in -> mm),  pressions (inHg -> hPa).
 
     Pour les jobs meteociel jour par jour:
-        - https://www.meteociel.com/climatologie/obs_villes.php?code2=7249&mois=1&annee=2021
-          https://     [...]                                    code<code_num>=<code>&mois=   [...]
+        - https://www.meteociel.com/climatologie/obs_villes.php?code=7249&mois=1&annee=2021
+          https://     [...]                                    code=<code>    [...]
 
     Pour les jobs meteociel heure par heure
         - https://www.meteociel.com/temps-reel/obs_villes.php?code2=7249&jour2=1&mois2=0&annee2=2020
-          https://     [...]                                  code<code_num>=<code>&jour2=   [...]
+          https://     [...]                                  code2=<code>&jour2=   [...]
         - /!\/!\ Les mois dans l'URL sont numérotés différement. Dans la config, utiliser les numéros usuels.
         - La colonne "vent (rafale)" est séparée en 2 colonnes distinctes.
-        - L'heure est convertie en date et heure.
 
 Informations importantes
 
@@ -69,7 +70,7 @@ Informations importantes
 Performances
 
     meteociel heure par heure
-    { "code_num":"2", "code": "7249", "ville":"orleans", "annees":[2019, 2020], "mois":[1, 12], "jours":[1, 31] }
+    {"code": "7249", "ville":"orleans", "annees":[2019, 2020], "mois":[1, 12], "jours":[1, 31] }
     => a généré un CSV de 17 521 lignes en 3 040s, sans fichier d'erreur
 
     ogimet heure par heure
@@ -85,8 +86,8 @@ Performances
     => a généré un CSV de 4 018 lignes en 916s, sans fichier d'erreur
 
     meteociel jour par jour
-    { "code_num":"2", "code": "7249", "ville":"orleans", "annees":[2013, 2023], "mois":[1, 12] }
-    => a généré un CSV de 4 018 lignes en 533s, sans fichier d'erreur
+    {"code": "7249", "ville":"orleans", "annees":[1975, 2023], "mois":[1, 12] }
+    => a généré un CSV de 17 897 lignes (100% des données) en 2 364, sans fichier d'erreur
 
 
 Structure du fichier config.json:
@@ -106,8 +107,8 @@ Structure du fichier config.json:
 
     "meteociel":
     [
-        { "code_num":"2", "code": "7249", "ville":"orleans", "annees":[2020, 2021], "mois":[2] },
-        { "code_num":"2", "code": "7249", "ville":"orleans", "annees":[2020], "mois":[1, 2], "jours":[27,31] }
+        {"code": "7249", "ville":"orleans", "annees":[2020, 2021], "mois":[2] },
+        {"code": "7249", "ville":"orleans", "annees":[2020], "mois":[1, 2], "jours":[27,31] }
     ]
 }
 

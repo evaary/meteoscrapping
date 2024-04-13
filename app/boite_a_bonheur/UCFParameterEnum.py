@@ -32,14 +32,13 @@ class UCFParameter:
     DAYS = UCFParameterEnumMember("jours")
     CITY = UCFParameterEnumMember("ville")
     CODE = UCFParameterEnumMember("code")
-    CODE_NUM = UCFParameterEnumMember("code_num")
     IND = UCFParameterEnumMember("ind")
     REGION = UCFParameterEnumMember("region")
     COUNTRY_CODE = UCFParameterEnumMember("code_pays")
 
     SPECIFIC_FIELDS = {
         WUNDERGROUND: [REGION, COUNTRY_CODE],
-        METEOCIEL: [CODE, CODE_NUM],
+        METEOCIEL: [CODE],
         OGIMET: [IND]
     }
 

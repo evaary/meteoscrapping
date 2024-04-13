@@ -37,7 +37,10 @@ class MeteoScrapper(ABC):
         self._progress = round(self._done / self._todo * 100, 0)
 
     def _print_progress(self,  uc: ScrapperUC, forced=False) -> None:
-
+        # La condition d'affichage empêche d'afficher 2 fois l'avancement à 100%,
+        # une fois par l'affichage final, une autre fois par le timer lancé juste avant d'atteindre les 100%.
+        # L'appel final à _print_progress arrivant à 100% d'avancement, on force l'affichage.
+        # Le 2nd affichage venant du timer sera bloqué.
         if self._progress < 100 or forced:
             print(f"{uc} - {self._progress}% - {round(perf_counter() - self._start, 0)}s \n")
 
@@ -75,7 +78,6 @@ class MeteoScrapper(ABC):
         self._print_progress(uc)
 
         for tp in uc.to_tps():
-            print(tp.url)
             try:
                 html_data = self._load_html(tp)
                 col_names = self._scrap_columns_names(html_data)

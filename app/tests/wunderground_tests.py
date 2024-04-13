@@ -50,10 +50,10 @@ class WundergroundDailyTester(TestCase):
             "date",
             "temperature_°C_max", "temperature_°C_avg", "temperature_°C_min",
             "dew_point_°C_max", "dew_point_°C_avg", "dew_point_°C_min",
-            "humidity_(%)_max", "humidity_(%)_avg", "humidity_(%)_min",
-            "wind_speed_(km/h)_max", "wind_speed_(km/h)_avg", "wind_speed_(km/h)_min",
-            "pressure_(hPa)_max", "pressure_(hPa)_avg", "pressure_(hPa)_min",
-            "precipitation_(mm)_total"
+            "humidity_%_max", "humidity_%_avg", "humidity_%_min",
+            "wind_speed_km/h_max", "wind_speed_km/h_avg", "wind_speed_km/h_min",
+            "pressure_hPa_max", "pressure_hPa_avg", "pressure_hPa_min",
+            "precipitation_mm_total"
         ]
     )
 
@@ -67,7 +67,7 @@ class WundergroundDailyTester(TestCase):
         uc = ucf.wunderground_ucs[0]
         data = self.SCRAPPER.scrap_uc(uc).set_index("date")
 
-        not_converted = ["humidity_(%)_max", "humidity_(%)_avg", "humidity_(%)_min"]
+        not_converted = ["humidity_%_max", "humidity_%_avg", "humidity_%_min"]
         converted = [col for col in data.columns if
                      col not in not_converted]
 

@@ -1,0 +1,4 @@
+https://www.wunderground.com/history/monthly/it/matera/LIBD/date/2000-6
+https://www.wunderground.com/history/monthly/it/matera/LIBD/date/2000-3
+http://www.ogimet.com/cgi-bin/gsynres?ind=16288&ndays=31&ano=2017&mes=8&day=31&hora=23&lang=en&decoded=no
+http://www.ogimet.com/cgi-bin/gsynres?ind=07149&ndays=31&ano=2023&mes=12&day=31&hora=23&lang=en&decoded=yes

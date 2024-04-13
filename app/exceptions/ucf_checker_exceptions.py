@@ -91,7 +91,7 @@ class UnavailableScrapperException(UCFCheckerException):
 class DateFieldException(UCFCheckerException):
     def __init__(self):
         super().__init__("Les champs {y}, {m} et {d} doivent contenir 1 ou 2 entiers positifs ordonnés".format(y=UCFParameter.YEARS.name,
-                                                                                                               m=UCFParameter.COUNTRY_CODE.name,
+                                                                                                               m=UCFParameter.MONTHS.name,
                                                                                                                d=UCFParameter.DAYS.name))
 
 

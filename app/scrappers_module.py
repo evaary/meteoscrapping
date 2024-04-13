@@ -78,7 +78,6 @@ class MeteoScrapper(ABC):
         self._print_progress(uc)
 
         for tp in uc.to_tps():
-            print(tp.url)
             try:
                 html_data = self._load_html(tp)
                 col_names = self._scrap_columns_names(html_data)
@@ -369,7 +368,7 @@ class MeteocielHourly(MeteoScrapper):
     def _extract_numeric_value(self, str_value: str):
         if str_value in ("---", ""):
             return np.NaN
-        elif str_value in ("aucune", "traces"):
+        elif "aucune" in str_value or "traces" in str_value:
             return 0
         else:
             return float(re.findall(self.REGEX_FOR_NUMERICS, str_value)[0])

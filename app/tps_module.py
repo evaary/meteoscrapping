@@ -140,26 +140,26 @@ class TPBuilder:
     def build(self) -> "TaskParameters":
 
         if self._month == 0 or self._year == 0:
-            raise ValueError("TPBuilder.build : 'month' et 'year' doivent être valorisés.")
+            raise ValueError("TPBuilder.build : 'month' et 'year' requis.")
 
         if self._scrapper_type in ScrapperType.hourly_scrappers() and self._day == 0:
-            raise ValueError("TPBuilder.build : 'day' doit être valorisé pour un scrapper heure par heure.")
+            raise ValueError("TPBuilder.build : 'day' requis pour un scrapper heure par heure.")
 
         if self._scrapper_type in ScrapperType.meteociel_scrappers():
             if any([x is None or len(x) == 0 for x in [self._code,
                                                        self._city]]):
-                raise ValueError("TPBuilder.build : 'code' et 'city' doivent être valorisés pour Meteociel.")
+                raise ValueError("TPBuilder.build : 'code' et 'city' requis pour Meteociel.")
 
             return MeteocielTP(self)
 
         if self._scrapper_type in ScrapperType.ogimet_scrappers():
             if any([x is None or len(x) == 0 for x in [self._ind,
                                                        self._city]]):
-                raise ValueError("TPBuilder.build : 'ind' et 'city' doivent être valorisés pour Ogimet.")
+                raise ValueError("TPBuilder.build : 'ind' et 'city' requis pour Ogimet.")
 
             if(    self._scrapper_type == ScrapperType.OGIMET_HOURLY
                and self._ndays == 0):
-                raise ValueError("TPBuilder.build : 'ndays' doit être valorisé pour Ogimet heure par heure.")
+                raise ValueError("TPBuilder.build : 'ndays' requis pour Ogimet heure par heure.")
 
             # Bizarrement, on ne peut pas requêter une page qui contient le 1er janvier sans perdre toutes les données.
             # Si le 1er janvier est inclus dans la demande de l'utilisateur, on force son exclusion.
@@ -176,7 +176,7 @@ class TPBuilder:
             if any([x is None or len(x) == 0 for x in [self.region,
                                                        self.country_code,
                                                        self.city]]):
-                raise ValueError("TPBuilder.build : 'region', 'country_code' et 'city' doivent être valorisés pour Wunderground.")
+                raise ValueError("TPBuilder.build : 'region', 'country_code' et 'city' requis pour Wunderground.")
 
             return WundergroundTP(self)
 
@@ -297,14 +297,14 @@ class TaskParameters(abc.ABC):
     @property
     def day(self):
         if self._scrapper_type not in ScrapperType.hourly_scrappers():
-            raise "TaskParameters.day : spécifique scrapper heure par heure"
+            raise ValueError("TaskParameters.day : spécifique scrapper heure par heure")
 
         return self._day
 
     @property
     def day_as_str(self):
         if self._scrapper_type not in ScrapperType.hourly_scrappers():
-            raise "TaskParameters.day_as_str : spécifique scrapper heure par heure"
+            raise ValueError("TaskParameters.day_as_str : spécifique scrapper heure par heure")
 
         return self._day_as_str
 

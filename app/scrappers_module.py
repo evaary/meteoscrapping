@@ -83,12 +83,13 @@ class MeteoScrapper(ABC):
                 col_names = self._scrap_columns_names(html_data)
                 values = self._scrap_columns_values(html_data)
                 local_df = self._rework_data(values, col_names, tp)
+                local_df = self._add_missing_rows(local_df, tp)
                 global_df = pd.concat([global_df, local_df])
 
                 global_df = global_df[["date"] + [x for x in global_df.columns if x != "date"]]
                 global_df = global_df.sort_values(by="date")
 
-            except Exception:
+            except Exception as ex:
                 self._errors[tp.key] = tp.url
                 continue
             finally:
@@ -163,6 +164,38 @@ class MeteoScrapper(ABC):
         """Mise en forme du tableau de tableau, conversions des unités si besoin."""
         pass
 
+    def _add_missing_rows(self,
+                          df: pd.DataFrame,
+                          tp: TaskParameters) -> pd.DataFrame:
+        """Complète le dataframe si des lignes manquent."""
+        # (1) On initialise un DataFrame totalement vide, des dimensions attendues,
+        #     avec les mêmes colonnes que df.
+        # (2) On place la date de chacun des dfs en indexe et on retire de missings tous les indexes de df.
+        #     Il ne reste que les lignes manquantes.
+        #     On ignore le 29 février car il n'est pas anticipé dans _expected_dates et causerait une KeyError.
+        # (3) On ajoute ces lignes aux résultats et on remet la date en colonne.
+
+        # (1)
+        expected_dates = self._expected_dates(tp)
+        missings = pd.DataFrame(np.full((len(expected_dates), df.shape[1]), np.NaN),
+                                columns=df.columns)
+        missings["date"] = pd.to_datetime(expected_dates)
+        # (2)
+        df = df.set_index("date")
+        missings = missings.set_index("date")
+        missings = missings.drop(df[df.index != f"{tp.year}-02-29"].index, axis="rows")
+        # (3)
+        df = pd.concat([df, missings])
+        df = df.reset_index()
+
+        return df
+
+    @abstractmethod
+    def _expected_dates(self, tp: TaskParameters) -> List[str]:
+        """Renvoie la liste des dates attendues pour le tp courant dans le dataframe,
+        pour l'ajout des lignes manquantes."""
+        pass
+
 
 class MeteocielDaily(MeteoScrapper):
 
@@ -221,10 +254,6 @@ class MeteocielDaily(MeteoScrapper):
         values = [td.text.strip()
                   for tr in table.find("tr")[1:-1]
                   for td in tr.find("td")]
-
-        if len(values) == 0:
-            raise ScrapException()
-
         return values
 
     def _rework_data(self, values, columns_names, tp):
@@ -261,6 +290,10 @@ class MeteocielDaily(MeteoScrapper):
             return 0
         else:
             return float(re.findall(self.REGEX_FOR_NUMERICS, str_value)[0])
+
+    def _expected_dates(self, tp):
+        return [f"{tp.year_as_str}-{tp.month_as_str}-{MonthEnum.format_date_time(x)}"
+                for x in range(1, MonthEnum.from_id(tp.month).ndays + 1)]
 
 
 class MeteocielHourly(MeteoScrapper):
@@ -312,10 +345,6 @@ class MeteocielHourly(MeteoScrapper):
         values = [td.text
                   for tr in table.find("tr")[1:]
                   for td in tr.find("td")]
-
-        if len(values) == 0:
-            raise ScrapException()
-
         return values
 
     def _rework_data(self, values, columns_names, tp):
@@ -372,6 +401,10 @@ class MeteocielHourly(MeteoScrapper):
         else:
             return float(re.findall(self.REGEX_FOR_NUMERICS, str_value)[0])
 
+    def _expected_dates(self, tp):
+        return [f"{tp.year_as_str}-{tp.month_as_str}-{tp.day_as_str} {MonthEnum.format_date_time(x)}:00:00"
+                for x in range(0, 24)]
+
 
 class OgimetDaily(MeteoScrapper):
     TEMP_SUBS = ["max", "min", "avg", "max.", "min.", "mvg."]
@@ -424,12 +457,7 @@ class OgimetDaily(MeteoScrapper):
         return columns_names
 
     def _scrap_columns_values(self, table):
-        values = [td.text for td in table.find("tbody")[0].find("td")]
-
-        if len(values) == 0:
-            raise ScrapException()
-
-        return values
+        return [td.text for td in table.find("tbody")[0].find("td")]
 
     @staticmethod
     def _fill_partial_rows(values: "List[str]",
@@ -514,6 +542,10 @@ class OgimetDaily(MeteoScrapper):
                  if "daily_weather_summary" not in col]]
         return df
 
+    def _expected_dates(self, tp):
+        return [f"{tp.year_as_str}-{tp.month_as_str}-{MonthEnum.format_date_time(x)}"
+                for x in range(1, MonthEnum.from_id(tp.month).ndays + 1)]
+
 
 class OgimetHourly(MeteoScrapper):
 
@@ -546,14 +578,9 @@ class OgimetHourly(MeteoScrapper):
 
     def _scrap_columns_values(self, table):
         # On supprime la 1ère ligne (noms des colonnes) et la dernière (data du jour précédent le 1er demandé).
-        values = [td.text
-                  for tr in table.find("tr")[1:-1]
-                  for td in tr.find("td")]
-
-        if len(values) == 0:
-            raise ScrapException()
-
-        return values
+        return [td.text
+                for tr in table.find("tr")[1:-1]
+                for td in tr.find("td")]
 
     @staticmethod
     def _fill_partial_rows(values: "List[str]",
@@ -638,6 +665,14 @@ class OgimetHourly(MeteoScrapper):
                                                errors="coerce")
         return df
 
+    def _expected_dates(self, tp):
+        days = [f"{tp.year_as_str}-{tp.month_as_str}-{MonthEnum.format_date_time(tp.day - x)}"
+                for x in range(0, tp.ndays)]
+
+        hours = [MonthEnum.format_date_time(x) for x in range(0, 24)]
+
+        return [f"{day} {hour}:00:00" for day in days for hour in hours]
+
 
 class WundergroundDaily(MeteoScrapper):
 
@@ -691,15 +726,10 @@ class WundergroundDaily(MeteoScrapper):
         # la nième valeur contient les données de la nième colonne principale,
         # et donc de toutes ses sous-colonnes.
         # On récupère ces 7 valeurs additionnelles qui contiennent le caractère \n.
-        values = [td.text
-                  for td in table.find("tbody")[0]
-                                 .find("td")
-                  if "\n" in td.text]
-
-        if len(values) == 0:
-            raise ScrapException()
-
-        return values
+        return [td.text
+                for td in table.find("tbody")[0]
+                               .find("td")
+                if "\n" in td.text]
 
     def _rework_data(self, values, columns_names, tp):
         #   (1) values est une liste de str. Chaque str contient toutes les données d'1 colonne principale
@@ -761,3 +791,7 @@ class WundergroundDaily(MeteoScrapper):
             df[cols_to_convert] = np.round(convertor(df[cols_to_convert]), 1)
 
         return df
+
+    def _expected_dates(self, tp):
+        return [f"{tp.year_as_str}-{tp.month_as_str}-{MonthEnum.format_date_time(x)}"
+                for x in range(1, MonthEnum.from_id(tp.month).ndays + 1)]

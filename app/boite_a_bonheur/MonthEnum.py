@@ -1,3 +1,6 @@
+from typing import List
+
+
 class MonthEnumMember:
     def __init__(self,
                  numero: int,
@@ -26,7 +29,7 @@ class MonthEnumMember:
         return self._numero == other.numero
 
     def __copy__(self):
-        return MonthEnumMember(self._numero, self._ndays)
+        return MonthEnumMember(self._numero, self._ndays, self._name)
 
     def __repr__(self):
         return self._name
@@ -48,7 +51,7 @@ class MonthEnum:
     DECEMBRE = MonthEnumMember(12, 31, "DECEMBRE")
 
     @classmethod
-    def values(cls) -> list[MonthEnumMember]:
+    def values(cls) -> List[MonthEnumMember]:
         return [cls.JANVIER,
                 cls.FEVRIER,
                 cls.MARS,

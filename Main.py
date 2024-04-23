@@ -4,13 +4,10 @@ from app.UserConfigFile import UserConfigFile
 from app.exceptions.ucf_checker_exceptions import UCFCheckerException
 from app.boite_a_bonheur.utils import to_csv, to_json
 from app.scrappers_module import MeteoScrapper
-from app.ucs_module import ScrapperUC
 import multiprocessing as mp
-from concurrent.futures import ProcessPoolExecutor
 
 
 class Main:
-    MAX_PROCESSES = 1 if mp.cpu_count() == 1 else (mp.cpu_count() - 1) * 2
     REPERTORIES = {"data": "resultats",
                    "errors": "erreurs"}
 
@@ -24,7 +21,6 @@ class Main:
 
         # (1)
         mp.freeze_support()  # pour ne pas que le main se relance en boucler
-        print("max processes : " + str(cls.MAX_PROCESSES))
         try:
             print("lecture du fichier config.json...")
             ucf = UserConfigFile.from_json(os.path.join(os.getcwd(), "config.json"))
@@ -38,42 +34,37 @@ class Main:
 
         print("fichier config.json trouvé, lancement des téléchargements\n")
 
-        with ProcessPoolExecutor(max_workers=cls.MAX_PROCESSES) as executor:
-            executor.map(cls._process_uc, ucf.get_all_ucs())
+        for uc in ucf.get_all_ucs():
+            workdir = os.getcwd()
+            start_date = f"{uc.months[0]}_{uc.years[0]}"
+            end_date = f"{uc.months[-1]}_{uc.years[-1]}"
 
-    @classmethod
-    def _process_uc(cls, uc: ScrapperUC) -> None:
+            if uc.scrapper_type in ScrapperType.hourly_scrappers():
+                start_date = f"{uc.days[0]}_{start_date}"
+                end_date = f"{uc.days[-1]}_{end_date}"
 
-        workdir = os.getcwd()
-        start_date = f"{uc.months[0]}_{uc.years[0]}"
-        end_date = f"{uc.months[-1]}_{uc.years[-1]}"
+            base_filename = "_".join([uc.scrapper_type.name,
+                                      uc.city,
+                                      f"du_{start_date}", f"au_{end_date}"])\
+                               .lower()
 
-        if uc.scrapper_type in ScrapperType.hourly_scrappers():
-            start_date = f"{uc.days[0]}_{start_date}"
-            end_date = f"{uc.days[-1]}_{end_date}"
+            data_filename = os.path.join(workdir,
+                                         cls.REPERTORIES["data"],
+                                         base_filename + ".csv")
 
-        base_filename = "_".join([uc.scrapper_type.name,
-                                  uc.city,
-                                  f"du_{start_date}", f"au_{end_date}"])\
-                           .lower()
+            errors_filename = os.path.join(workdir,
+                                           cls.REPERTORIES["errors"],
+                                           base_filename + ".json")
+            # (3)
+            scrapper = MeteoScrapper.scrapper_instance(uc)
+            data = scrapper.scrap_uc(uc)
 
-        data_filename = os.path.join(workdir,
-                                     cls.REPERTORIES["data"],
-                                     base_filename + ".csv")
+            # (4)
+            if not data.empty:
+                to_csv(data, data_filename)
 
-        errors_filename = os.path.join(workdir,
-                                       cls.REPERTORIES["errors"],
-                                       base_filename + ".json")
-        # (3)
-        scrapper = MeteoScrapper.scrapper_instance(uc)
-        data = scrapper.scrap_uc(uc)
-
-        # (4)
-        if not data.empty:
-            to_csv(data, data_filename)
-
-        if scrapper.errors:
-            to_json(scrapper.errors, errors_filename)
+            if scrapper.errors:
+                to_json(scrapper.errors, errors_filename)
 
     @staticmethod
     def stop() -> None:

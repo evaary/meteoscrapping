@@ -1,3 +1,4 @@
+import asyncio
 from threading import Timer
 import re
 import numpy as np
@@ -8,17 +9,22 @@ from typing import List
 from time import perf_counter
 
 from app.exceptions.scrapping_exceptions import (ScrapException,
-                                                 HtmlPageException)
+                                                 HtmlPageException,
+                                                 ProcessException)
 from app.ucs_module import ScrapperUC
 from app.tps_module import TaskParameters
 from app.boite_a_bonheur.ScraperTypeEnum import ScrapperType
 from app.boite_a_bonheur.MonthEnum import MonthEnum
 from requests_html import (Element,
                            HTMLSession)
+from concurrent.futures import ProcessPoolExecutor
 
 
 class MeteoScrapper(ABC):
 
+    MAX_PROCESSES = 12
+    EXECUTOR = ProcessPoolExecutor(max_workers=MAX_PROCESSES)
+    LOOP = asyncio.get_event_loop()
     PROGRESS_TIMER_INTERVAL = 10  # en secondes
 
     def __init__(self):
@@ -71,56 +77,73 @@ class MeteoScrapper(ABC):
 
     def scrap_uc(self, uc: ScrapperUC) -> pd.DataFrame:
         """Télécharge les données et renvoie les résultats."""
-        global_df = pd.DataFrame()
+        return self.LOOP.run_until_complete(self._async_process_tps(uc))
 
-        self._todo = sum([1 for _ in uc.to_tps()])
-        self._start = perf_counter()
-        self._print_progress(uc)
+    async def _async_process_tps(self, uc: ScrapperUC):
+        start = perf_counter()
+        futures = [self.LOOP.run_in_executor(self.EXECUTOR,
+                                             self._process_tp,
+                                             tp)
+                   for tp in uc.to_tps()]
 
-        for tp in uc.to_tps():
-            try:
-                html_data = self._load_html(tp)
-                col_names = self._scrap_columns_names(html_data)
-                values = self._scrap_columns_values(html_data)
-                local_df = self._rework_data(values, col_names, tp)
-                local_df = self._add_missing_rows(local_df, tp)
-                global_df = pd.concat([global_df, local_df])
+        results = await asyncio.gather(*futures, return_exceptions=True)
 
-                global_df = global_df[["date"] + [x for x in global_df.columns if x != "date"]]
-                global_df = global_df.sort_values(by="date")
+        dfs = [x for x in results if isinstance(x, pd.DataFrame)]
+        exceptions = [x for x in results if isinstance(x, ProcessException)]
 
-            except Exception as ex:
-                self._errors[tp.key] = tp.url
-                continue
-            finally:
-                self._update()
+        for ex in exceptions:
+            kwargs = ex.args[0][1]
+            self._errors[kwargs["key"]] = {"url": kwargs["url"], "msg": kwargs["msg"]}
 
-        self._print_progress(uc, forced=True)
+        try:
+            global_df = pd.concat(dfs)
+            global_df = global_df[["date"] + [x for x in global_df.columns if x != "date"]]
+            global_df = global_df.sort_values(by="date")
+        except ValueError:
+            global_df = pd.DataFrame()
+
+        end = round(perf_counter() - start, 2)
+        print(f"terminé en {end}s")
 
         return global_df
+
+    def _process_tp(self, tp: TaskParameters):
+        print(tp.url)
+
+        try:
+            html_data = self._load_html(tp)
+            col_names = self._scrap_columns_names(html_data)
+            values = self._scrap_columns_values(html_data)
+            df_tp = self._rework_data(values, col_names, tp)
+            df_tp = self._add_missing_rows(df_tp, tp)
+        except Exception as ex:
+            raise ProcessException(key=tp.key,
+                                   url=tp.url,
+                                   msg=str(ex))
+        return df_tp
 
     @staticmethod
     def _load_html(tp: TaskParameters) -> Element:
         """Charge une page html à scrapper et renvoie la table de données trouvée."""
         html_loading_trials = 3
         html_page = None
-        while html_page is None and html_loading_trials > 0:
+        with HTMLSession() as session:
+            while html_page is None and html_loading_trials > 0:
 
-            if html_loading_trials < 3:
-                print("retrying...")
+                if html_loading_trials < 3:
+                    print("retrying...")
 
-            try:
-                with HTMLSession() as session:
+                try:
                     html_page = session.get(tp.url)
                     html_page.html.render(sleep=tp.waiting,  # .html n'est pas trouvé mais est essentiel
                                           keep_page=True,
                                           scrolldown=1)
-                if html_page.status_code != 200:
+                    if html_page.status_code != 200:
+                        html_page = None
+                except Exception:
+                    html_loading_trials -= 1
                     html_page = None
-            except Exception:
-                html_loading_trials -= 1
-                html_page = None
-                tp.update_waiting()
+                    tp.update_waiting()
 
         if html_page is None:
             raise HtmlPageException()

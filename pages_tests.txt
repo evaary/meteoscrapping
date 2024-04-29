@@ -4,3 +4,23 @@ https://www.wunderground.com/history/monthly/it/matera/LIBD/date/2000-2
 http://www.ogimet.com/cgi-bin/gsynres?ind=16288&ndays=31&ano=2017&mes=8&day=31&hora=23&lang=en&decoded=no
 http://www.ogimet.com/cgi-bin/gsynres?ind=07149&ndays=31&ano=2023&mes=12&day=31&hora=23&lang=en&decoded=yes
 https://www.ogimet.com/cgi-bin/gsynres?ind=07149&ndays=1&ano=2000&mes=2&day=28&hora=23&lang=en&decoded=yes
+
+
+{
+    "meteociel":
+    [
+        {"code": "7249", "ville":"orleans", "annees":[2021, 2022], "mois":[1, 12] },
+        {"code": "7249", "ville":"orleans", "annees":[2019, 2020], "mois":[1, 12], "jours":[1, 31] }
+    ],
+
+    "ogimet":
+    [
+        { "ind":"07149", "ville":"paris_orly", "annees":[2015, 2020], "mois":[1, 12]},
+        { "ind":"07149", "ville":"paris_orly", "annees":[2015, 2020], "mois":[1, 12], "jours":[1, 31] }
+    ],
+
+    "wunderground":
+    [
+        { "code_pays":"it", "region": "LIBD", "ville":"matera", "annees":[2013, 2023], "mois":[1,12] }
+    ]
+}

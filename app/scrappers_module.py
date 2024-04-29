@@ -1,5 +1,5 @@
 import asyncio
-from threading import Timer
+from multiprocessing import cpu_count
 import re
 import numpy as np
 import pandas as pd
@@ -22,40 +22,16 @@ from concurrent.futures import ProcessPoolExecutor
 
 class MeteoScrapper(ABC):
 
-    MAX_PROCESSES = 12
+    MAX_PROCESSES = cpu_count()
     EXECUTOR = ProcessPoolExecutor(max_workers=MAX_PROCESSES)
     LOOP = asyncio.get_event_loop()
-    PROGRESS_TIMER_INTERVAL = 10  # en secondes
 
     def __init__(self):
         self._errors = dict()
-        self._start = 0     # date de départ de lancement des jobs
-        self._done = 0      # quantité de TPs traités
-        self._todo = 0      # quantité de TPs à traiter
-        self._progress = 0  # % de TPs traités
 
     @property
     def errors(self):
         return self._errors.copy()
-
-    def _update(self) -> None:
-        self._done += 1
-        self._progress = round(self._done / self._todo * 100, 0)
-
-    def _print_progress(self,  uc: ScrapperUC, forced=False) -> None:
-        # La condition d'affichage empêche d'afficher 2 fois l'avancement à 100%,
-        # une fois par l'affichage final, une autre fois par le timer lancé juste avant d'atteindre les 100%.
-        # L'appel final à _print_progress arrivant à 100% d'avancement, on force l'affichage.
-        # Le 2nd affichage venant du timer sera bloqué.
-        if self._progress < 100 or forced:
-            print(f"{uc} - {self._progress}% - {round(perf_counter() - self._start, 0)}s \n")
-
-        if self._progress == 100:
-            return
-
-        timer = Timer(self.PROGRESS_TIMER_INTERVAL, self._print_progress, [uc])
-        timer.daemon = True
-        timer.start()
 
     @staticmethod
     def scrapper_instance(uc: ScrapperUC) -> "MeteoScrapper":

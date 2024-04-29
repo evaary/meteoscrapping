@@ -8,7 +8,8 @@ import multiprocessing as mp
 
 
 class Main:
-    REPERTORIES = {"data": "resultats",
+
+    DIRECTORIES = {"data": "resultats",
                    "errors": "erreurs"}
 
     @classmethod
@@ -20,7 +21,6 @@ class Main:
         #   (4) Enregistrement des résultats et des erreurs.
 
         # (1)
-        mp.freeze_support()  # pour ne pas que le main se relance en boucler
         try:
             print("lecture du fichier config.json...")
             ucf = UserConfigFile.from_json(os.path.join(os.getcwd(), "config.json"))
@@ -45,15 +45,16 @@ class Main:
 
             base_filename = "_".join([uc.scrapper_type.name,
                                       uc.city,
-                                      f"du_{start_date}", f"au_{end_date}"])\
+                                      f"du_{start_date}",
+                                      f"au_{end_date}"])\
                                .lower()
 
             data_filename = os.path.join(workdir,
-                                         cls.REPERTORIES["data"],
+                                         cls.DIRECTORIES["data"],
                                          base_filename + ".csv")
 
             errors_filename = os.path.join(workdir,
-                                           cls.REPERTORIES["errors"],
+                                           cls.DIRECTORIES["errors"],
                                            base_filename + ".json")
             # (3)
             scrapper = MeteoScrapper.scrapper_instance(uc)

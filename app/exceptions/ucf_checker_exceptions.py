@@ -113,3 +113,24 @@ class DaysDateException(UCFCheckerException):
         super().__init__("Le champ {d} doit être compris entre {x} et {y}".format(d=UCFParameter.DAYS.name,
                                                                                   x=UCFParameter.MIN_MONTHS_DAYS_VALUE,
                                                                                   y=UCFParameter.MAX_DAYS))
+
+
+class GeneralParametersFieldException(UCFCheckerException):
+    def __init__(self, ucfpem: UCFParameterEnumMember):
+        if ucfpem not in UCFParameter.GENERAL_PARAMETERS_FIELDS:
+            raise ValueError("GeneralParametersFieldException : ucfpem est incompatible")
+
+        if ucfpem == UCFParameter.PARALLELISM:
+            msg = "{gpuc} : '{p}' doit être 'true' ou 'false'".format(p=UCFParameter.PARALLELISM.name,
+                                                                      gpuc=UCFParameter.GENERAL_PARAMETERS.name)
+        else:
+            msg = "{gpuc} : '{cpus}' doit être un entier positif (non nul), ou -1.".format(cpus=UCFParameter.CPUS.name,
+                                                                                           gpuc=UCFParameter.GENERAL_PARAMETERS.name)
+        super().__init__(msg)
+
+
+class GeneralParametersMissingFieldException(UCFCheckerException):
+    def __init__(self):
+        super().__init__("{gpuc} : les champs '{p}' et '{cpus}' sont obligatoires.".format(gpuc=UCFParameter.GENERAL_PARAMETERS.name,
+                                                                                           p=UCFParameter.PARALLELISM.name,
+                                                                                           cpus=UCFParameter.CPUS.name))

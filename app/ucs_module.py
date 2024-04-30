@@ -1,5 +1,6 @@
 import abc
 import copy
+from multiprocessing import cpu_count
 from abc import ABC
 from typing import (Any,
                     Dict,
@@ -11,6 +12,50 @@ from app.boite_a_bonheur.UCFParameterEnum import UCFParameterEnumMember, UCFPara
 from app.tps_module import (TPBuilder,
                             TaskParameters)
 from app.UCFChecker import UCFChecker
+
+
+class GeneralParametersUC:
+
+    _INSTANCE = None
+
+    def __init__(self):
+        self._should_download_in_parallel: bool = UCFParameter.DEFAULT_PARALLELISM
+        self._max_cpus: int = UCFParameter.DEFAULT_CPUS
+        raise RuntimeError("GeneralParametersUC : appeler GeneralParametersUC.instance()")
+
+    @property
+    def should_download_in_parallel(self):
+        return self._should_download_in_parallel
+
+    @property
+    def max_cpus(self):
+        return self._max_cpus
+
+    @classmethod
+    def from_json_object(cls, jsono: dict, should_check_parameter: bool = True) -> "GeneralParametersUC":
+
+        if should_check_parameter:
+            UCFChecker.check_general_parameters(jsono)
+
+        gpuc = GeneralParametersUC.instance()
+        gpuc._should_download_in_parallel = jsono[UCFParameter.PARALLELISM.name]
+
+        if jsono[UCFParameter.CPUS.name] != -1:
+            gpuc._max_cpus = jsono[UCFParameter.CPUS.name]
+
+        return gpuc
+
+    @classmethod
+    def instance(cls) -> "GeneralParametersUC":
+        if cls._INSTANCE is None:
+            cls._INSTANCE = GeneralParametersUC.__new__(cls)
+            cls._INSTANCE._should_download_in_parallel = UCFParameter.DEFAULT_PARALLELISM
+            cls._INSTANCE._max_cpus = UCFParameter.DEFAULT_CPUS
+
+        return cls._INSTANCE
+
+    def __repr__(self):
+        return f"<{self.__class__.__name__} {self.should_download_in_parallel} {self.max_cpus}>"
 
 
 class ScrapperUC(ABC):
@@ -43,7 +88,7 @@ class ScrapperUC(ABC):
         return copy.copy(self._days)
 
     @classmethod
-    def from_json(cls, jsono, param_name: UCFParameterEnumMember) -> "ScrapperUC":
+    def from_json(cls, jsono: dict, param_name: UCFParameterEnumMember) -> "ScrapperUC":
 
         if param_name not in UCFParameter.scrappers_parameters():
             raise ValueError("ScrapperUC.from_ucf : param_name doit être un des exceptions")

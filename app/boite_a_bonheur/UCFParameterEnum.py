@@ -1,3 +1,4 @@
+from multiprocessing import cpu_count
 from typing import List
 
 
@@ -24,17 +25,27 @@ class UCFParameterEnumMember:
 class UCFParameter:
 
     UCF = UCFParameterEnumMember("config.json")
+
+    GENERAL_PARAMETERS = UCFParameterEnumMember("parametres_generaux")
+    PARALLELISM = UCFParameterEnumMember("parallelisme")
+    CPUS = UCFParameterEnumMember("cpus_max")
+
     OGIMET = UCFParameterEnumMember("ogimet")
+    IND = UCFParameterEnumMember("ind")
+
     METEOCIEL = UCFParameterEnumMember("meteociel")
+    CODE = UCFParameterEnumMember("code")
+
     WUNDERGROUND = UCFParameterEnumMember("wunderground")
+    COUNTRY_CODE = UCFParameterEnumMember("code_pays")
+    REGION = UCFParameterEnumMember("region")
+
     YEARS = UCFParameterEnumMember("annees")
     MONTHS = UCFParameterEnumMember("mois")
     DAYS = UCFParameterEnumMember("jours")
     CITY = UCFParameterEnumMember("ville")
-    CODE = UCFParameterEnumMember("code")
-    IND = UCFParameterEnumMember("ind")
-    REGION = UCFParameterEnumMember("region")
-    COUNTRY_CODE = UCFParameterEnumMember("code_pays")
+
+    GENERAL_PARAMETERS_FIELDS = [PARALLELISM, CPUS]
 
     SPECIFIC_FIELDS = {
         WUNDERGROUND: [REGION, COUNTRY_CODE],
@@ -43,10 +54,12 @@ class UCFParameter:
     }
 
     COMMON_FIELDS = [CITY]
-
     DATE_FIELDS = [YEARS, MONTHS, DAYS]
 
+    # valeurs par défaut
     DEFAULT_WAITING = 2
+    DEFAULT_PARALLELISM = True
+    DEFAULT_CPUS = cpu_count()
     MIN_MONTHS_DAYS_VALUE = 1
     MAX_DATE_FIELD_SIZE = 2
     MIN_YEARS = 1800

@@ -1,5 +1,4 @@
 import asyncio
-from multiprocessing import cpu_count
 import re
 import numpy as np
 import pandas as pd
@@ -7,11 +6,10 @@ from abc import (ABC,
                  abstractmethod)
 from typing import List
 from time import perf_counter
-
 from app.exceptions.scrapping_exceptions import (ScrapException,
                                                  HtmlPageException,
                                                  ProcessException)
-from app.ucs_module import ScrapperUC
+from app.ucs_module import ScrapperUC, GeneralParametersUC
 from app.tps_module import TaskParameters
 from app.boite_a_bonheur.ScraperTypeEnum import ScrapperType
 from app.boite_a_bonheur.MonthEnum import MonthEnum
@@ -22,8 +20,6 @@ from concurrent.futures import ProcessPoolExecutor
 
 class MeteoScrapper(ABC):
 
-    MAX_PROCESSES = cpu_count()
-    EXECUTOR = ProcessPoolExecutor(max_workers=MAX_PROCESSES)
     LOOP = asyncio.get_event_loop()
 
     def __init__(self):
@@ -53,17 +49,28 @@ class MeteoScrapper(ABC):
 
     def scrap_uc(self, uc: ScrapperUC) -> pd.DataFrame:
         """Télécharge les données et renvoie les résultats."""
-        return self.LOOP.run_until_complete(self._async_process_tps(uc))
-
-    async def _async_process_tps(self, uc: ScrapperUC):
         start = perf_counter()
-        futures = [self.LOOP.run_in_executor(self.EXECUTOR,
+        if GeneralParametersUC.instance().should_download_in_parallel:
+            global_df = self.LOOP.run_until_complete(self._parallel_process_tps(uc))
+        else:
+            global_df = self._sequential_process_tps(uc)
+
+        global_df = global_df[["date"] + [x for x in global_df.columns if x != "date"]]
+        global_df = global_df.sort_values(by="date")
+
+        end = round(perf_counter() - start, 2)
+        print(f"terminé en {end}s")
+
+        return global_df
+
+    async def _parallel_process_tps(self, uc: ScrapperUC):
+        executor = ProcessPoolExecutor(max_workers=GeneralParametersUC.instance().max_cpus)
+        futures = [self.LOOP.run_in_executor(executor,
                                              self._process_tp,
                                              tp)
                    for tp in uc.to_tps()]
 
         results = await asyncio.gather(*futures, return_exceptions=True)
-
         dfs = [x for x in results if isinstance(x, pd.DataFrame)]
         exceptions = [x for x in results if isinstance(x, ProcessException)]
 
@@ -73,13 +80,22 @@ class MeteoScrapper(ABC):
 
         try:
             global_df = pd.concat(dfs)
-            global_df = global_df[["date"] + [x for x in global_df.columns if x != "date"]]
-            global_df = global_df.sort_values(by="date")
         except ValueError:
             global_df = pd.DataFrame()
 
-        end = round(perf_counter() - start, 2)
-        print(f"terminé en {end}s")
+        return global_df
+
+    def _sequential_process_tps(self, uc):
+
+        global_df = pd.DataFrame()
+        for tp in uc.to_tps():
+            try:
+                local_df = self._process_tp(tp)
+                global_df = pd.concat([global_df, local_df])
+            except ProcessException as pe:
+                kwargs = pe.args[0][1]
+                self._errors[kwargs["key"]] = {"url": kwargs["url"], "msg": kwargs["msg"]}
+                continue
 
         return global_df
 

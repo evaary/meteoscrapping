@@ -50,6 +50,7 @@ class MeteoScrapper(ABC):
     def scrap_uc(self, uc: ScrapperUC) -> pd.DataFrame:
         """Télécharge les données et renvoie les résultats."""
         start = perf_counter()
+        print()
         if GeneralParametersUC.instance().should_download_in_parallel:
             global_df = self.LOOP.run_until_complete(self._parallel_process_tps(uc))
         else:
@@ -64,10 +65,8 @@ class MeteoScrapper(ABC):
         return global_df
 
     async def _parallel_process_tps(self, uc: ScrapperUC):
-        executor = ProcessPoolExecutor(max_workers=GeneralParametersUC.instance().max_cpus)
-        futures = [self.LOOP.run_in_executor(executor,
-                                             self._process_tp,
-                                             tp)
+        executor = ProcessPoolExecutor(max_workers=GeneralParametersUC.instance().cpus)
+        futures = [self.LOOP.run_in_executor(executor, self._process_tp, tp)
                    for tp in uc.to_tps()]
 
         results = await asyncio.gather(*futures, return_exceptions=True)
@@ -86,7 +85,6 @@ class MeteoScrapper(ABC):
         return global_df
 
     def _sequential_process_tps(self, uc):
-
         global_df = pd.DataFrame()
         for tp in uc.to_tps():
             try:
@@ -101,7 +99,6 @@ class MeteoScrapper(ABC):
 
     def _process_tp(self, tp: TaskParameters):
         print(tp.url)
-
         try:
             html_data = self._load_html(tp)
             col_names = self._scrap_columns_names(html_data)
@@ -109,9 +106,8 @@ class MeteoScrapper(ABC):
             df_tp = self._rework_data(values, col_names, tp)
             df_tp = self._add_missing_rows(df_tp, tp)
         except Exception as ex:
-            raise ProcessException(key=tp.key,
-                                   url=tp.url,
-                                   msg=str(ex))
+            raise ProcessException(key=tp.key, url=tp.url, msg=str(ex))
+
         return df_tp
 
     @staticmethod

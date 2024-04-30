@@ -28,7 +28,7 @@ class UCFParameter:
 
     GENERAL_PARAMETERS = UCFParameterEnumMember("parametres_generaux")
     PARALLELISM = UCFParameterEnumMember("parallelisme")
-    CPUS = UCFParameterEnumMember("cpus_max")
+    CPUS = UCFParameterEnumMember("cpus")
 
     OGIMET = UCFParameterEnumMember("ogimet")
     IND = UCFParameterEnumMember("ind")
@@ -59,7 +59,8 @@ class UCFParameter:
     # valeurs par défaut
     DEFAULT_WAITING = 2
     DEFAULT_PARALLELISM = True
-    DEFAULT_CPUS = cpu_count()
+    MAX_CPUS = cpu_count()
+    DEFAULT_CPUS = MAX_CPUS
     MIN_MONTHS_DAYS_VALUE = 1
     MAX_DATE_FIELD_SIZE = 2
     MIN_YEARS = 1800

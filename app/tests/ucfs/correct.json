@@ -1,4 +1,10 @@
 {
+    "parametres_generaux":
+    {
+        "parallelisme": false,
+        "cpus": -1
+    },
+
     "ogimet":
     [
         { "ind":"16138", "ville":"Ferrara", "annees":[2021], "mois":[2] },

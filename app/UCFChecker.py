@@ -16,7 +16,8 @@ from app.exceptions.ucf_checker_exceptions import (DateFieldException,
                                                    ScrapperUCException,
                                                    CommonStrFieldException,
                                                    SpecificStrFieldException,
-                                                   YearsDateException)
+                                                   YearsDateException, GeneralParametersFieldException,
+                                                   GeneralParametersMissingFieldException)
 
 
 class UCFChecker:
@@ -93,6 +94,7 @@ class UCFChecker:
         #   (3) Les paramètres pour chaque scrapper doivent être des listes.
         #       scrapper_presence associe ces paramètres à leur état de présence (True = présent, par défaut)
         #   (4) Chacun de ces paramètres est optionnel, mais il en faut au moins 1.
+        #   (5) On teste la présence des paramètres généraux, champs optionnel.
 
         # (1)
         try:
@@ -117,7 +119,38 @@ class UCFChecker:
         if not any(scrapper_presence.values()):
             raise EmptyConfigFileException(path=path_to_config)
 
+        # (5)
+        try:
+            if not isinstance(config_file[UCFParameter.GENERAL_PARAMETERS.name], dict):
+                raise NotAJsonObjectException(UCFParameter.GENERAL_PARAMETERS)
+        except KeyError:
+            pass
+
         return config_file
+
+    @staticmethod
+    def check_general_parameters(config: dict):
+
+        try:
+            gpuc = config[UCFParameter.GENERAL_PARAMETERS.name]
+        except KeyError:
+            return
+
+        try:
+            should_download_in_parallel = gpuc[UCFParameter.PARALLELISM.name]
+            if not isinstance(should_download_in_parallel, bool):
+                raise GeneralParametersFieldException(UCFParameter.PARALLELISM)
+        except KeyError:
+            raise GeneralParametersMissingFieldException()
+
+        try:
+            max_cpus = int(gpuc[UCFParameter.CPUS.name])
+            if max_cpus < -1 or max_cpus == 0:
+                raise GeneralParametersFieldException(UCFParameter.CPUS)
+        except KeyError:
+            raise GeneralParametersMissingFieldException()
+        except ValueError:
+            raise GeneralParametersFieldException(UCFParameter.CPUS)
 
     @staticmethod
     def check_scrappers(config: dict) -> None:
@@ -196,6 +229,7 @@ class UCFChecker:
     def check(cls, path: str) -> dict:
         cls.check_ucf_existence(path)
         config = cls.check_ucf_structure(path)
+        cls.check_general_parameters(config)
         cls.check_scrappers(config)
         cls.check_ucs(config)
 

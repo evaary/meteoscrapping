@@ -33,7 +33,7 @@ Où trouver les paramètres ?
 
     Pour les jobs wunderground:
         - https://www.wunderground.com/history/monthly/it/bergamo/LIME/date/2020-3
-          https:       [...]                  /monthly/<code_pays>/<ville>/<region>/date/[...]
+          https:       [...]                  /monthly/<code_pays>/<ville>/<region>/[...]
         - /!\   Les unités sont converties dans les résultats
                 températures (°F -> °C),    vitesses (mph -> km/h), précipitations (in -> mm),  pressions (inHg -> hPa).
 
@@ -44,8 +44,11 @@ Où trouver les paramètres ?
     Pour les jobs meteociel heure par heure
         - https://www.meteociel.com/temps-reel/obs_villes.php?code2=7249&jour2=1&mois2=0&annee2=2020
           https://     [...]                                  code2=<code>&jour2=   [...]
-        - /!\/!\ Les mois dans l'URL sont numérotés différement. Dans la config, utiliser les numéros usuels.
-        - La colonne "vent (rafale)" est séparée en 2 colonnes distinctes.
+        - /!\ Les mois dans l'URL sont numérotés différement. Dans la config, utiliser les numéros usuels.
+        - La colonne "vent (rafales)" est séparée en 3 colonnes distinctes :
+            la direction du vent en degré
+            la vitesse moyenne du vent
+            la vitesse max
 
 Informations importantes
 
@@ -56,6 +59,11 @@ Informations importantes
     - les colonnes contenant des icônes sont exclues des résultats.
     - Des ConnectionResetError peuvent apparaitre pendant le téléchargement, elles ne sont pas graves.
     - La 1ère fois que le programme se lance, il téléchargera chromium, c'est normal.
+    - Dans les paramètres généraux :
+        si "parallelisme" est "true", plusieurs pages seront téléchargées en même temps.
+        S'il est false, on télécharge les pages 1 par 1.
+        "cpus" est le nombre de téléchargements en parallèle à faire. -1 correspond à "autant que possible".
+
 
     meteociel heure par heure
     La durée du téléchargement dépend du nombre de jours (1 page de 24h requêtée par jour demandé)
@@ -87,11 +95,17 @@ Performances
 
     meteociel jour par jour
     {"code": "7249", "ville":"orleans", "annees":[1975, 2023], "mois":[1, 12] }
-    => a généré un CSV de 17 897 lignes (100% des données) en 2 364, sans fichier d'erreur
+    => a généré un CSV de 17 897 lignes en 2 364s, sans fichier d'erreur
 
 
 Structure du fichier config.json:
 {
+    "parametres_generaux":
+    {
+        "parallelisme": true,
+        "cpus": -1
+    },
+
     "ogimet":
     [
         { "ind":"16288", "ville":"Caserta", "annees":[2020, 2025], "mois":[1, 12] },

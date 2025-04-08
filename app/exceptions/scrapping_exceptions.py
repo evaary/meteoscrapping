@@ -1,8 +1,12 @@
 class ProcessException(Exception):
-    pass
+    def __init__(self, *args, **kwargs):
+        super().__init__(args, kwargs)
+        self.key = kwargs["key"]
+        self.url = kwargs["url"]
+        self.msg = kwargs["msg"]
 
 
-class HtmlPageException(ProcessException):
+class HtmlPageException(Exception):
 
     MESSAGE = "Echec de récupération du html"
 
@@ -10,7 +14,7 @@ class HtmlPageException(ProcessException):
         super().__init__(self.MESSAGE)
 
 
-class ScrapException(ProcessException):
+class ScrapException(Exception):
 
     MESSAGE = "Echec de récupération des données de la table html"
 
@@ -18,7 +22,7 @@ class ScrapException(ProcessException):
         super().__init__(self.MESSAGE)
 
 
-class ReworkException(ProcessException):
+class ReworkException(Exception):
 
     MESSAGE = "Echec du traitement des données récupérées"
 

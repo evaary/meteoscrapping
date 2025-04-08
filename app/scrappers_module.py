@@ -1,4 +1,4 @@
-from threading import Timer
+import asyncio
 import re
 import numpy as np
 import pandas as pd
@@ -6,50 +6,28 @@ from abc import (ABC,
                  abstractmethod)
 from typing import List
 from time import perf_counter
-
 from app.exceptions.scrapping_exceptions import (ScrapException,
-                                                 HtmlPageException)
-from app.ucs_module import ScrapperUC
+                                                 HtmlPageException,
+                                                 ProcessException)
+from app.ucs_module import ScrapperUC, GeneralParametersUC
 from app.tps_module import TaskParameters
 from app.boite_a_bonheur.ScraperTypeEnum import ScrapperType
 from app.boite_a_bonheur.MonthEnum import MonthEnum
 from requests_html import (Element,
                            HTMLSession)
+from concurrent.futures import ProcessPoolExecutor
 
 
 class MeteoScrapper(ABC):
 
-    PROGRESS_TIMER_INTERVAL = 10  # en secondes
+    LOOP = asyncio.get_event_loop()
 
     def __init__(self):
         self._errors = dict()
-        self._start = 0     # date de départ de lancement des jobs
-        self._done = 0      # quantité de TPs traités
-        self._todo = 0      # quantité de TPs à traiter
-        self._progress = 0  # % de TPs traités
 
     @property
     def errors(self):
         return self._errors.copy()
-
-    def _update(self) -> None:
-        self._done += 1
-        self._progress = round(self._done / self._todo * 100, 0)
-
-    def _print_progress(self,  uc: ScrapperUC, forced=False) -> None:
-        # La condition d'affichage empêche d'afficher 2 fois l'avancement à 100%,
-        # une fois par l'affichage final, une autre fois par le timer lancé juste avant d'atteindre les 100%.
-        # L'appel final à _print_progress arrivant à 100% d'avancement, on force l'affichage.
-        # Le 2nd affichage venant du timer sera bloqué.
-        if self._progress < 100 or forced:
-            print(f"{uc} - {self._progress}% - {round(perf_counter() - self._start, 0)}s \n")
-
-        if self._progress == 100:
-            return
-
-        timer = Timer(self.PROGRESS_TIMER_INTERVAL, self._print_progress, [uc])
-        timer.daemon = True
-        timer.start()
 
     @staticmethod
     def scrapper_instance(uc: ScrapperUC) -> "MeteoScrapper":
@@ -71,56 +49,90 @@ class MeteoScrapper(ABC):
 
     def scrap_uc(self, uc: ScrapperUC) -> pd.DataFrame:
         """Télécharge les données et renvoie les résultats."""
-        global_df = pd.DataFrame()
+        start = perf_counter()
+        print()
+        if GeneralParametersUC.instance().should_download_in_parallel:
+            global_df = self.LOOP.run_until_complete(self._parallel_process_tps(uc))
+        else:
+            global_df = self._sequential_process_tps(uc)
 
-        self._todo = sum([1 for _ in uc.to_tps()])
-        self._start = perf_counter()
-        self._print_progress(uc)
+        try:
+            global_df = global_df[["date"] + [x for x in global_df.columns if x != "date"]]
+            global_df = global_df.sort_values(by="date")
+        except KeyError:
+            pass
 
-        for tp in uc.to_tps():
-            try:
-                html_data = self._load_html(tp)
-                col_names = self._scrap_columns_names(html_data)
-                values = self._scrap_columns_values(html_data)
-                local_df = self._rework_data(values, col_names, tp)
-                local_df = self._add_missing_rows(local_df, tp)
-                global_df = pd.concat([global_df, local_df])
-
-                global_df = global_df[["date"] + [x for x in global_df.columns if x != "date"]]
-                global_df = global_df.sort_values(by="date")
-
-            except Exception as ex:
-                self._errors[tp.key] = tp.url
-                continue
-            finally:
-                self._update()
-
-        self._print_progress(uc, forced=True)
+        end = round(perf_counter() - start, 2)
+        print(f"terminé en {end}s")
 
         return global_df
+
+    async def _parallel_process_tps(self, uc: ScrapperUC):
+        executor = ProcessPoolExecutor(max_workers=GeneralParametersUC.instance().cpus)
+        futures = [self.LOOP.run_in_executor(executor, self._process_tp, tp)
+                   for tp in uc.to_tps()]
+
+        results = await asyncio.gather(*futures, return_exceptions=True)
+        dfs = [x for x in results if isinstance(x, pd.DataFrame)]
+        exceptions = [x for x in results if isinstance(x, ProcessException)]
+
+        for ex in exceptions:
+            self._errors[ex.key] = {"url": ex.url, "msg": ex.msg}
+
+        try:
+            global_df = pd.concat(dfs)
+        except ValueError:
+            global_df = pd.DataFrame()
+
+        return global_df
+
+    def _sequential_process_tps(self, uc: ScrapperUC):
+        global_df = pd.DataFrame()
+        for tp in uc.to_tps():
+            try:
+                local_df = self._process_tp(tp)
+                global_df = pd.concat([global_df, local_df])
+            except ProcessException as pe:
+                self._errors[pe.key] = {"url": pe.url, "msg": pe.msg}
+                continue
+
+        return global_df
+
+    def _process_tp(self, tp: TaskParameters):
+        print(tp.url)
+        try:
+            html_data = self._load_html(tp)
+            col_names = self._scrap_columns_names(html_data)
+            values = self._scrap_columns_values(html_data)
+            df_tp = self._rework_data(values, col_names, tp)
+            df_tp = self._add_missing_rows(df_tp, tp)
+        except Exception as ex:
+            raise ProcessException(key=tp.key, url=tp.url, msg=str(ex))
+
+        return df_tp
 
     @staticmethod
     def _load_html(tp: TaskParameters) -> Element:
         """Charge une page html à scrapper et renvoie la table de données trouvée."""
         html_loading_trials = 3
         html_page = None
-        while html_page is None and html_loading_trials > 0:
+        with HTMLSession() as session:
+            while html_page is None and html_loading_trials > 0:
 
-            if html_loading_trials < 3:
-                print("retrying...")
+                if html_loading_trials < 3:
+                    print("retrying...")
 
-            try:
-                with HTMLSession() as session:
+                try:
                     html_page = session.get(tp.url)
                     html_page.html.render(sleep=tp.waiting,  # .html n'est pas trouvé mais est essentiel
                                           keep_page=True,
                                           scrolldown=1)
-                if html_page.status_code != 200:
+                    if html_page.status_code != 200:
+                        html_page = None
+                except Exception:
+                    html_loading_trials -= 1
                     html_page = None
-            except Exception:
-                html_loading_trials -= 1
-                html_page = None
-                tp.update_waiting()
+                    tp.update_waiting()
 
         if html_page is None:
             raise HtmlPageException()
@@ -298,13 +310,14 @@ class MeteocielDaily(MeteoScrapper):
 
 class MeteocielHourly(MeteoScrapper):
 
-    UNWANTED_COLUMNS = ["winddir", "temps", "vent_rafales"]
+    UNWANTED_COLUMNS = ["temps", "vent_rafales"]
     NOT_NUMERIC = ["date", "neb"]
     REGEX_FOR_NUMERICS = r'-?\d+\.?\d*'
     UNITS = {"visi": "km",
              "temperature": "°C",
              "point_de_rosee": "°C",
              "humi": "%",
+             "direction_du_vent": "°",
              "vent": "km/h",
              "rafales": "km/h",
              "pression": "hPa",
@@ -316,13 +329,14 @@ class MeteocielHourly(MeteoScrapper):
         #   (3) La colonne vent est composée de 2 sous colonnes: direction et vitesse.
         #       Le tableau compte donc n colonnes mais n-1 noms de colonnes.
         #       On rajoute donc un nom pour la colonne de la direction du vent.
-        columns_names = [td.text.lower() for td in table.find("tr")[0].find("td")]
+        columns_names = [td.text for td in table.find("tr")[0].find("td")]
         if len(columns_names) == 0:
             raise ScrapException()
         # (1)
         columns_names = [col.split("\n")[0] if "\n" in col else col for col in columns_names]
         # (2)
-        columns_names = [col.replace("ã©", "e")
+        columns_names = [col.lower()
+                            .replace("ã©", "e")
                             .replace("ã¨", "e")
                             .replace(".", "")
                             .replace(" ", "_")
@@ -334,17 +348,66 @@ class MeteocielHourly(MeteoScrapper):
         # (3)
         try:
             indexe = columns_names.index("vent_rafales")
-            columns_names.insert(indexe, "winddir")
+            columns_names.insert(indexe, "direction_du_vent")
         except ValueError:
             pass
 
         return columns_names
 
     def _scrap_columns_values(self, table):
-        # On enlève la 1ère ligne car elle contient le nom des colonnes
+        # (1)   On enlève la 1ère ligne car elle contient le nom des colonnes
+        # (2)   On va récupérer la direction du vent en degré contenue dans les pop-up au survol de l'image
+        # (2.1) On récupère le numéro de la colonne de la direction du vent.
+        #       Comme il y a 1 colonne de plus que de noms de colonnes, la direction du vent correspond à l'indexe de vent (rafales)
+        #
+        # (2.2) On récupère le html des images des directions du vent en html, qui contient toutes les infos des pop-up.
+        #
+        # (2.3) La valeur à récupérer est facile à retrouver en splittant sur ";(",
+        #       et en récupérant les 3 premiers caractères du 2ème membre.
+        #       On isole ainsi soit un nombre à 3 chiffres, soit un nombre à 2 chiffres + 1 caractère indésirable.
+        #       Certaines icônes contiennent le mot "variable" à la place de la valeur en degré, on aura "" comme valeur finale.
+        #
+        # (2.4) On convertit les str récupérées en valeur numérique, on élimine ainsi les potentiels caractères indésirables,
+        #       puis on remet la valeur numérique en str, car à ce stade du processus de scrapping, on ne doit travailler qu'avec des str.
+        #
+        # (2.5) On a récupéré les directions du vent dans une liste à part de la liste principale des valeurs.
+        #       Les directions du vent dans la liste principale sont des str vides.
+        #       On calcule donc l'indexe des directions du vent dans la liste principale, et on les remplace par les nouvelles.
+
+        # (1)
         values = [td.text
                   for tr in table.find("tr")[1:]
                   for td in tr.find("td")]
+        # (2)
+        try:
+            # (2.1)
+            columns_names = [td.text.lower() for td in table.find("tr")[0].find("td")]
+            columns_size = len(columns_names) + 1
+            wind_dir_indexe = columns_names.index("vent (rafales)")
+            # (2.2)
+            wind_dir_cells = [img.html
+                              for img in table.find("img")
+                              if "Vent moyen :" in img.html]
+            # (2.3)
+            wind_dir_cells = [string.split(";(")
+                              for string in wind_dir_cells]
+
+            wind_dir_cells = ["" if len(str_list) < 2 else str_list[1][:3]
+                              for str_list in wind_dir_cells]
+            # (2.4)
+            wind_dir_cells = [self._extract_numeric_value(str_value)
+                              for str_value in wind_dir_cells]
+
+            wind_dir_cells = ["" if x is np.nan else str(x) for x in wind_dir_cells]
+            # (2.5)
+            indexe_value_map = {columns_size * idx + wind_dir_indexe : val
+                                for idx, val in enumerate(wind_dir_cells)}
+
+            for key, val in indexe_value_map.items():
+                values[key] = val
+        except ValueError:
+            pass
+
         return values
 
     def _rework_data(self, values, columns_names, tp):
@@ -367,9 +430,14 @@ class MeteocielHourly(MeteoScrapper):
         # (2)
         try:
             splitted = df["vent_rafales"].str.split("(")
-            df["vent"] = [x[0] for x in splitted]
-            df["rafales"] = ["" if len(x) == 1 else x[1] for x in splitted]
-            del splitted
+            idx_vent = list(df.columns).index("vent_rafales")
+            df.insert(loc=idx_vent + 1,
+                      column="vent",
+                      value=[x[0] for x in splitted])
+            df.insert(loc=idx_vent + 2,
+                      column="rafales",
+                      value=["" if len(x) == 1 else x[1] for x in splitted])
+            del splitted, idx_vent
         except KeyError:
             pass
         df = df[[col

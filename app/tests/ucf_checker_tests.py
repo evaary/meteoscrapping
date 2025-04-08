@@ -1,6 +1,7 @@
 from unittest import TestCase
 
 from app.UCFChecker import UCFChecker
+from app.boite_a_bonheur.UCFParameterEnum import UCFParameter
 from app.exceptions.ucf_checker_exceptions import (DateFieldException,
                                                    DaysDateException,
                                                    MonthsDateException,
@@ -14,7 +15,10 @@ from app.exceptions.ucf_checker_exceptions import (DateFieldException,
                                                    ScrapperUCException,
                                                    CommonStrFieldException,
                                                    SpecificStrFieldException,
-                                                   YearsDateException)
+                                                   YearsDateException,
+                                                   GeneralParametersFieldException,
+                                                   GeneralParametersMissingFieldException)
+from app.ucs_module import GeneralParametersUC
 
 
 class UCFCheckerTester(TestCase):
@@ -42,7 +46,13 @@ class UCFCheckerTester(TestCase):
         "date_unordered"      : f"{BASE_PATH}/date_unordered.json",
         "years_oob"           : f"{BASE_PATH}/years_out_of_bounds.json",
         "months_oob"          : f"{BASE_PATH}/months_out_of_bounds.json",
-        "days_oob"            : f"{BASE_PATH}/days_out_of_bounds.json"
+        "days_oob"            : f"{BASE_PATH}/days_out_of_bounds.json",
+        "invalid_genparams"   : f"{BASE_PATH}/invalid_general_params.json",
+        "max_cpus_oob"        : f"{BASE_PATH}/max_cpus_oob.json",
+        "max_cpus_oob_2"      : f"{BASE_PATH}/max_cpus_oob_2.json",
+        "invalid_parallelism" : f"{BASE_PATH}/invalid_parallelism.json",
+        "fake_parallelism"    : f"{BASE_PATH}/fake_parallelism.json",
+        "missing_field_genprm": f"{BASE_PATH}/missing_field_genparams.json",
     }
 
     def test_nominal_case(self):
@@ -121,3 +131,25 @@ class UCFCheckerTester(TestCase):
 
         with self.assertRaises(DaysDateException):
             UCFChecker.check(self.CONFIG_FILES["days_oob"])
+
+    def test_general_parameters(self):
+
+        with self.assertRaises(NotAJsonObjectException):
+            UCFChecker.check(self.CONFIG_FILES["invalid_genparams"])
+
+        with self.assertRaises(GeneralParametersFieldException):
+            UCFChecker.check(self.CONFIG_FILES["max_cpus_oob"])
+
+        with self.assertRaises(GeneralParametersFieldException):
+            UCFChecker.check(self.CONFIG_FILES["invalid_parallelism"])
+
+        with self.assertRaises(GeneralParametersMissingFieldException):
+            UCFChecker.check(self.CONFIG_FILES["missing_field_genprm"])
+
+        config_file = UCFChecker.check(self.CONFIG_FILES["max_cpus_oob_2"])
+        gpuc = GeneralParametersUC.from_json_object(config_file[UCFParameter.GENERAL_PARAMETERS.name])
+        self.assertEqual(gpuc.cpus, UCFParameter.MAX_CPUS)
+
+        config_file = UCFChecker.check(self.CONFIG_FILES["fake_parallelism"])
+        gpuc = GeneralParametersUC.from_json_object(config_file[UCFParameter.GENERAL_PARAMETERS.name])
+        self.assertFalse(gpuc._should_download_in_parallel)

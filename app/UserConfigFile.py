@@ -3,7 +3,7 @@ from typing import List
 
 from app.boite_a_bonheur.UCFParameterEnum import UCFParameter
 from app.UCFChecker import UCFChecker
-from app.ucs_module import ScrapperUC
+from app.ucs_module import ScrapperUC, GeneralParametersUC
 
 
 class UserConfigFile:
@@ -30,6 +30,12 @@ class UserConfigFile:
 
         config_file = UCFChecker.check(path_to_ucf)
         ucf = UserConfigFile()
+
+        try:
+            general_parameters = config_file[UCFParameter.GENERAL_PARAMETERS.name]
+            GeneralParametersUC.from_json_object(general_parameters, False)
+        except KeyError:
+            pass
 
         try:
             oucs = config_file[UCFParameter.OGIMET.name]

@@ -1,6 +1,9 @@
 class ProcessException(Exception):
     def __init__(self, *args, **kwargs):
         super().__init__(args, kwargs)
+        self.key = kwargs["key"]
+        self.url = kwargs["url"]
+        self.msg = kwargs["msg"]
 
 
 class HtmlPageException(Exception):

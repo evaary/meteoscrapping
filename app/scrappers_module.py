@@ -56,8 +56,11 @@ class MeteoScrapper(ABC):
         else:
             global_df = self._sequential_process_tps(uc)
 
-        global_df = global_df[["date"] + [x for x in global_df.columns if x != "date"]]
-        global_df = global_df.sort_values(by="date")
+        try:
+            global_df = global_df[["date"] + [x for x in global_df.columns if x != "date"]]
+            global_df = global_df.sort_values(by="date")
+        except KeyError:
+            pass
 
         end = round(perf_counter() - start, 2)
         print(f"terminé en {end}s")
@@ -74,8 +77,7 @@ class MeteoScrapper(ABC):
         exceptions = [x for x in results if isinstance(x, ProcessException)]
 
         for ex in exceptions:
-            kwargs = ex.args[0][1]
-            self._errors[kwargs["key"]] = {"url": kwargs["url"], "msg": kwargs["msg"]}
+            self._errors[ex.key] = {"url": ex.url, "msg": ex.msg}
 
         try:
             global_df = pd.concat(dfs)
@@ -84,15 +86,14 @@ class MeteoScrapper(ABC):
 
         return global_df
 
-    def _sequential_process_tps(self, uc):
+    def _sequential_process_tps(self, uc: ScrapperUC):
         global_df = pd.DataFrame()
         for tp in uc.to_tps():
             try:
                 local_df = self._process_tp(tp)
                 global_df = pd.concat([global_df, local_df])
             except ProcessException as pe:
-                kwargs = pe.args[0][1]
-                self._errors[kwargs["key"]] = {"url": kwargs["url"], "msg": kwargs["msg"]}
+                self._errors[pe.key] = {"url": pe.url, "msg": pe.msg}
                 continue
 
         return global_df
@@ -309,13 +310,14 @@ class MeteocielDaily(MeteoScrapper):
 
 class MeteocielHourly(MeteoScrapper):
 
-    UNWANTED_COLUMNS = ["winddir", "temps", "vent_rafales"]
+    UNWANTED_COLUMNS = ["temps", "vent_rafales"]
     NOT_NUMERIC = ["date", "neb"]
     REGEX_FOR_NUMERICS = r'-?\d+\.?\d*'
     UNITS = {"visi": "km",
              "temperature": "°C",
              "point_de_rosee": "°C",
              "humi": "%",
+             "direction_du_vent": "°",
              "vent": "km/h",
              "rafales": "km/h",
              "pression": "hPa",
@@ -327,13 +329,14 @@ class MeteocielHourly(MeteoScrapper):
         #   (3) La colonne vent est composée de 2 sous colonnes: direction et vitesse.
         #       Le tableau compte donc n colonnes mais n-1 noms de colonnes.
         #       On rajoute donc un nom pour la colonne de la direction du vent.
-        columns_names = [td.text.lower() for td in table.find("tr")[0].find("td")]
+        columns_names = [td.text for td in table.find("tr")[0].find("td")]
         if len(columns_names) == 0:
             raise ScrapException()
         # (1)
         columns_names = [col.split("\n")[0] if "\n" in col else col for col in columns_names]
         # (2)
-        columns_names = [col.replace("ã©", "e")
+        columns_names = [col.lower()
+                            .replace("ã©", "e")
                             .replace("ã¨", "e")
                             .replace(".", "")
                             .replace(" ", "_")
@@ -345,17 +348,66 @@ class MeteocielHourly(MeteoScrapper):
         # (3)
         try:
             indexe = columns_names.index("vent_rafales")
-            columns_names.insert(indexe, "winddir")
+            columns_names.insert(indexe, "direction_du_vent")
         except ValueError:
             pass
 
         return columns_names
 
     def _scrap_columns_values(self, table):
-        # On enlève la 1ère ligne car elle contient le nom des colonnes
+        # (1)   On enlève la 1ère ligne car elle contient le nom des colonnes
+        # (2)   On va récupérer la direction du vent en degré contenue dans les pop-up au survol de l'image
+        # (2.1) On récupère le numéro de la colonne de la direction du vent.
+        #       Comme il y a 1 colonne de plus que de noms de colonnes, la direction du vent correspond à l'indexe de vent (rafales)
+        #
+        # (2.2) On récupère le html des images des directions du vent en html, qui contient toutes les infos des pop-up.
+        #
+        # (2.3) La valeur à récupérer est facile à retrouver en splittant sur ";(",
+        #       et en récupérant les 3 premiers caractères du 2ème membre.
+        #       On isole ainsi soit un nombre à 3 chiffres, soit un nombre à 2 chiffres + 1 caractère indésirable.
+        #       Certaines icônes contiennent le mot "variable" à la place de la valeur en degré, on aura "" comme valeur finale.
+        #
+        # (2.4) On convertit les str récupérées en valeur numérique, on élimine ainsi les potentiels caractères indésirables,
+        #       puis on remet la valeur numérique en str, car à ce stade du processus de scrapping, on ne doit travailler qu'avec des str.
+        #
+        # (2.5) On a récupéré les directions du vent dans une liste à part de la liste principale des valeurs.
+        #       Les directions du vent dans la liste principale sont des str vides.
+        #       On calcule donc l'indexe des directions du vent dans la liste principale, et on les remplace par les nouvelles.
+
+        # (1)
         values = [td.text
                   for tr in table.find("tr")[1:]
                   for td in tr.find("td")]
+        # (2)
+        try:
+            # (2.1)
+            columns_names = [td.text.lower() for td in table.find("tr")[0].find("td")]
+            columns_size = len(columns_names) + 1
+            wind_dir_indexe = columns_names.index("vent (rafales)")
+            # (2.2)
+            wind_dir_cells = [img.html
+                              for img in table.find("img")
+                              if "Vent moyen :" in img.html]
+            # (2.3)
+            wind_dir_cells = [string.split(";(")
+                              for string in wind_dir_cells]
+
+            wind_dir_cells = ["" if len(str_list) < 2 else str_list[1][:3]
+                              for str_list in wind_dir_cells]
+            # (2.4)
+            wind_dir_cells = [self._extract_numeric_value(str_value)
+                              for str_value in wind_dir_cells]
+
+            wind_dir_cells = ["" if x is np.nan else str(x) for x in wind_dir_cells]
+            # (2.5)
+            indexe_value_map = {columns_size * idx + wind_dir_indexe : val
+                                for idx, val in enumerate(wind_dir_cells)}
+
+            for key, val in indexe_value_map.items():
+                values[key] = val
+        except ValueError:
+            pass
+
         return values
 
     def _rework_data(self, values, columns_names, tp):
@@ -378,9 +430,14 @@ class MeteocielHourly(MeteoScrapper):
         # (2)
         try:
             splitted = df["vent_rafales"].str.split("(")
-            df["vent"] = [x[0] for x in splitted]
-            df["rafales"] = ["" if len(x) == 1 else x[1] for x in splitted]
-            del splitted
+            idx_vent = list(df.columns).index("vent_rafales")
+            df.insert(loc=idx_vent + 1,
+                      column="vent",
+                      value=[x[0] for x in splitted])
+            df.insert(loc=idx_vent + 2,
+                      column="rafales",
+                      value=["" if len(x) == 1 else x[1] for x in splitted])
+            del splitted, idx_vent
         except KeyError:
             pass
         df = df[[col

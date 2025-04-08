@@ -38,16 +38,25 @@ class Main:
             workdir = os.getcwd()
             start_date = f"{uc.months[0]}_{uc.years[0]}"
             end_date = f"{uc.months[-1]}_{uc.years[-1]}"
+            is_one_date = False
 
             if uc.scrapper_type in ScrapperType.hourly_scrappers():
                 start_date = f"{uc.days[0]}_{start_date}"
                 end_date = f"{uc.days[-1]}_{end_date}"
 
-            base_filename = "_".join([uc.scrapper_type.name,
-                                      uc.city,
-                                      f"du_{start_date}",
-                                      f"au_{end_date}"])\
-                               .lower()
+            is_one_date = start_date == end_date
+
+            if is_one_date:
+                base_filename = "_".join([uc.scrapper_type.name,
+                                          uc.city,
+                                          start_date])\
+                                    .lower()
+            else:
+                base_filename = "_".join([uc.scrapper_type.name,
+                                        uc.city,
+                                        f"du_{start_date}",
+                                        f"au_{end_date}"])\
+                                    .lower()
 
             data_filename = os.path.join(workdir,
                                          cls.DIRECTORIES["data"],

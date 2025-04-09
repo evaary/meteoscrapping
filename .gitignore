@@ -6,6 +6,6 @@ app/__pycache__
 resultats/
 erreurs/
 output/
-venv/
+.venv/
 
 config.json

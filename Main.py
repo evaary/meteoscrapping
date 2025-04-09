@@ -85,6 +85,7 @@ class Main:
 
 if __name__ == "__main__":
     try:
+        mp.freeze_support()  # pour ne pas que le main se relance en boucle
         Main.run()
     except KeyboardInterrupt:
         Main.stop()

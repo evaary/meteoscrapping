@@ -1,6 +1,6 @@
 {
     "wunderground":
     [
-        { "code_pays":"it", "region": "LIBD", "ville":"matera", "annees":[2021, 2022, 2023], "mois":[1,6] }
+        { "code_pays":"it", "region": "LIBD", "ville":"matera", "dates":["1/2/3/2021"] }
     ]
 }

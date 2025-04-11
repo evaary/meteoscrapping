@@ -1,7 +1,7 @@
 {
     "wunderground":
     [
-        { "code_pays":"it", "region": "LIBD", "ville":"matera", "dates":["1/1/2020"] },
-        { "code_pays":"it", "region": "LIBD", "ville":"matera", "dates":["1/1/2020"] }
+        { "code_pays":"it", "region": "LIBD", "ville":"matera", "dates":["1/2020"] },
+        { "code_pays":"it", "region": "LIBD", "ville":"matera", "dates":["1/2020"] }
     ]
 }

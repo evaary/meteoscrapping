@@ -7,18 +7,18 @@
 
     "ogimet":
     [
-        { "ind":"16288", "ville":"Caserta", "start_date": "1/2020", "end_date": "2/2020"},
-        { "ind":"07149", "ville":"paris_orly", "start_date": "13/1/2024", "end_date": "18/1/2024" }
+        { "ind":"16288", "ville":"Caserta", "dates":["1/2020", "2/2020"] },
+        { "ind":"07149", "ville":"paris_orly", "dates":["13/1/2024", "18/1/2024"] }
     ],
 
     "wunderground":
     [
-        { "code_pays":"it", "region": "LIBD", "ville":"matera", "start_date": "1/2020", "end_date": "6/2024" }
+        { "code_pays":"it", "region":"LIBD", "ville":"matera", "dates":["1/2020", "6/2024"] }
     ],
 
     "meteociel":
     [
-        {"code": "7249", "ville":"orleans", "date": "1/2020"},
-        {"code": "7249", "ville":"orleans", "start_date": "27/2/2020", "end_date": "31/2/2024" }
+        {"code":"7249", "ville":"orleans", "date":["1/2020"] },
+        {"code":"7249", "ville":"orleans", "date":["27/2/2020", "31/2/2024"] }
     ]
 }

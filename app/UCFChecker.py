@@ -70,12 +70,14 @@ class UCFChecker:
         if len(dates_sizes) != 1:
             raise DateFieldException()
         # (4)
-        if not all([ isinstance(x, int)
-                    for string in dates
-                    for x in string.split("/") ]):
+        try:
+            [ int(x)
+             for string in dates
+             for x in string.split("/") ]
+        except ValueError:
             raise DateFieldException()
         # (5)
-        if dates_sizes[0] == 3 and scrapper_name == UCFParameter.WUNDERGROUND:
+        if dates_sizes.pop() == 3 and scrapper_name == UCFParameter.WUNDERGROUND:
             raise UnavailableScrapperException(scrapper_name, "par heure")
         # (6)
         for date in dates:

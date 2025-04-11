@@ -33,7 +33,7 @@ class UserConfigFile:
 
         try:
             general_parameters = config_file[UCFParameter.GENERAL_PARAMETERS.json_name]
-            GeneralParametersUC.from_json_object(general_parameters, False)
+            GeneralParametersUC.from_json_object(general_parameters)
         except KeyError:
             pass
 

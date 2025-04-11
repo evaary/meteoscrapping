@@ -111,6 +111,13 @@ class ScrapperUC(ABC):
         is_hourly = len(suc.dates[0].split("/")) == 3
         suc._scrapper_type = hourly_type if is_hourly else daily_type
 
+        if is_hourly:
+            for index, date in enumerate(suc._dates):
+                day, month, year = (int(x) for x in date.split("/"))
+                max_day = MonthEnum.from_id(month).ndays
+                if day > max_day:
+                    suc._dates[index] = f"{max_day}/{month}/{year}"
+
         return suc
 
     @abc.abstractmethod
@@ -124,14 +131,17 @@ class ScrapperUC(ABC):
     def __repr__(self):
         return "<{type} {city} from {start_date} to {end_date}>".format(type=self.scrapper_type,
                                                                         city=self.city,
-                                                                        start_date=self.start_date,
-                                                                        end_date=self.end_date)
+                                                                        start_date=self.dates[0],
+                                                                        end_date=self.dates[-1])
 
     def __hash__(self):
         x = 7 # à différencier selon les scrappers
         for param in self._get_parameters():
             field_value = self.__dict__[param.field_name]
-            x = 79 * x + hash(field_value)  # à différencier selon les scrappers
+            if isinstance(field_value, list):
+                x = 79 * x + sum([hash(x) for x in field_value])
+            else:
+                x = 79 * x + hash(field_value)  # à différencier selon les scrappers
 
         return x
 
@@ -175,27 +185,42 @@ class MeteocielUC(ScrapperUC):
     def to_tps(self):
 
         should_run = True
-        *current_day, current_month, current_year = [int(x) for x in self.dates[0].split("/")]
-        is_hourly = self.scrapper_type == ScrapperType.METEOCIEL_HOURLY
-        if is_hourly:
-            current_day = current_day[0]
 
-        while should_run:
+        if self.scrapper_type == ScrapperType.METEOCIEL_DAILY:
 
-            tpbuilder = TPBuilder(self.scrapper_type).with_code(self._code)\
+            current_month, current_year = [int(x) for x in self.dates[0].split("/")]
+
+            while should_run:
+
+                yield TPBuilder(self.scrapper_type).with_code(self._code)\
                                                     .with_city(self._city)\
                                                     .with_year(current_year)\
-                                                    .with_month(current_month)
-            if is_hourly:
-                tpbuilder.with_day(current_day)
+                                                    .with_month(current_month)\
+                                                    .build()
 
-            yield tpbuilder.build()
+                if f"{current_month}/{current_year}" == self.dates[-1]:
+                    should_run = False
 
-            current_date = f"{current_day}/{current_month}/{current_year}" if is_hourly else f"{current_month}/{current_year}"
-            if current_date == self.dates[-1]:
-                should_run = False
+                current_month = current_month % UCFParameter.MAX_MONTHS + 1
+                if current_month == 1:
+                    current_year += 1
 
-            if is_hourly:
+        elif self.scrapper_type == ScrapperType.METEOCIEL_HOURLY:
+
+            current_day, current_month, current_year = [int(x) for x in self.dates[0].split("/")]
+
+            while should_run:
+
+                yield TPBuilder(self.scrapper_type).with_code(self._code)\
+                                                    .with_city(self._city)\
+                                                    .with_year(current_year)\
+                                                    .with_month(current_month)\
+                                                    .with_day(current_day)\
+                                                    .build()
+
+                if f"{current_day}/{current_month}/{current_year}" == self.dates[-1]:
+                    should_run = False
+
                 current_day = current_day % MonthEnum.from_id(current_month).ndays + 1
 
                 if current_day == 1:
@@ -203,10 +228,9 @@ class MeteocielUC(ScrapperUC):
 
                 if current_day == 1 and current_month == 1:
                     current_year += 1
-            else:
-                current_month = current_month % UCFParameter.MAX_MONTHS + 1
-                if current_month == 1:
-                    current_year += 1
+        else:
+            raise ValueError("MeteocielUC.to_tps : ScrapperType inconnu")
+
 
     def _get_parameters(self):
         return self._PARAMETERS
@@ -256,8 +280,15 @@ class OgimetUC(ScrapperUC):
             # Seuls le 1er mois et le dernier doivent faire l'objet d'un paramétrage de l'URL plus fin.
             current_day, current_month, current_year = [int(x) for x in self.dates[0].split("/")]
             end_day, end_month, end_year = [int(x) for x in self.dates[-1].split("/")]
-            last_day = MonthEnum.from_id(current_month).ndays
-            n_days = last_day - current_day + 1
+            has_single_date = len(self._dates) == 1
+
+            if (current_month, current_year) == (end_month, end_year):
+                n_days = 1 if has_single_date else end_day
+                last_day = end_day
+                current_day = end_day
+            else:
+                last_day = MonthEnum.from_id(current_month).ndays
+                n_days = last_day - current_day + 1
 
             while should_run:
 
@@ -276,8 +307,8 @@ class OgimetUC(ScrapperUC):
                     current_year += 1
 
                 if (current_month, current_year) == (end_month, end_year):
-                    n_days = end_day
-                    last_day = end_day
+                    n_days = min(end_day, MonthEnum.from_id(current_month).ndays)
+                    last_day = min(end_day, MonthEnum.from_id(current_month).ndays)
                     current_day = end_day
                 else:
                     last_day = MonthEnum.from_id(current_month).ndays

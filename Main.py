@@ -39,13 +39,13 @@ class Main:
             if uc.dates[0] == uc.dates[-1]:
                 base_filename = "_".join([uc.scrapper_type.name,
                                           uc.city,
-                                          uc.dates[0]])\
+                                          uc.dates[0].replace("/","-")])\
                                     .lower()
             else:
                 base_filename = "_".join([uc.scrapper_type.name,
                                           uc.city,
-                                          f"du_{uc.dates[0]}",
-                                          f"au_{uc.dates[-1]}"])\
+                                          f"du_{uc.dates[0].replace('/','-')}",
+                                          f"au_{uc.dates[-1].replace('/','-')}"])\
                                     .lower()
 
             data_filename = os.path.join(workdir,

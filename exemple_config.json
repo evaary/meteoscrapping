@@ -19,6 +19,6 @@
     "meteociel":
     [
         {"code":"7249", "ville":"orleans", "dates":["1/2020"] },
-        {"code":"7249", "ville":"orleans", "dates":["27/2/2020", "31/2/2024"] }
+        {"code":"7249", "ville":"orleans", "dates":["27/2/2020", "31/2/2020"] }
     ]
 }

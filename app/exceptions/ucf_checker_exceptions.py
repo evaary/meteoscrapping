@@ -48,21 +48,21 @@ class InvalidStrFieldException(UCFCheckerException):
     def __init__(self,
                  scrapper_name: UCFParameterEnumMember,
                  field_name: UCFParameterEnumMember):
-        super().__init__(f"configurations {scrapper_name.json_name} : le champ {field_name} doit être rempli.")
+        super().__init__(f"configurations {scrapper_name.json_name} : le champ {field_name.json_name} doit être rempli.")
 
 
 class RequiredFieldException(UCFCheckerException):
     def __init__(self,
                  scrapper_name: UCFParameterEnumMember,
                  field_name: UCFParameterEnumMember):
-        super().__init__(f"configurations {scrapper_name.json_name} : le champ {field_name} est obligatoire.")
+        super().__init__(f"configurations {scrapper_name.json_name} : le champ {field_name.json_name} est obligatoire.")
 
 
 class UnavailableScrapperException(UCFCheckerException):
     def __init__(self,
-                 ucfpem: UCFParameterEnumMember,
+                 scrapper_name: UCFParameterEnumMember,
                  complement: str):
-        super().__init__(f"{ucfpem.json_name} ne peut télécharger des données {complement}")
+        super().__init__(f"{scrapper_name.json_name} ne peut télécharger des données {complement}")
 
 
 class DateFieldException(UCFCheckerException):

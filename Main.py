@@ -1,5 +1,4 @@
 import os
-from app.boite_a_bonheur.ScraperTypeEnum import ScrapperType
 from app.UserConfigFile import UserConfigFile
 from app.exceptions.ucf_checker_exceptions import UCFCheckerException
 from app.boite_a_bonheur.utils import to_csv, to_json
@@ -36,26 +35,17 @@ class Main:
 
         for uc in ucf.get_all_ucs():
             workdir = os.getcwd()
-            start_date = f"{uc.months[0]}_{uc.years[0]}"
-            end_date = f"{uc.months[-1]}_{uc.years[-1]}"
-            is_one_date = False
 
-            if uc.scrapper_type in ScrapperType.hourly_scrappers():
-                start_date = f"{uc.days[0]}_{start_date}"
-                end_date = f"{uc.days[-1]}_{end_date}"
-
-            is_one_date = start_date == end_date
-
-            if is_one_date:
+            if uc.dates[0] == uc.dates[-1]:
                 base_filename = "_".join([uc.scrapper_type.name,
                                           uc.city,
-                                          start_date])\
+                                          uc.dates[0].replace("/","-")])\
                                     .lower()
             else:
                 base_filename = "_".join([uc.scrapper_type.name,
-                                        uc.city,
-                                        f"du_{start_date}",
-                                        f"au_{end_date}"])\
+                                          uc.city,
+                                          f"du_{uc.dates[0].replace('/','-')}",
+                                          f"au_{uc.dates[-1].replace('/','-')}"])\
                                     .lower()
 
             data_filename = os.path.join(workdir,

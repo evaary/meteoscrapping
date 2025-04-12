@@ -7,7 +7,6 @@
 
     "ogimet":
     [
-        { "ind":"16138", "ville":"Ferrara", "annees":[2021], "mois":[2] },
-        { "ind":"16288", "ville":"Caserta", "annees":[2020, 2021], "mois":[1,2] }
+        { "ind":"16138", "ville":"Ferrara", "dates":["2/2021"] }
     ]
 }

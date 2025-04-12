@@ -2,15 +2,14 @@ import abc
 import copy
 from abc import ABC
 from typing import (Any,
-                    Dict,
+                    List,
                     Generator)
 
 from app.boite_a_bonheur.MonthEnum import MonthEnum
-from app.boite_a_bonheur.ScraperTypeEnum import ScrapperType
+from app.boite_a_bonheur.ScraperTypeEnum import ScrapperType, ScrapperTypeEnumMember
 from app.boite_a_bonheur.UCFParameterEnum import UCFParameterEnumMember, UCFParameter
 from app.tps_module import (TPBuilder,
                             TaskParameters)
-from app.UCFChecker import UCFChecker
 
 
 class GeneralParametersUC:
@@ -31,15 +30,12 @@ class GeneralParametersUC:
         return self._cpus
 
     @classmethod
-    def from_json_object(cls, jsono: dict, should_check_parameter: bool = True) -> "GeneralParametersUC":
-
-        if should_check_parameter:
-            UCFChecker.check_general_parameters(jsono)
+    def from_json_object(cls, jsono: dict) -> "GeneralParametersUC":
 
         gpuc = GeneralParametersUC.instance()
-        gpuc._should_download_in_parallel = jsono[UCFParameter.PARALLELISM.name]
+        gpuc._should_download_in_parallel = jsono[UCFParameter.PARALLELISM.json_name]
 
-        user_cpus = jsono[UCFParameter.CPUS.name]
+        user_cpus = jsono[UCFParameter.CPUS.json_name]
         if(    user_cpus == -1
             or user_cpus > UCFParameter.MAX_CPUS):
             gpuc._cpus = UCFParameter.MAX_CPUS
@@ -67,46 +63,60 @@ class GeneralParametersUC:
 class ScrapperUC(ABC):
 
     def __init__(self):
-        self._city = ""
-        self._scrapper_type = None
-        self._years = []
-        self._months = []
-        self._days = []
+        self._city : str = ""
+        self._scrapper_type : ScrapperTypeEnumMember = None
+        self._dates : List[str] = []
 
     @property
-    def city(self):
+    def city(self) -> str:
         return self._city
 
     @property
-    def scrapper_type(self):
+    def scrapper_type(self) -> ScrapperTypeEnumMember:
         return copy.copy(self._scrapper_type)
 
     @property
-    def years(self):
-        return copy.copy(self._years)
-
-    @property
-    def months(self):
-        return copy.copy(self._months)
-
-    @property
-    def days(self):
-        return copy.copy(self._days)
+    def dates(self):
+        return self._dates
 
     @classmethod
-    def from_json(cls, jsono: dict, param_name: UCFParameterEnumMember) -> "ScrapperUC":
+    def from_json(cls,
+                  jsono: dict,
+                  param_name: UCFParameterEnumMember) -> "ScrapperUC":
 
-        if param_name not in UCFParameter.scrappers_parameters():
-            raise ValueError("ScrapperUC.from_ucf : param_name doit être un des exceptions")
+        hourly_type : ScrapperTypeEnumMember = None
+        daily_type : ScrapperTypeEnumMember = None
 
         if param_name == UCFParameter.WUNDERGROUND:
-            suc = WundergroundUC.from_json_object(jsono, False)
+            suc = WundergroundUC.from_json_object(jsono)
+            daily_type = ScrapperType.WUNDERGROUND_DAILY
+            hourly_type = ScrapperType.WUNDERGROUND_HOURLY
 
         elif param_name == UCFParameter.METEOCIEL:
-            suc = MeteocielUC.from_json_object(jsono, False)
+            suc = MeteocielUC.from_json_object(jsono)
+            daily_type = ScrapperType.METEOCIEL_DAILY
+            hourly_type = ScrapperType.METEOCIEL_HOURLY
+
+        elif param_name == UCFParameter.OGIMET:
+            suc = OgimetUC.from_json_object(jsono)
+            daily_type = ScrapperType.OGIMET_DAILY
+            hourly_type = ScrapperType.OGIMET_HOURLY
 
         else:
-            suc = OgimetUC.from_json_object(jsono, False)
+            raise ValueError("ScrapperUC.from_json : scrapper inconnu")
+
+        suc._city = jsono[UCFParameter.CITY.json_name]
+        suc._dates = jsono[UCFParameter.DATES.json_name]
+
+        is_hourly = len(suc.dates[0].split("/")) == 3
+        suc._scrapper_type = hourly_type if is_hourly else daily_type
+
+        if is_hourly:
+            for index, date in enumerate(suc._dates):
+                day, month, year = (int(x) for x in date.split("/"))
+                max_day = MonthEnum.from_id(month).ndays
+                if day > max_day:
+                    suc._dates[index] = f"{max_day}/{month}/{year}"
 
         return suc
 
@@ -115,37 +125,23 @@ class ScrapperUC(ABC):
         pass
 
     @abc.abstractmethod
-    def _get_parameters(self) -> Dict[UCFParameterEnumMember, str]:
+    def _get_parameters(self) -> List[UCFParameterEnumMember]:
         pass
 
     def __repr__(self):
-        if self.scrapper_type in ScrapperType.hourly_scrappers():
-            return "<{type} {city} {d_from}/{m_from}/{y_from} -> {d_to}/{m_to}/{y_to}>".format(type=self.scrapper_type,
-                                                                                               city=self.city,
-                                                                                               d_from=self.days[0],
-                                                                                               m_from=self.months[0],
-                                                                                               y_from=self.years[0],
-                                                                                               d_to=self.days[-1],
-                                                                                               m_to=self.months[-1],
-                                                                                               y_to=self.years[-1])
-        else:
-            return "<{type} {city} {m_from}/{y_from} -> {m_to}/{y_to}>".format(type=self.scrapper_type,
-                                                                               city=self.city,
-                                                                               m_from=self.months[0],
-                                                                               y_from=self.years[0],
-                                                                               m_to=self.months[-1],
-                                                                               y_to=self.years[-1])
+        return "<{type} {city} from {start_date} to {end_date}>".format(type=self.scrapper_type,
+                                                                        city=self.city,
+                                                                        start_date=self.dates[0],
+                                                                        end_date=self.dates[-1])
 
     def __hash__(self):
-        x = 7
-        for param in self._get_parameters().values():
-
-            field_value = self.__dict__[param]
+        x = 7 # à différencier selon les scrappers
+        for param in self._get_parameters():
+            field_value = self.__dict__[param.field_name]
             if isinstance(field_value, list):
-                for list_value in field_value:
-                    x = 79 * x + hash(list_value)
+                x = 79 * x + sum([hash(x) for x in field_value])
             else:
-                x = 79 * x + hash(field_value)
+                x = 79 * x + hash(field_value)  # à différencier selon les scrappers
 
         return x
 
@@ -157,87 +153,84 @@ class ScrapperUC(ABC):
         if not isinstance(other, self.__class__):
             return False
 
-        for param in self._get_parameters().values():
+        if self.scrapper_type != other.scrapper_type:
+            return False
+
+        for param in self._get_parameters():
             try:
-                if self.__dict__[param] != other.__dict__[param]:
+                if self.__dict__[param.field_name] != other.__dict__[param.field_name]:
                     return False
             except KeyError:
                 return False
-
-        if self.scrapper_type != other.scrapper_type:
-            return False
 
         return True
 
 
 class MeteocielUC(ScrapperUC):
 
-    _PARAMETERS = {UCFParameter.CITY: "_city",
-                   UCFParameter.CODE: "_code",
-                   UCFParameter.YEARS: "_years",
-                   UCFParameter.MONTHS: "_months",
-                   UCFParameter.DAYS: "_days"}
+    _PARAMETERS = [UCFParameter.CITY,
+                   UCFParameter.CODE,
+                   UCFParameter.DATES]
 
     def __init__(self):
         super().__init__()
         self._code = ""
 
     @classmethod
-    def from_json_object(cls, jsono, should_check_parameter: bool = True):
-
-        if should_check_parameter:
-            UCFChecker.check_uc(jsono, UCFParameter.METEOCIEL)
-
+    def from_json_object(cls, jsono):
         muc = MeteocielUC()
-
-        muc._city = jsono[UCFParameter.CITY.name]
-        muc._code = jsono[UCFParameter.CODE.name]
-        muc._years = jsono[UCFParameter.YEARS.name]
-        muc._months = jsono[UCFParameter.MONTHS.name]
-
-        try:
-            muc._days = jsono[UCFParameter.DAYS.name]
-            muc._scrapper_type = ScrapperType.METEOCIEL_HOURLY
-        except KeyError:
-            muc._scrapper_type = ScrapperType.METEOCIEL_DAILY
-
+        muc._code = jsono[UCFParameter.CODE.json_name]
         return muc
 
     def to_tps(self):
 
+        should_run = True
+
         if self.scrapper_type == ScrapperType.METEOCIEL_DAILY:
 
-            return (TPBuilder(self.scrapper_type).with_code(self._code)
-                                                 .with_city(self._city)
-                                                 .with_year(year)
-                                                 .with_month(month)
-                                                 .build()
-                    for year in range(self._years[0],
-                                      self._years[-1] + 1)
+            current_month, current_year = [int(x) for x in self.dates[0].split("/")]
 
-                    for month in range(self._months[0],
-                                       self._months[-1] + 1))
+            while should_run:
+
+                yield TPBuilder(self.scrapper_type).with_code(self._code)\
+                                                    .with_city(self._city)\
+                                                    .with_year(current_year)\
+                                                    .with_month(current_month)\
+                                                    .build()
+
+                if f"{current_month}/{current_year}" == self.dates[-1]:
+                    should_run = False
+
+                current_month = current_month % UCFParameter.MAX_MONTHS + 1
+                if current_month == 1:
+                    current_year += 1
 
         elif self.scrapper_type == ScrapperType.METEOCIEL_HOURLY:
 
-            return (TPBuilder(self.scrapper_type).with_code(self._code)
-                                                 .with_city(self._city)
-                                                 .with_year(year)
-                                                 .with_month(month)
-                                                 .with_day(day)
-                                                 .build()
-                    for year in range(self._years[0],
-                                      self._years[-1] + 1)
+            current_day, current_month, current_year = [int(x) for x in self.dates[0].split("/")]
 
-                    for month in range(self._months[0],
-                                       self._months[-1] + 1)
+            while should_run:
 
-                    for day in range(self._days[0],
-                                     self._days[-1] + 1)
+                yield TPBuilder(self.scrapper_type).with_code(self._code)\
+                                                    .with_city(self._city)\
+                                                    .with_year(current_year)\
+                                                    .with_month(current_month)\
+                                                    .with_day(current_day)\
+                                                    .build()
 
-                    if day <= MonthEnum.from_id(month).ndays)
+                if f"{current_day}/{current_month}/{current_year}" == self.dates[-1]:
+                    should_run = False
+
+                current_day = current_day % MonthEnum.from_id(current_month).ndays + 1
+
+                if current_day == 1:
+                    current_month = current_month % UCFParameter.MAX_MONTHS + 1
+
+                if current_day == 1 and current_month == 1:
+                    current_year += 1
         else:
-            raise ValueError("MeteocielUC.to_tps : scrapper_type invalide")
+            raise ValueError("MeteocielUC.to_tps : ScrapperType inconnu")
+
 
     def _get_parameters(self):
         return self._PARAMETERS
@@ -245,91 +238,84 @@ class MeteocielUC(ScrapperUC):
 
 class OgimetUC(ScrapperUC):
 
-    _PARAMETERS = {UCFParameter.CITY: "_city",
-                   UCFParameter.IND: "_ind",
-                   UCFParameter.YEARS: "_years",
-                   UCFParameter.MONTHS: "_months",
-                   UCFParameter.DAYS: "_days"}
+    _PARAMETERS = [UCFParameter.CITY,
+                   UCFParameter.IND,
+                   UCFParameter.DATES]
 
     def __init__(self):
         super().__init__()
         self._ind = ""
 
     @classmethod
-    def from_json_object(cls, jsono, should_check_parameter: bool = True):
-
-        if should_check_parameter:
-            UCFChecker.check_uc(jsono, UCFParameter.OGIMET)
-
+    def from_json_object(cls, jsono):
         ouc = OgimetUC()
-
-        ouc._city = jsono[UCFParameter.CITY.name]
-        ouc._ind = jsono[UCFParameter.IND.name]
-        ouc._years = jsono[UCFParameter.YEARS.name]
-        ouc._months = jsono[UCFParameter.MONTHS.name]
-
-        try:
-            ouc._days = jsono[UCFParameter.DAYS.name]
-            ouc._scrapper_type = ScrapperType.OGIMET_HOURLY
-        except KeyError:
-            ouc._scrapper_type = ScrapperType.OGIMET_DAILY
-
+        ouc._ind = jsono[UCFParameter.IND.json_name]
         return ouc
 
     def to_tps(self):
 
+        should_run = True
+
         if self.scrapper_type == ScrapperType.OGIMET_DAILY:
 
-            return (TPBuilder(self.scrapper_type).with_ind(self._ind)
-                                                 .with_city(self._city)
-                                                 .with_year(year)
-                                                 .with_month(month)
-                                                 .build()
-                    for year in range(self._years[0],
-                                      self._years[-1] + 1)
+            current_month, current_year = [int(x) for x in self.dates[0].split("/")]
 
-                    for month in range(self._months[0],
-                                       self._months[-1] + 1))
+            while should_run:
+
+                yield TPBuilder(self.scrapper_type).with_ind(self._ind)\
+                                                    .with_city(self._city)\
+                                                    .with_year(current_year)\
+                                                    .with_month(current_month)\
+                                                    .build()
+                if f"{current_month}/{current_year}" == self.dates[-1]:
+                    should_run = False
+
+                current_month = current_month % UCFParameter.MAX_MONTHS + 1
+                if current_month == 1:
+                    current_year += 1
 
         elif self.scrapper_type == ScrapperType.OGIMET_HOURLY:
-            # on peut requêter de façon à obtenir une page qui contient l'ensemble des données
-            # pour chaque mois, d'où les boucles sur les années et mois mais pas sur les jours
-            return (TPBuilder(self.scrapper_type).with_ind(self._ind)
-                                                 .with_city(self._city)
-                                                 .with_year(year)
-                                                 .with_month(month)
-                                                 .with_day(self._compute_day(month))
-                                                 .with_ndays(self._compute_ndays(month))
-                                                 .build()
-                    for year in range(self._years[0],
-                                      self._years[-1] + 1)
+            # La requête consiste à demander les n derniers jour à partir du jour j.
+            # Pour obtenir les infos d'un mois complet, on se met au 31, on demande les 31 derniers jours.
+            # Seuls le 1er mois et le dernier doivent faire l'objet d'un paramétrage de l'URL plus fin.
+            current_day, current_month, current_year = [int(x) for x in self.dates[0].split("/")]
+            end_day, end_month, end_year = [int(x) for x in self.dates[-1].split("/")]
+            has_single_date = len(self._dates) == 1
 
-                    for month in range(self._months[0],
-                                       self._months[-1] + 1))
+            if (current_month, current_year) == (end_month, end_year):
+                n_days = 1 if has_single_date else end_day
+                last_day = end_day
+                current_day = end_day
+            else:
+                last_day = MonthEnum.from_id(current_month).ndays
+                n_days = last_day - current_day + 1
+
+            while should_run:
+
+                yield TPBuilder(self.scrapper_type).with_ind(self._ind)\
+                                                    .with_city(self._city)\
+                                                    .with_year(current_year)\
+                                                    .with_month(current_month)\
+                                                    .with_day(last_day)\
+                                                    .with_ndays(n_days)\
+                                                    .build()
+                if f"{current_day}/{current_month}/{current_year}" == self.dates[-1]:
+                    should_run = False
+
+                current_month = current_month % UCFParameter.MAX_MONTHS + 1
+                if current_month == 1:
+                    current_year += 1
+
+                if (current_month, current_year) == (end_month, end_year):
+                    n_days = min(end_day, MonthEnum.from_id(current_month).ndays)
+                    last_day = min(end_day, MonthEnum.from_id(current_month).ndays)
+                    current_day = end_day
+                else:
+                    last_day = MonthEnum.from_id(current_month).ndays
+                    n_days = MonthEnum.from_id(current_month).ndays
+                    current_day = 0
         else:
             raise ValueError("OgimetUC.to_tps : scrapper_type invalide")
-
-    def _compute_ndays(self, month: int) -> int:
-
-        if self._scrapper_type != ScrapperType.OGIMET_HOURLY:
-            raise ValueError("OgimetUC.compute_ndays : le type de scrapper est invalide")
-
-        ndays = self._days[-1] - self._days[0] + 1
-        max_ndays = MonthEnum.from_id(month).ndays
-        ndays = max_ndays if ndays > max_ndays else ndays
-
-        return ndays
-
-    def _compute_day(self, month: int) -> int:
-
-        if self._scrapper_type != ScrapperType.OGIMET_HOURLY:
-            raise ValueError("OgimetUC.compute_day : le type de scrapper est invalide")
-
-        day = self._days[-1]
-        max_day = MonthEnum.from_id(month).ndays
-        day = max_day if day > max_day else day
-
-        return day
 
     def _get_parameters(self):
         return self._PARAMETERS
@@ -337,12 +323,10 @@ class OgimetUC(ScrapperUC):
 
 class WundergroundUC(ScrapperUC):
 
-    _PARAMETERS = {UCFParameter.CITY: "_city",
-                   UCFParameter.COUNTRY_CODE: "_country_code",
-                   UCFParameter.REGION: "_region",
-                   UCFParameter.YEARS: "_years",
-                   UCFParameter.MONTHS: "_months",
-                   UCFParameter.DAYS: "_days"}
+    _PARAMETERS = [UCFParameter.CITY,
+                   UCFParameter.COUNTRY_CODE,
+                   UCFParameter.REGION,
+                   UCFParameter.DATES]
 
     def __init__(self):
         super().__init__()
@@ -350,42 +334,33 @@ class WundergroundUC(ScrapperUC):
         self._country_code = ""
 
     @classmethod
-    def from_json_object(cls, jsono, should_check_parameter: bool = True):
-
-        if should_check_parameter:
-            UCFChecker.check_uc(jsono, UCFParameter.WUNDERGROUND)
-
+    def from_json_object(cls, jsono):
         wuc = WundergroundUC()
-
-        wuc._city = jsono[UCFParameter.CITY.name]
-        wuc._country_code = jsono[UCFParameter.COUNTRY_CODE.name]
-        wuc._region = jsono[UCFParameter.REGION.name]
-        wuc._years = jsono[UCFParameter.YEARS.name]
-        wuc._months = jsono[UCFParameter.MONTHS.name]
-
-        try:
-            wuc._days = jsono[UCFParameter.DAYS.name]
-            wuc._scrapper_type = ScrapperType.WUNDERGROUND_HOURLY
-        except KeyError:
-            wuc._scrapper_type = ScrapperType.WUNDERGROUND_DAILY
-
+        wuc._country_code = jsono[UCFParameter.COUNTRY_CODE.json_name]
+        wuc._region = jsono[UCFParameter.REGION.json_name]
         return wuc
 
     def to_tps(self):
 
+        should_run = True
+
         if self.scrapper_type == ScrapperType.WUNDERGROUND_DAILY:
 
-            return (TPBuilder(self.scrapper_type).with_country_code(self._country_code)
-                                                 .with_region(self._region)
-                                                 .with_city(self._city)
-                                                 .with_year(year)
-                                                 .with_month(month)
-                                                 .build()
-                    for year in range(self._years[0],
-                                      self._years[-1] + 1)
+            current_month, current_year = [int(x) for x in self.dates[0].split("/")]
 
-                    for month in range(self._months[0],
-                                       self._months[-1] + 1))
+            while should_run:
+                yield TPBuilder(self.scrapper_type).with_country_code(self._country_code)\
+                                                    .with_region(self._region)\
+                                                    .with_city(self._city)\
+                                                    .with_year(current_year)\
+                                                    .with_month(current_month)\
+                                                    .build()
+                if f"{current_month}/{current_year}" == self.dates[-1]:
+                    should_run = False
+
+                current_month = current_month % UCFParameter.MAX_MONTHS + 1
+                if current_month == 1:
+                    current_year += 1
 
         elif self.scrapper_type == ScrapperType.WUNDERGROUND_HOURLY:
             raise NotImplementedError("un jour peut être !")

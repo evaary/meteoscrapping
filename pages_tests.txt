@@ -9,18 +9,18 @@ https://www.ogimet.com/cgi-bin/gsynres?ind=07149&ndays=1&ano=2000&mes=2&day=28&h
 {
     "meteociel":
     [
-        {"code": "7249", "ville":"orleans", "annees":[2021, 2022], "mois":[1, 12] },
-        {"code": "7249", "ville":"orleans", "annees":[2019, 2020], "mois":[1, 12], "jours":[1, 31] }
+        { "code":"7249", "ville":"orleans", "dates":["1/2021", "12/2022"] },
+        { "code":"7249", "ville":"orleans", "dates":["1/1/2019", "31/12/2020"] }
     ],
 
     "ogimet":
     [
-        { "ind":"07149", "ville":"paris_orly", "annees":[2015, 2020], "mois":[1, 12]},
-        { "ind":"07149", "ville":"paris_orly", "annees":[2015, 2020], "mois":[1, 12], "jours":[1, 31] }
+        { "ind":"07149", "ville":"paris_orly", "dates":["1/2015", "12/2020"] },
+        { "ind":"07149", "ville":"paris_orly", "dates":["1/1/2015", "31/12/2020"] }
     ],
 
     "wunderground":
     [
-        { "code_pays":"it", "region": "LIBD", "ville":"matera", "annees":[2013, 2023], "mois":[1,12] }
+        { "code_pays":"it", "region":"LIBD", "ville":"matera", "dates":["1/2013", "12/2023"] }
     ]
 }

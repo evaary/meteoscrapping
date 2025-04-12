@@ -32,25 +32,25 @@ class UserConfigFile:
         ucf = UserConfigFile()
 
         try:
-            general_parameters = config_file[UCFParameter.GENERAL_PARAMETERS.name]
-            GeneralParametersUC.from_json_object(general_parameters, False)
+            general_parameters = config_file[UCFParameter.GENERAL_PARAMETERS.json_name]
+            GeneralParametersUC.from_json_object(general_parameters)
         except KeyError:
             pass
 
         try:
-            oucs = config_file[UCFParameter.OGIMET.name]
+            oucs = config_file[UCFParameter.OGIMET.json_name]
             ucf._ogimet_ucs = list(set([ScrapperUC.from_json(ouc, UCFParameter.OGIMET) for ouc in oucs]))
         except KeyError:
             pass
 
         try:
-            mucs = config_file[UCFParameter.METEOCIEL.name]
+            mucs = config_file[UCFParameter.METEOCIEL.json_name]
             ucf._meteociel_ucs = list(set([ScrapperUC.from_json(muc, UCFParameter.METEOCIEL) for muc in mucs]))
         except KeyError:
             pass
 
         try:
-            wucs = config_file[UCFParameter.WUNDERGROUND.name]
+            wucs = config_file[UCFParameter.WUNDERGROUND.json_name]
             ucf._wunderground_ucs = list(set([ScrapperUC.from_json(wuc, UCFParameter.WUNDERGROUND) for wuc in wucs]))
         except KeyError:
             pass

@@ -1,6 +1,6 @@
 {
     "meteociel":
     [
-        {"code": "7249", "ville":"orleans", "annees":[2020], "mois":[1], "jours": [1] }
+        {"code": "7249", "ville":"orleans", "dates":["1/1/2021"] }
     ]
 }

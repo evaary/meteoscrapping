@@ -74,10 +74,13 @@ class MeteoScrapper(ABC):
 
         results = await asyncio.gather(*futures, return_exceptions=True)
         dfs = [x for x in results if isinstance(x, pd.DataFrame)]
-        exceptions = [x for x in results if isinstance(x, ProcessException)]
+        exceptions = [x for x in results if isinstance(x, Exception)]
 
-        for ex in exceptions:
-            self._errors[ex.key] = {"url": ex.url, "msg": ex.msg}
+        for index, ex in enumerate(exceptions):
+            if isinstance(ex, ProcessException):
+                self._errors[ex.key] = {"url": ex.url, "msg": ex.msg}
+            else:
+                self._errors[str(index)] = "exception durant un process en parallèle"
 
         try:
             global_df = pd.concat(dfs)
@@ -139,9 +142,13 @@ class MeteoScrapper(ABC):
 
         attr = tp.criteria.css_attribute
         val = tp.criteria.attribute_value
-        table: Element = [tab
-                          for tab in html_page.html.find("table")
-                          if attr in tab.attrs and tab.attrs[attr] == val][0]
+        try:
+            table: Element = [tab
+                            for tab in html_page.html.find("table")
+                            if attr in tab.attrs and tab.attrs[attr] == val][0]
+        except IndexError:
+            raise HtmlPageException()
+
         try:
             is_invalid = "no valid" in table.find("thead")[0]\
                                             .find("th")[0]\

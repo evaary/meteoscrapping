@@ -1,3 +1,4 @@
+version 1.0 - 12/04/2025
 Un programme de webscrapping pour récupérer des données météorologiques depuis ogimet, wunderground et meteociel.
 
 Exemples de tableaux récupérés:
@@ -10,7 +11,7 @@ Exemples de tableaux récupérés:
 Utilisation:
 
     télécharger l'exécutable
-        - fichier zip : https://drive.google.com/file/d/1B_OzMMsbPklipMpI2lyS1UmxNzDYiSNi/view?usp=sharing
+        - fichier zip : https://drive.google.com/file/d/1e73vXeoFy0Pzc7YPZ3DK-ZafIHJqobKB/view?usp=sharing
         - dézipper
 
     créer un fichier "config.json" à côté l'éxecutable (nom "config.json" impératif)
@@ -76,11 +77,11 @@ Informations importantes
 Performances
 
     meteociel heure par heure
-    {"code": "7249", "ville":"orleans", "dates": ["1/1/2019", "31/12/2020"] }
+    { "code":"7249", "ville":"orleans", "dates":["1/1/2019", "31/12/2020"] }
     => a généré un CSV de 17 521 lignes en 3 040s, sans fichier d'erreur
 
     ogimet heure par heure
-    { "ind":"07149", "ville":"paris_orly", "dates": ["1/1/2015", "31/12/2020"] }
+    { "ind":"07149", "ville":"paris_orly", "dates":["1/1/2015", "31/12/2020"] }
     => a généré un CSV de 52 561 lignes en 3 476s, sans fichier d'erreur
 
     ogimet jour par jour
@@ -88,11 +89,11 @@ Performances
     => a généré un CSV de 2191 lignes en 3245s, sans fichier d'erreur
 
     wunderground jour par jour
-    { "code_pays":"it", "region": "LIBD", "ville":"matera", "dates":["1/2013", "12/2023"] }
+    { "code_pays":"it", "region":"LIBD", "ville":"matera", "dates":["1/2013", "12/2023"] }
     => a généré un CSV de 4 018 lignes en 916s, sans fichier d'erreur
 
     meteociel jour par jour
-    {"code": "7249", "ville":"orleans", "dates":["1/1975", "12/2023"] }
+    { "code":"7249", "ville":"orleans", "dates":["1/1975", "12/2023"] }
     => a généré un CSV de 17 897 lignes en 2 364s, sans fichier d'erreur
 
 

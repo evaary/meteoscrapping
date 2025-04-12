@@ -54,9 +54,7 @@ Informations importantes
 
     - 1 CSV (résultats) et éventuellement 1 JSON (erreurs) seront générés par configuration.
     - le paramètre "ville" est imposé pour wunderground mais arbitraire pour les autres.
-    - le paramètre "jours" n'est pas disponible pour wunderground.
     - les jours absurdes (31 février par exemple), sont autorisés dans les configurations et triés automatiquement.
-    - les colonnes contenant des icônes sont exclues des résultats.
     - Des ConnectionResetError peuvent apparaitre pendant le téléchargement, elles ne sont pas graves.
     - La 1ère fois que le programme se lance, il téléchargera chromium, c'est normal.
     - Dans les paramètres généraux :
@@ -78,23 +76,23 @@ Informations importantes
 Performances
 
     meteociel heure par heure
-    {"code": "7249", "ville":"orleans", "annees":[2019, 2020], "mois":[1, 12], "jours":[1, 31] }
+    {"code": "7249", "ville":"orleans", "dates": ["1/1/2019", "31/12/2020"] }
     => a généré un CSV de 17 521 lignes en 3 040s, sans fichier d'erreur
 
     ogimet heure par heure
-    { "ind":"07149", "ville":"paris_orly", "annees":[2015, 2020], "mois":[1, 12], "jours":[1, 31] }
+    { "ind":"07149", "ville":"paris_orly", "dates": ["1/1/2015", "31/12/2020"] }
     => a généré un CSV de 52 561 lignes en 3 476s, sans fichier d'erreur
 
     ogimet jour par jour
-    { "ind":"07149", "ville":"paris_orly", "annees":[2015, 2020], "mois":[1, 12]}
+    { "ind":"07149", "ville":"paris_orly", "dates":["1/2015", "12/2020"] }
     => a généré un CSV de 2191 lignes en 3245s, sans fichier d'erreur
 
     wunderground jour par jour
-    { "code_pays":"it", "region": "LIBD", "ville":"matera", "annees":[2013, 2023], "mois":[1,12] }
+    { "code_pays":"it", "region": "LIBD", "ville":"matera", "dates":["1/2013", "12/2023"] }
     => a généré un CSV de 4 018 lignes en 916s, sans fichier d'erreur
 
     meteociel jour par jour
-    {"code": "7249", "ville":"orleans", "annees":[1975, 2023], "mois":[1, 12] }
+    {"code": "7249", "ville":"orleans", "dates":["1/1975", "12/2023"] }
     => a généré un CSV de 17 897 lignes en 2 364s, sans fichier d'erreur
 
 
@@ -108,29 +106,30 @@ Structure du fichier config.json:
 
     "ogimet":
     [
-        { "ind":"16288", "ville":"Caserta", "annees":[2020, 2025], "mois":[1, 12] },
-        { "ind":"07149", "ville":"paris_orly", "annees":[2023], "mois":[1,5], "jours":[13, 18] }
+        { "ind":"16288", "ville":"Caserta", "dates":["1/2020"] },
+        { "ind":"16288", "ville":"Caserta", "dates":["1/2020", "12/2025"] },
+        { "ind":"16288", "ville":"Caserta", "dates":["13/1/2023", "18/5/2023"] }
     ],
 
     "wunderground":
     [
-        { "code_pays":"it", "region": "LIBD", "ville":"matera", "annees":[2021], "mois":[1] }
-        { "code_pays":"it", "region": "LIBD", "ville":"matera", "annees":[2021], "mois":[3] }
-        { "code_pays":"it", "region": "LIBD", "ville":"matera", "annees":[2021], "mois":[1,3] }
+        { "code_pays":"it", "region":"LIBD", "ville":"matera", "dates":["1/2021"] },
+        { "code_pays":"it", "region":"LIBD", "ville":"matera", "dates":["3/2021"] },
+        { "code_pays":"it", "region":"LIBD", "ville":"matera", "dates":["1/2021", "3/2021"] }
     ],
 
     "meteociel":
     [
-        {"code": "7249", "ville":"orleans", "annees":[2020, 2021], "mois":[2] },
-        {"code": "7249", "ville":"orleans", "annees":[2020], "mois":[1, 2], "jours":[27,31] }
+        { "code":"7249", "ville":"orleans", "dates":["27/1/2020", "31/2/2020"] }
     ]
 }
 
-la config ogimet n°1 récupère tous les mois de 2020 à 2025.
-La config ogimet n°2 récupère les jours 13 à 18 des mois de janvier à mai 2023
+la config ogimet n°1 récupère le mois de janvier 2020.
+la config ogimet n°2 récupère tous les mois de 2020 à 2025.
+La config ogimet n°3 récupère les jours 13 à 31 de janvier, tout février, mars, avril, et les jours 1 à 18 de mai 2023
 
-les configs wunderground n° 1 et 2 récupèrent les mois de janvier et mars 2021
-la config wunderground n°3 récupère les mois de janvier à mars 2021 (janvier, février, mars)
+les configs wunderground n°1 et 2 récupèrent les mois de janvier et mars 2021
+la config wunderground n°3 récupère les mois de janvier, février, et mars 2021
+pour wunderground, "dates":["1/1/2021", "1/3/2021"] est illégal (pas de jours pour wunderground)
 
-la config meteociel n°1 récupère les mois de février 2020 et février 2021
-la config meteociel n°2 récupère les jours 27 à 31 de janvier 2020 et 27 à 28 de février 2020
+la config meteociel n°1 récupère les jours 27 à 31 de janvier 2020 et 1 à 28 de février 2020, malgré le jour 31 renseigné

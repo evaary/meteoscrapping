@@ -20,9 +20,9 @@ class UCsTester(TestCase):
         except Exception:
             self.fail("ScrapperUCsTests : le cas nominal ne fonctionne pas")
 
-        self.assertEqual(len(ucf.ogimet_ucs), 2)
-        self.assertEqual(len(ucf.meteociel_ucs), 2)
-        self.assertEqual(len(ucf.wunderground_ucs), 1)
+        self.assertEqual(len(ucf.ogimet_ucs), 5)
+        self.assertEqual(len(ucf.meteociel_ucs), 5)
+        self.assertEqual(len(ucf.wunderground_ucs), 2)
 
     def test_duplicated_uc(self):
         ucf = UserConfigFile.from_json(self.CONFIG_FILES["duplicate_suc"])

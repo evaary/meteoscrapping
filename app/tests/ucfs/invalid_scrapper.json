@@ -1,18 +1,17 @@
 {
     "ogimet":
     [
-        { "ind":"16138", "ville":"Ferrara", "annees":[2021], "mois":[2] },
-        { "ind":"16288", "ville":"Caserta", "annees":[2020, 2021], "mois":[1,2] }
+        { "ind":"16138", "ville":"Ferrara", "dates":["6/2021"] }
     ],
 
     "wunderground":
     [
-        { "code_pays":"it", "region": "LIBD", "ville":"matera", "annees":[2021], "mois":[1,6] }
+        { "code_pays":"it", "region": "LIBD", "ville":"matera", "dates":["6/2021"] }
     ],
 
     "meteociel":
     {
-        "bouh": {"code": "7249", "ville":"orleans", "annees":[2020, 2021], "mois":[2] },
-        "hey" : {"code": "7249", "ville":"orleans", "annees":[2020], "mois":[2], "jours":[27,31] }
+        "bouh": {"code": "7249", "ville":"orleans", "dates":["6/2021"] },
+        "hey" : {"code": "7249", "ville":"orleans", "dates":["1/1/2022", "31/12/2022"] }
     }
 }

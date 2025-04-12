@@ -5,7 +5,7 @@ from app.boite_a_bonheur.UCFParameterEnum import UCFParameter
 from app.exceptions.ucf_checker_exceptions import (DateFieldException,
                                                    DaysDateException,
                                                    MonthsDateException,
-                                                   RequiredDateFieldException,
+                                                   RequiredFieldException,
                                                    UnavailableScrapperException,
                                                    NoConfigFoundException,
                                                    NotAJsonFileException,
@@ -13,16 +13,14 @@ from app.exceptions.ucf_checker_exceptions import (DateFieldException,
                                                    NotAJsonListException,
                                                    EmptyConfigFileException,
                                                    ScrapperUCException,
-                                                   CommonStrFieldException,
-                                                   SpecificStrFieldException,
+                                                   InvalidStrFieldException,
                                                    YearsDateException,
-                                                   GeneralParametersFieldException,
-                                                   GeneralParametersMissingFieldException)
+                                                   GeneralParametersFieldException)
 from app.ucs_module import GeneralParametersUC
 
 
 class UCFCheckerTester(TestCase):
-    
+
     BASE_PATH = "./app/tests/ucfs"
 
     CONFIG_FILES = {
@@ -89,10 +87,10 @@ class UCFCheckerTester(TestCase):
         with self.assertRaises(ScrapperUCException):
             UCFChecker.check(self.CONFIG_FILES["invalid_scrapper_ucs"])
 
-        with self.assertRaises(SpecificStrFieldException):
+        with self.assertRaises(RequiredFieldException):
             UCFChecker.check(self.CONFIG_FILES["invalid_specstr"])
 
-        with self.assertRaises(CommonStrFieldException):
+        with self.assertRaises(InvalidStrFieldException):
             UCFChecker.check(self.CONFIG_FILES["invalid_comstr"])
 
     def test_invalid_date_structure(self):
@@ -100,10 +98,10 @@ class UCFCheckerTester(TestCase):
         with self.assertRaises(NotAJsonListException):
             UCFChecker.check(self.CONFIG_FILES["date_not_list"])
 
-        with self.assertRaises(RequiredDateFieldException):
+        with self.assertRaises(DateFieldException):
             UCFChecker.check(self.CONFIG_FILES["missing_months"])
 
-        with self.assertRaises(RequiredDateFieldException):
+        with self.assertRaises(DateFieldException):
             UCFChecker.check(self.CONFIG_FILES["missing_years"])
 
         with self.assertRaises(DateFieldException):
@@ -143,13 +141,13 @@ class UCFCheckerTester(TestCase):
         with self.assertRaises(GeneralParametersFieldException):
             UCFChecker.check(self.CONFIG_FILES["invalid_parallelism"])
 
-        with self.assertRaises(GeneralParametersMissingFieldException):
+        with self.assertRaises(RequiredFieldException):
             UCFChecker.check(self.CONFIG_FILES["missing_field_genprm"])
 
         config_file = UCFChecker.check(self.CONFIG_FILES["max_cpus_oob_2"])
-        gpuc = GeneralParametersUC.from_json_object(config_file[UCFParameter.GENERAL_PARAMETERS.name])
+        gpuc = GeneralParametersUC.from_json_object(config_file[UCFParameter.GENERAL_PARAMETERS.json_name])
         self.assertEqual(gpuc.cpus, UCFParameter.MAX_CPUS)
 
         config_file = UCFChecker.check(self.CONFIG_FILES["fake_parallelism"])
-        gpuc = GeneralParametersUC.from_json_object(config_file[UCFParameter.GENERAL_PARAMETERS.name])
+        gpuc = GeneralParametersUC.from_json_object(config_file[UCFParameter.GENERAL_PARAMETERS.json_name])
         self.assertFalse(gpuc._should_download_in_parallel)

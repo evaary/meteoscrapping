@@ -375,7 +375,7 @@ class MeteocielTP(TaskParameters):
 class OgimetTP(TaskParameters):
 
     _CRITERIA = Criteria("bgcolor", "#d0d0d0")
-    _BASE_URL = Template("http://www.ogimet.com/cgi-bin/gsynres?ind=$ind&ndays=$ndays&ano=$ano&mes=$mes&day=$day&hora=23&lang=en&decoded=$decoded")
+    _BASE_URL = Template("https://www.ogimet.com/cgi-bin/gsynres?ind=$ind&ndays=$ndays&ano=$ano&mes=$mes&day=$day&hora=23&lang=en&decoded=$decoded")
 
     def __init__(self, builder: TPBuilder):
 

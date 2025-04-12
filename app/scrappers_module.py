@@ -624,8 +624,8 @@ class OgimetHourly(MeteoScrapper):
     def _scrap_columns_names(self, table):
         # La colonne date est subdivisée en 2, une colonne date et une colonne time.
         # On ajoute la colonne time.
-        col_names = [th.text for th in table.find("tr")[0]
-                                            .find("th")]
+        col_names : list[str] = [th.text for th in table.find("tr")[0]
+                                                        .find("th")]
         if len(col_names) == 0:
             raise ScrapException()
 
@@ -641,6 +641,12 @@ class OgimetHourly(MeteoScrapper):
 
         specific_index = col_names.index("date")
         col_names.insert(specific_index + 1, "time")
+
+        try:
+            index_gust_max = col_names.index("gust_max")
+            col_names[index_gust_max] = "gust_max_km/h"
+        except ValueError:
+            pass
 
         return col_names
 
@@ -724,6 +730,12 @@ class OgimetHourly(MeteoScrapper):
             df["prec_mm"] = ["" if "--" in x
                              else "_".join(x.split("\n"))
                              for x in df["prec_mm"].values]
+        except KeyError:
+            pass
+
+        try:
+            df["gust_max_km/h"] = [x.split("/")[0] if "/" in x else x
+                                   for x in df["gust_max_km/h"].values]
         except KeyError:
             pass
         # (5)

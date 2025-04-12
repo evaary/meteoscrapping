@@ -1,7 +1,7 @@
 {
     "meteociel":
     [
-        {"ville":"orleans", "dates":["6/2021"] },
-        {"code": "7249", "ville":"orleans", "dates":["7/2023"] }
+        { "ville":"orleans", "dates":["6/2021"] },
+        { "code":"7249", "ville":"orleans", "dates":["7/2023"] }
     ]
 }

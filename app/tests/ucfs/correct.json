@@ -17,17 +17,16 @@
 
     "wunderground":
     [
-        { "code_pays":"it", "region": "LIBD", "ville":"matera", "dates":["1/2020"] },
-        { "code_pays":"it", "region": "LIBD", "ville":"matera", "dates":["1/2020", "3/2020"] }
+        { "code_pays":"it", "region":"LIBD", "ville":"matera", "dates":["1/2020"] },
+        { "code_pays":"it", "region":"LIBD", "ville":"matera", "dates":["1/2020", "3/2020"] }
     ],
 
     "meteociel":
     [
-        {"code": "7249", "ville":"orleans", "dates":["2/2021"] },
-        {"code": "7249", "ville":"orleans", "dates":["1/2021", "3/2021"] },
-
-        {"code": "7255", "ville":"bourges", "dates":["15/2/2021"] },
-        {"code": "7255", "ville":"bourges", "dates":["1/1/2021", "31/2/2021"] },
-        {"code": "7255", "ville":"bourges", "dates":["15/3/2021", "15/5/2021"] }
+        { "code":"7249", "ville":"orleans", "dates":["2/2021"] },
+        { "code":"7249", "ville":"orleans", "dates":["1/2021", "3/2021"] },
+        { "code":"7255", "ville":"bourges", "dates":["15/2/2021"] },
+        { "code":"7255", "ville":"bourges", "dates":["1/1/2021", "31/2/2021"] },
+        { "code":"7255", "ville":"bourges", "dates":["15/3/2021", "15/5/2021"] }
     ]
 }

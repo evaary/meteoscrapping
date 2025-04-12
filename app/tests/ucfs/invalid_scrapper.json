@@ -6,12 +6,12 @@
 
     "wunderground":
     [
-        { "code_pays":"it", "region": "LIBD", "ville":"matera", "dates":["6/2021"] }
+        { "code_pays":"it", "region":"LIBD", "ville":"matera", "dates":["6/2021"] }
     ],
 
     "meteociel":
     {
-        "bouh": {"code": "7249", "ville":"orleans", "dates":["6/2021"] },
-        "hey" : {"code": "7249", "ville":"orleans", "dates":["1/1/2022", "31/12/2022"] }
+        "bouh": { "code":"7249", "ville":"orleans", "dates":["6/2021"] },
+        "hey" : { "code":"7249", "ville":"orleans", "dates":["1/1/2022", "31/12/2022"] }
     }
 }

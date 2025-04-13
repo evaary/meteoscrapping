@@ -144,8 +144,8 @@ class MeteoScrapper(ABC):
         val = tp.criteria.attribute_value
         try:
             table: Element = [tab
-                            for tab in html_page.html.find("table")
-                            if attr in tab.attrs and tab.attrs[attr] == val][0]
+                              for tab in html_page.html.find("table")
+                              if attr in tab.attrs and tab.attrs[attr] == val][0]
         except IndexError:
             raise HtmlPageException()
 
@@ -187,12 +187,12 @@ class MeteoScrapper(ABC):
                           df: pd.DataFrame,
                           tp: TaskParameters) -> pd.DataFrame:
         """Complète le dataframe si des lignes manquent."""
-        # (1) On initialise un DataFrame totalement vide, des dimensions attendues,
-        #     avec les mêmes colonnes que df.
-        # (2) On place la date de chacun des dfs en indexe et on retire de missings tous les indexes de df.
-        #     Il ne reste que les lignes manquantes.
-        #     On ignore le 29 février car il n'est pas anticipé dans _expected_dates et causerait une KeyError.
-        # (3) On ajoute ces lignes aux résultats et on remet la date en colonne.
+        # (1)   On initialise un DataFrame totalement vide, des dimensions attendues,
+        #       avec les mêmes colonnes que df.
+        # (2)   On place la date de chacun des dfs en indexe et on retire de missings tous les indexes de df.
+        #       Il ne reste que les lignes manquantes.
+        #       On ignore le 29 février car il n'est pas anticipé dans _expected_dates et causerait une KeyError.
+        # (3)   On ajoute ces lignes aux résultats et on remet la date en colonne.
 
         # (1)
         expected_dates = self._expected_dates(tp)
@@ -228,11 +228,11 @@ class MeteocielDaily(MeteoScrapper):
              "pression": "hPa"}
 
     def _scrap_columns_names(self, table):
-        #   (1) On récupère les noms des colonnes contenus dans la 1ère ligne du tableau.
-        #   (2) Certains caractères à accents passent mal (précipitations, phénomènes).
-        #     On les remplace, on enlève les "." et on remplace les espaces par des _.
-        #   (3) On renomme la colonne jour en date, et la dernière colonne qui n'a pas de nom en to_delete.
-        #   (4) On ajoute au nom de la colonne son unité.
+        # (1)   On récupère les noms des colonnes contenus dans la 1ère ligne du tableau.
+        # (2)   Certains caractères à accents passent mal (précipitations, phénomènes).
+        #       On les remplace, on enlève les "." et on remplace les espaces par des _.
+        # (3)   On renomme la colonne jour en date, et la dernière colonne qui n'a pas de nom en to_delete.
+        # (4)   On ajoute au nom de la colonne son unité.
 
         # (1)
         columns_names = [td.text.lower().strip() for td in table.find("tr")[0].find("td")]
@@ -276,18 +276,20 @@ class MeteocielDaily(MeteoScrapper):
         return values
 
     def _rework_data(self, values, columns_names, tp):
-        #   (1) On créé le tableau de données.
-        #   (2) Suppression des colonnes inutiles. On passe par une compréhension pour éviter les KeyError.
-        #   (3) Le tableau ne contient que des string composées d'une valeur et d'une unité.
+        # (1)   On créé le tableau de données.
+        # (2)   Suppression des colonnes inutiles. On passe par une compréhension pour éviter les KeyError.
+        # (3)   Le tableau ne contient que des string composées d'une valeur et d'une unité.
         #       La fonction lambda renvoie la valeur trouvée dans une string, convertie en float si elle existe, ou nan.
         #       On définit aussi une fonction lambda vectorisée qui met la date en forme.
-        #   (4) On reconstruit les dates à partir des numéros des jours extraits de la colonne des dates.
+        # (4)   On reconstruit les dates à partir des numéros des jours extraits de la colonne des dates.
         #       On extrait les valeurs des autres colonnes.
 
         # (1)
         df = pd.DataFrame(np.array(values)
                             .reshape(-1, len(columns_names)),
                           columns=columns_names)
+        if df.empty:
+            return df
         # (2)
         df = df[[x for x in df.columns if x not in self.UNWANTED_COLUMNS]]
         # (3)
@@ -331,9 +333,9 @@ class MeteocielHourly(MeteoScrapper):
              "precip": "mm"}
 
     def _scrap_columns_names(self, table):
-        #   (1) Certains noms sont sur 2 lignes, on peut se passer de la 2ème.
-        #   (2) Certains caractères à accents passent mal, on les remplace par leur version sans accent.
-        #   (3) La colonne vent est composée de 2 sous colonnes: direction et vitesse.
+        # (1)   Certains noms sont sur 2 lignes, on peut se passer de la 2ème.
+        # (2)   Certains caractères à accents passent mal, on les remplace par leur version sans accent.
+        # (3)   La colonne vent est composée de 2 sous colonnes: direction et vitesse.
         #       Le tableau compte donc n colonnes mais n-1 noms de colonnes.
         #       On rajoute donc un nom pour la colonne de la direction du vent.
         columns_names = [td.text for td in table.find("tr")[0].find("td")]
@@ -418,22 +420,24 @@ class MeteocielHourly(MeteoScrapper):
         return values
 
     def _rework_data(self, values, columns_names, tp):
-        #   (1) On créé le tableau.
-        #   (2) On sépare la colonne vent_rafales en 2
+        # (1)   On créé le tableau.
+        # (2)   On sépare la colonne vent_rafales en 2
         #       Les valeurs contenues dans "vent (rafales)" sont normalement de la forme :
         #         - x km/h (y km/h)
         #         - x km/h
         #       On splite selon la ( pour avoir les 2 valeurs dans 2 str différentes.
         #       Si le split rend une liste d'1 seule valeur, on met une str vide dans les rafales.
         #       Puis on supprime les colonnes inutiles.
-        #   (3) On définit 2 fonctions vectorisées qui serviront à extraire les données numérique et formater les dates.
-        #   (4) On convertit les valeurs du format string vers le format qui leur vont.
-        #   (5) On ajoute au nom de la colonne son unité.
+        # (3)   On définit 2 fonctions vectorisées qui serviront à extraire les données numérique et formater les dates.
+        # (4)   On convertit les valeurs du format string vers le format qui leur vont.
+        # (5)   On ajoute au nom de la colonne son unité.
 
         # (1)
         df = pd.DataFrame(np.array(values)
                             .reshape(-1, len(columns_names)),
                           columns=columns_names)
+        if df.empty:
+            return df
         # (2)
         try:
             splitted = df["vent_rafales"].str.split("(")
@@ -487,13 +491,13 @@ class OgimetDaily(MeteoScrapper):
     NOT_NUMERIC = ["date", "wind_km/h_dir"]
 
     def _scrap_columns_names(self, table):
-        #   (1) On récupère les 2 tr du thead de la table de données sur ogimet dans trs.
+        # (1)   On récupère les 2 tr du thead de la table de données sur ogimet dans trs.
         #       Le 1er contient les noms principaux des colonnes, le 2ème des compléments.
         #       Max 3 des compléments sont pour la température, max 3 autres pour le vent.
-        #   (2) On ajoute chaque nom principal à la liste des noms de colonnes, en lui associant
+        # (2)   On ajoute chaque nom principal à la liste des noms de colonnes, en lui associant
         #       son complément s'il y a lieu.
-        #   (3) On formate les noms et les unités correctement.
-        #   (4) La colonne daily_weather_summary compte pour 8, on n'a qu'1 nom sur les 8.
+        # (3)   On formate les noms et les unités correctement.
+        # (4)   La colonne daily_weather_summary compte pour 8, on n'a qu'1 nom sur les 8.
         #       On en rajoute 7.
 
         # (1)
@@ -502,7 +506,7 @@ class OgimetDaily(MeteoScrapper):
         all_subs = [th.text.strip().lower() for th in trs[1].find("th")]
         actual_temp_subs = [x for x in all_subs if x in self.TEMP_SUBS]
         actual_wind_subs = [x for x in all_subs if x in self.WIND_SUBS]
-        columns_names = []
+        columns_names: list[str] = []
 
         if len(trs) == 0 or len(main_names) == 0:
             raise ScrapException()
@@ -539,20 +543,25 @@ class OgimetDaily(MeteoScrapper):
                            n_cols: int,
                            tp: TaskParameters):
         """Complète les lignes auxquelles il manque des valeurs avec des str vides."""
-        #   Ogimet gère mal les données manquantes.
-        #   Si certaines valeurs manquent en début ou milieu de ligne,
-        #   elle sont comblées par "---", et tout va bien, on a des valeurs quand même.
+        # Ogimet gère mal les données manquantes.
+        # Si certaines valeurs manquent en début ou milieu de ligne,
+        # elle sont comblées par "---", et tout va bien, on a des valeurs quand même.
         #
-        #   Si les valeurs manquantes sont à la fin, la ligne s'arrête prématurément.
-        #   Elle compte moins de valeurs qu'attendu, on ne peut pas reconstruire le tableau.
-        #       => https://www.ogimet.com/cgi-bin/gsynres?lang=en&ind=08180&ano=2017&mes=7&day=31&hora=23&ndays=31
+        # Si les valeurs manquantes sont à la fin, la ligne s'arrête prématurément.
+        # Elle compte moins de valeurs qu'attendu, on ne peut pas reconstruire le tableau.
+        #     => https://www.ogimet.com/cgi-bin/gsynres?lang=en&ind=08180&ano=2017&mes=7&day=31&hora=23&ndays=31
         #
-        #   (1) values contient des lignes incomplètes si sa taille n'est pas un multiple de n_cols.
-        #     Si toutes les lignes sont complètes, on a rien à faire.
-        #   (2) A chaque tour de boucle, on trouve l'indexe des 2 prochaines dates.
-        #   (3) On sélectionne les valeurs entre la 1ère date incluse et la 2ème exclue dans row.
+        # Les dates manquantes sont ajoutées ultérieurement.
+        #
+        # (1)   values contient des lignes incomplètes si sa taille n'est pas un multiple de n_cols.
+        #       Si toutes les lignes sont complètes, on a rien à faire.
+        #
+        # (2)   A chaque tour de boucle, on trouve l'indexe des 2 prochaines dates.
+        #
+        # (3)   On sélectionne les valeurs entre la 1ère date incluse et la 2ème exclue dans row.
         #       On retire ces valeurs de values.
-        #   (4) On complète row avec autant de str que nécessaire pour avoir n_cols valeurs dedans,
+        #
+        # (4)   On complète row avec autant de str que nécessaire pour avoir n_cols valeurs dedans,
         #       et on l'ajoute aux valeurs traitées.
 
         # (1)
@@ -580,12 +589,12 @@ class OgimetDaily(MeteoScrapper):
         return done
 
     def _rework_data(self, values, columns_names, tp):
-        #   (1) Création du dataframe.
-        #   (2) La colonne date est au format MM/JJ, on la convertit au format AAAA-MM-JJ.
-        #   (3) Les valeurs sont au format str, on les convertit en numérique colonne par colonne.
-        #   (4) La colonne wind_(km/h)_dir contient des str, on remplace les "---" par "" pour les
+        # (1)   Création du dataframe.
+        # (2)   La colonne date est au format MM/JJ, on la convertit au format AAAA-MM-JJ.
+        # (3)   Les valeurs sont au format str, on les convertit en numérique colonne par colonne.
+        # (4)   La colonne wind_(km/h)_dir contient des str, on remplace les "---" par "" pour les
         #       valeurs manquantes.
-        #   (5) On supprime les colonnes daily_weather_summary si elles existent en conservant les
+        # (5)   On supprime les colonnes daily_weather_summary si elles existent en conservant les
         #       colonnes qui n'ont pas daily_weather_summary dans leur nom.
 
         # (1)
@@ -594,6 +603,8 @@ class OgimetDaily(MeteoScrapper):
         df = pd.DataFrame(np.array(values)
                             .reshape(-1, n_cols),
                           columns=columns_names)
+        if df.empty:
+            return df
         # (2)
         df["date"] = tp.year_as_str + "/" + df["date"]
         df["date"] = pd.to_datetime(df["date"])
@@ -668,19 +679,21 @@ class OgimetHourly(MeteoScrapper):
                            n_cols: int,
                            tp: TaskParameters):
         """Complète les lignes auxquelles il manque des valeurs avec des str vides."""
-        #   Ogimet gère mal les données manquantes.
-        #   Si certaines valeurs manquent en début ou milieu de ligne,
-        #   elle sont comblées par "---", et tout va bien, on a des valeurs quand même.
+        # Ogimet gère mal les données manquantes.
+        # Si certaines valeurs manquent en début ou milieu de ligne,
+        # elle sont comblées par "---", et tout va bien, on a des valeurs quand même.
         #
-        #   Si les valeurs manquantes sont à la fin, la ligne s'arrête prématurément.
-        #   Elle compte moins de valeurs qu'attendu, on ne peut pas reconstruire le tableau.
+        # Si les valeurs manquantes sont à la fin, la ligne s'arrête prématurément.
+        # Elle compte moins de valeurs qu'attendu, on ne peut pas reconstruire le tableau.
         #
-        #   (1) values contient des lignes incomplètes si sa taille n'est pas un multiple de n_cols.
-        #     Si toutes les lignes sont complètes, on a rien à faire.
-        #   (2) A chaque tour de boucle, on trouve l'indexe des 2 prochaines dates.
-        #   (3) On sélectionne les valeurs entre la 1ère date incluse et la 2ème exclue dans row.
+        # Les dates manquantes sont ajoutées ultérieurement.
+        #
+        # (1)   values contient des lignes incomplètes si sa taille n'est pas un multiple de n_cols.
+        #       Si toutes les lignes sont complètes, on a rien à faire.
+        # (2)   A chaque tour de boucle, on trouve l'indexe des 2 prochaines dates.
+        # (3)   On sélectionne les valeurs entre la 1ère date incluse et la 2ème exclue dans row.
         #       On retire ces valeurs de values.
-        #   (4) On complète row avec autant de str que nécessaire pour avoir n_cols valeurs dedans,
+        # (4)   On complète row avec autant de str que nécessaire pour avoir n_cols valeurs dedans,
         #       et on l'ajoute aux valeurs traitées.
 
         # (1)
@@ -690,8 +703,8 @@ class OgimetHourly(MeteoScrapper):
         done = []
         while len(values) > 0:
             # (2)
-            remaining_dates = [MonthEnum.format_date_time(tp.day - x) for x in range(0, tp.ndays)]
-            remaining_dates = [f"{tp.month_as_str}/{x}/{tp.year_as_str}" for x in remaining_dates]
+            remaining_dates = [f"{tp.month_as_str}/{MonthEnum.format_date_time(tp.day - x)}/{tp.year_as_str}"
+                               for x in range(0, tp.ndays)]
             remaining_dates = [x for x in values if x in remaining_dates]
 
             first_index = values.index(remaining_dates[0])
@@ -712,13 +725,13 @@ class OgimetHourly(MeteoScrapper):
         return done
 
     def _rework_data(self, values, columns_names, tp):
-        #   (1) On créé le dataframe.
-        #   (2) La date est divisée en 2 colonnes date et heure, on les rassemble, et on formate correctement.
-        #   (3) On retire les colonnes qui ne nous intéressent pas.
-        #   (4) Le format des précipitations est bizarre, on choisit de le laisser sous forme de str.
+        # (1)   On créé le dataframe.
+        # (2)   La date est divisée en 2 colonnes date et heure, on les rassemble, et on formate correctement.
+        # (3)   On retire les colonnes qui ne nous intéressent pas.
+        # (4)   Le format des précipitations est bizarre, on choisit de le laisser sous forme de str.
         #       Parfois la cellule contient 2 données, séparée par un retour à la ligne, on les met bout à bout.
         #       => https://www.ogimet.com/cgi-bin/gsynres?ind=07149&ndays=28&ano=2020&mes=2&day=28&hora=23&lang=en&decoded=yes
-        #   (5) On convertit les données au format numérique.
+        # (5)   On convertit les données au format numérique.
 
         # (1)
         n_cols = len(columns_names)
@@ -726,6 +739,8 @@ class OgimetHourly(MeteoScrapper):
         df = pd.DataFrame(np.array(values)
                             .reshape(-1, n_cols),
                           columns=columns_names)
+        if df.empty:
+            return df
         # (2)
         df["date"] = df["date"] + ":" + df["time"]
         df["date"] = pd.to_datetime(df["date"],
@@ -819,25 +834,25 @@ class WundergroundDaily(MeteoScrapper):
                 if "\n" in td.text]
 
     def _rework_data(self, values, columns_names, tp):
-        #   (1) values est une liste de str. Chaque str contient toutes les données d'1 colonne principale
+        # (1)   values est une liste de str. Chaque str contient toutes les données d'1 colonne principale
         #       séparées par des \n ("x\nx\nx\nx..."). On convertit ces str en liste de données [x,x,x, ...].
         #       values devient une liste de listes.
         #       On définit aussi le nombre de ligne comme étant égal à la longueur de la 1ère liste de values,
         #       qui correspond à la colonne Time.
-        #   (2) On initialise la matrice qui constituera le dataframe final avec la 1ère liste (Time)
+        # (2)   On initialise la matrice qui constituera le dataframe final avec la 1ère liste (Time)
         #       transformée en vecteur colonne.
-        #   (3) Le dataframe aura besoin de noms pour ses colonnes. Le nom final est composé d'un nom
+        # (3)   Le dataframe aura besoin de noms pour ses colonnes. Le nom final est composé d'un nom
         #       principal et d'un complément, sauf pour la colonne Time.
         #       Les noms principaux sont contenus dans main_names, les compléments correspondent aux 1 ou 3
         #       premières valeurs des listes dans values. Pour chaque liste, on récupère les compléments.
         #       On transforme la liste courante en vecteur colonne ou en matrice à 3 colonnes,
         #       puis on accolle ces colonnes au dataframe principal.
-        #   (4) On associe les main_names avec leurs sub_names.
-        #   (5) On créé le dataframe final à partir de la matrice et des noms de colonnes. La 1ère ligne,
+        # (4)   On associe les main_names avec leurs sub_names.
+        # (5)   On créé le dataframe final à partir de la matrice et des noms de colonnes. La 1ère ligne,
         #       contenant les compléments, est supprimée.
-        #   (6) On formate les dates correctement, au format AAAA-MM-JJ.
-        #   (7) Jusqu'ici les valeur du dataframe sont au format str. On les convertit en numérique.
-        #   (8) On convertit vers les unités classiques .
+        # (6)   On formate les dates correctement, au format AAAA-MM-JJ.
+        # (7)   Jusqu'ici les valeur du dataframe sont au format str. On les convertit en numérique.
+        # (8)   On convertit vers les unités classiques .
 
         # (1)
         values = [string.split("\n") for string in values]

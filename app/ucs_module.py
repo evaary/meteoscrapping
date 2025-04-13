@@ -300,7 +300,8 @@ class OgimetUC(ScrapperUC):
             while should_run:
 
                 if(     MonthEnum.from_id(current_month) == MonthEnum.JANVIER
-                   and  last_day - n_days == 0):
+                   and  last_day - n_days == 0
+                   and not has_single_date):
                     n_days -= 1
 
                 yield TPBuilder(self.scrapper_type).with_ind(self._ind)\

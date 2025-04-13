@@ -120,12 +120,12 @@ class UCFChecker:
     @staticmethod
     def check_ucf_structure(path_to_config: str) -> dict:
         """Contrôle de la validité du fichier config"""
-        #   (1) On tente de lire le fichier config.
-        #   (2) Le fichier config doit contenir un dict.
-        #   (3) Les paramètres pour chaque scrapper doivent être des listes.
+        # (1)   On tente de lire le fichier config.
+        # (2)   Le fichier config doit contenir un dict.
+        # (3)   Les paramètres pour chaque scrapper doivent être des listes.
         #       scrapper_presence associe ces paramètres à leur état de présence (True = présent, par défaut)
-        #   (4) Chacun de ces paramètres est optionnel, mais il en faut au moins 1.
-        #   (5) On teste la présence des paramètres généraux, champs optionnel.
+        # (4)   Chacun de ces paramètres est optionnel, mais il en faut au moins 1.
+        # (5)   On teste la présence des paramètres généraux, champs optionnel.
 
         # (1)
         try:
@@ -224,9 +224,9 @@ class UCFChecker:
                  uc: dict,
                  scrapper_name: UCFParameterEnumMember):
         """Détermine si un UC du fichier de configuration est valide ou pas"""
-        #   (1) On vérifie que les champs str spécifiques au scrapper sont présents et bien remplis.
-        #   (2) On vérifie que les champs str communs sont présents et bien remplis.
-        #   (3) On vérifie que le champ dates est présent et bien remplis.
+        # (1)   On vérifie que les champs str spécifiques au scrapper sont présents et bien remplis.
+        # (2)   On vérifie que les champs str communs sont présents et bien remplis.
+        # (3)   On vérifie que le champ dates est présent et bien remplis.
         if scrapper_name not in UCFParameter.SCRAPPERS:
             raise ValueError("UCFChecker.check_individual_uc : scrapper_name doit être un scrapper")
 

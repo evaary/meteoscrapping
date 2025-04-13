@@ -86,7 +86,7 @@ Performances
 
     ogimet jour par jour
     { "ind":"07149", "ville":"paris_orly", "dates":["1/2015", "12/2020"] }
-    => a généré un CSV de 2191 lignes en 3245s, sans fichier d'erreur
+    => a généré un CSV de 2 191 lignes en 3 245s, sans fichier d'erreur
 
     wunderground jour par jour
     { "code_pays":"it", "region":"LIBD", "ville":"matera", "dates":["1/2013", "12/2023"] }

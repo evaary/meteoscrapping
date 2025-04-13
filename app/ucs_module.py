@@ -278,19 +278,31 @@ class OgimetUC(ScrapperUC):
             # La requête consiste à demander les n derniers jour à partir du jour j.
             # Pour obtenir les infos d'un mois complet, on se met au 31, on demande les 31 derniers jours.
             # Seuls le 1er mois et le dernier doivent faire l'objet d'un paramétrage de l'URL plus fin.
+            #
+            # Bizarrement, on ne peut pas requêter une page qui contient le 1er janvier sans perdre toutes les données.
+            # Si le 1er janvier est inclus dans la demande de l'utilisateur, on force son exclusion.
+            #dates = [1/1/2000, 15/12/2000] 1/2/2000
             current_day, current_month, current_year = [int(x) for x in self.dates[0].split("/")]
             end_day, end_month, end_year = [int(x) for x in self.dates[-1].split("/")]
             has_single_date = len(self._dates) == 1
 
-            if (current_month, current_year) == (end_month, end_year):
-                n_days = 1 if has_single_date else end_day
+            if has_single_date:
+                last_day = current_day
+                n_days = 1
+            elif (current_month, current_year) == (end_month, end_year):
                 last_day = end_day
-                current_day = end_day
+                n_days = last_day - current_day + 1
+                current_day = last_day
             else:
                 last_day = MonthEnum.from_id(current_month).ndays
                 n_days = last_day - current_day + 1
 
             while should_run:
+
+                if(     current_month == 1
+                   and  last_day == n_days
+                   and  n_days == MonthEnum.from_id(1).ndays):
+                    n_days -= 1
 
                 yield TPBuilder(self.scrapper_type).with_ind(self._ind)\
                                                     .with_city(self._city)\
@@ -307,13 +319,12 @@ class OgimetUC(ScrapperUC):
                     current_year += 1
 
                 if (current_month, current_year) == (end_month, end_year):
-                    n_days = min(end_day, MonthEnum.from_id(current_month).ndays)
                     last_day = min(end_day, MonthEnum.from_id(current_month).ndays)
-                    current_day = end_day
                 else:
                     last_day = MonthEnum.from_id(current_month).ndays
-                    n_days = MonthEnum.from_id(current_month).ndays
-                    current_day = 0
+
+                current_day = last_day
+                n_days = last_day
         else:
             raise ValueError("OgimetUC.to_tps : scrapper_type invalide")
 

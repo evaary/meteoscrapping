@@ -161,15 +161,6 @@ class TPBuilder:
                and self._ndays == 0):
                 raise ValueError("TPBuilder.build : 'ndays' requis pour Ogimet heure par heure.")
 
-            # Bizarrement, on ne peut pas requêter une page qui contient le 1er janvier sans perdre toutes les données.
-            # Si le 1er janvier est inclus dans la demande de l'utilisateur, on force son exclusion.
-            wanted_month = MonthEnum.from_id(self._month)
-            if(     self._scrapper_type == ScrapperType.OGIMET_HOURLY
-                and wanted_month == MonthEnum.JANVIER
-                and self._day - self._ndays == 0
-            ):
-                self._ndays -= 1
-
             return OgimetTP(self)
 
         if self._scrapper_type in ScrapperType.wunderground_scrappers():

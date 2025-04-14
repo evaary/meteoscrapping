@@ -6,7 +6,7 @@ from typing import (Any,
                     Generator)
 
 from app.boite_a_bonheur.MonthEnum import Months
-from app.boite_a_bonheur.ScraperTypeEnum import ScrapperTypes, ScrapperType
+from app.boite_a_bonheur.ScrapperTypeEnum import ScrapperTypes, ScrapperType
 from app.boite_a_bonheur.UCFParameterEnum import UCFParameter, UCFParameters
 from app.tps_module import (TPBuilder,
                             TaskParameters)

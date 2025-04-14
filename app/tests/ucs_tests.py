@@ -1,7 +1,7 @@
 import copy
 from unittest import TestCase
 
-from app.boite_a_bonheur.ScraperTypeEnum import ScrapperTypes
+from app.boite_a_bonheur.ScrapperTypeEnum import ScrapperTypes
 from app.UserConfigFile import UserConfigFile
 
 

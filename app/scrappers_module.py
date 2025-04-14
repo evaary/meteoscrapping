@@ -11,7 +11,7 @@ from app.exceptions.scrapping_exceptions import (ScrapException,
                                                  ProcessException)
 from app.ucs_module import ScrapperUC, GeneralParametersUC
 from app.tps_module import TaskParameters
-from app.boite_a_bonheur.ScraperTypeEnum import ScrapperTypes
+from app.boite_a_bonheur.ScrapperTypeEnum import ScrapperTypes
 from app.boite_a_bonheur.MonthEnum import Months
 from requests_html import (Element,
                            HTMLSession)

@@ -4,7 +4,7 @@ from string import Template
 
 from app.boite_a_bonheur.Criteria import Criteria
 from app.boite_a_bonheur.MonthEnum import Months
-from app.boite_a_bonheur.ScraperTypeEnum import (ScrapperTypes,
+from app.boite_a_bonheur.ScrapperTypeEnum import (ScrapperTypes,
                                                  ScrapperType)
 from app.boite_a_bonheur.UCFParameterEnum import UCFParameters
 

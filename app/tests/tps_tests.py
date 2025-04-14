@@ -117,6 +117,7 @@ class TPsTester(TestCase):
         tp_dec_2020 = next(tps)
         tp_jan_2021 = next(tps)
         tp_fev_2021 = next(tps)
+        tp_1er_jan_2021 = next(tps)
 
         with self.assertRaises(StopIteration):
             next(tps)
@@ -127,6 +128,8 @@ class TPsTester(TestCase):
                          'https://www.ogimet.com/cgi-bin/gsynres?ind=bouh&ndays=30&ano=2021&mes=1&day=31&hora=23&lang=en&decoded=yes')
         self.assertEqual(tp_fev_2021.url,
                          'https://www.ogimet.com/cgi-bin/gsynres?ind=bouh&ndays=28&ano=2021&mes=2&day=28&hora=23&lang=en&decoded=yes')
+        self.assertEqual(tp_1er_jan_2021.url,
+                         'https://www.ogimet.com/cgi-bin/gsynres?ind=bouh&ndays=1&ano=2021&mes=1&day=1&hora=23&lang=en&decoded=yes')
 
     def test_ogimeth_31_fev(self):
         tps = [uc

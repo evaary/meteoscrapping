@@ -1,4 +1,4 @@
-version 1.1 - 14/04/2025 - wunderground indisponible
+version 1.2 - 14/04/2025 - wunderground indisponible
 Un programme de webscrapping pour récupérer des données météorologiques depuis ogimet, wunderground et meteociel.
 
 Exemples de tableaux récupérés:
@@ -29,8 +29,6 @@ Où trouver les paramètres ?
     Pour les jobs ogimet jour par jour et heure par heure:
         - http://www.ogimet.com/cgi-bin/gsynres?lang=en&ind=08180&ano=2017&mes=8&day=0&hora=0&min=0&ndays=31
           http:      [...]                              ind=<ind>          [...]
-        - ogimet heure par heure : empiriquement, une url qui inclus le 1er janvier n'affiche aucune donnée.
-          Le 1er janvier sera toujours exclu automatiquement des résultats.
 
     Pour les jobs wunderground:
         - https://www.wunderground.com/history/monthly/it/bergamo/LIME/date/2020-3

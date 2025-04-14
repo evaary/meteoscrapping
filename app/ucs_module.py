@@ -280,11 +280,13 @@ class OgimetUC(ScrapperUC):
             # Seuls le 1er mois et le dernier doivent faire l'objet d'un paramétrage de l'URL plus fin.
             #
             # Bizarrement, on ne peut pas requêter une page qui contient le 1er janvier sans perdre toutes les données.
-            # Si le 1er janvier est inclus dans la demande de l'utilisateur, on force son exclusion.
+            # Si le 1er janvier est inclus dans la demande de l'utilisateur, on les exclue du processus principal
+            # et on les traite à part via list_of_1er_jan.
 
             current_day, current_month, current_year = [int(x) for x in self.dates[0].split("/")]
             end_day, end_month, end_year = [int(x) for x in self.dates[-1].split("/")]
-            has_single_date = len(self.dates) == 1
+            has_single_date = self.dates[0] == self.dates[-1]
+            list_of_1er_jan = []
 
             if (current_month, current_year) == (end_month, end_year):
                 n_days = end_day - current_day + 1
@@ -299,6 +301,7 @@ class OgimetUC(ScrapperUC):
                    and  current_day - n_days == 0
                    and not has_single_date):
                     n_days -= 1
+                    list_of_1er_jan.append(current_year)
 
                 yield TPBuilder(self.scrapper_type).with_ind(self._ind)\
                                                     .with_city(self._city)\
@@ -321,9 +324,14 @@ class OgimetUC(ScrapperUC):
 
                 n_days = current_day
 
-                if(     current_month == 1
-                    and current_day - n_days == 0):
-                    n_days -= 1
+            for year in list_of_1er_jan:
+                yield TPBuilder(self.scrapper_type).with_ind(self._ind)\
+                                                    .with_city(self._city)\
+                                                    .with_year(year)\
+                                                    .with_month(1)\
+                                                    .with_day(1)\
+                                                    .with_ndays(1)\
+                                                    .build()
         else:
             raise ValueError("OgimetUC.to_tps : scrapper_type invalide")
 

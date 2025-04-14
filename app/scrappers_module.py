@@ -11,7 +11,7 @@ from app.exceptions.scrapping_exceptions import (ScrapException,
                                                  ProcessException)
 from app.ucs_module import ScrapperUC, GeneralParametersUC
 from app.tps_module import TaskParameters
-from app.boite_a_bonheur.ScraperTypeEnum import ScrapperType
+from app.boite_a_bonheur.ScraperTypeEnum import ScrapperTypes
 from app.boite_a_bonheur.MonthEnum import Months
 from requests_html import (Element,
                            HTMLSession)
@@ -36,14 +36,14 @@ class MeteoScrapper(ABC):
         # Les None ne posent pas de problème car lors de la lecture du fichier config,
         # on contrôle que tous les UCs sont bien pris en charge.
         # TODO : faire de ce truc un attribut de classe
-        scrappers = {ScrapperType.WUNDERGROUND_HOURLY: None,
-                     ScrapperType.WUNDERGROUND_DAILY: WundergroundDaily,
+        scrappers = {ScrapperTypes.WUNDERGROUND_HOURLY: None,
+                     ScrapperTypes.WUNDERGROUND_DAILY: WundergroundDaily,
 
-                     ScrapperType.OGIMET_HOURLY: OgimetHourly,
-                     ScrapperType.OGIMET_DAILY: OgimetDaily,
+                     ScrapperTypes.OGIMET_HOURLY: OgimetHourly,
+                     ScrapperTypes.OGIMET_DAILY: OgimetDaily,
 
-                     ScrapperType.METEOCIEL_HOURLY: MeteocielHourly,
-                     ScrapperType.METEOCIEL_DAILY: MeteocielDaily}
+                     ScrapperTypes.METEOCIEL_HOURLY: MeteocielHourly,
+                     ScrapperTypes.METEOCIEL_DAILY: MeteocielDaily}
 
         return scrappers[uc.scrapper_type]()
 

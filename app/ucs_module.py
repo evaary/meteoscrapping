@@ -6,7 +6,7 @@ from typing import (Any,
                     Generator)
 
 from app.boite_a_bonheur.MonthEnum import Months
-from app.boite_a_bonheur.ScraperTypeEnum import ScrapperType, ScrapperTypeEnumMember
+from app.boite_a_bonheur.ScraperTypeEnum import ScrapperTypes, ScrapperType
 from app.boite_a_bonheur.UCFParameterEnum import UCFParameterEnumMember, UCFParameter
 from app.tps_module import (TPBuilder,
                             TaskParameters)
@@ -64,7 +64,7 @@ class ScrapperUC(ABC):
 
     def __init__(self):
         self._city : str = ""
-        self._scrapper_type : ScrapperTypeEnumMember = None
+        self._scrapper_type : ScrapperType = None
         self._dates : List[str] = []
 
     @property
@@ -72,7 +72,7 @@ class ScrapperUC(ABC):
         return self._city
 
     @property
-    def scrapper_type(self) -> ScrapperTypeEnumMember:
+    def scrapper_type(self) -> ScrapperType:
         return copy.copy(self._scrapper_type)
 
     @property
@@ -84,23 +84,23 @@ class ScrapperUC(ABC):
                   jsono: dict,
                   param_name: UCFParameterEnumMember) -> "ScrapperUC":
 
-        hourly_type : ScrapperTypeEnumMember = None
-        daily_type : ScrapperTypeEnumMember = None
+        hourly_type : ScrapperType = None
+        daily_type : ScrapperType = None
 
         if param_name == UCFParameter.WUNDERGROUND:
             suc = WundergroundUC.from_json_object(jsono)
-            daily_type = ScrapperType.WUNDERGROUND_DAILY
-            hourly_type = ScrapperType.WUNDERGROUND_HOURLY
+            daily_type = ScrapperTypes.WUNDERGROUND_DAILY
+            hourly_type = ScrapperTypes.WUNDERGROUND_HOURLY
 
         elif param_name == UCFParameter.METEOCIEL:
             suc = MeteocielUC.from_json_object(jsono)
-            daily_type = ScrapperType.METEOCIEL_DAILY
-            hourly_type = ScrapperType.METEOCIEL_HOURLY
+            daily_type = ScrapperTypes.METEOCIEL_DAILY
+            hourly_type = ScrapperTypes.METEOCIEL_HOURLY
 
         elif param_name == UCFParameter.OGIMET:
             suc = OgimetUC.from_json_object(jsono)
-            daily_type = ScrapperType.OGIMET_DAILY
-            hourly_type = ScrapperType.OGIMET_HOURLY
+            daily_type = ScrapperTypes.OGIMET_DAILY
+            hourly_type = ScrapperTypes.OGIMET_HOURLY
 
         else:
             raise ValueError("ScrapperUC.from_json : scrapper inconnu")
@@ -186,7 +186,7 @@ class MeteocielUC(ScrapperUC):
 
         should_run = True
 
-        if self.scrapper_type == ScrapperType.METEOCIEL_DAILY:
+        if self.scrapper_type == ScrapperTypes.METEOCIEL_DAILY:
 
             current_month, current_year = [int(x) for x in self.dates[0].split("/")]
 
@@ -205,7 +205,7 @@ class MeteocielUC(ScrapperUC):
                 if current_month == 1:
                     current_year += 1
 
-        elif self.scrapper_type == ScrapperType.METEOCIEL_HOURLY:
+        elif self.scrapper_type == ScrapperTypes.METEOCIEL_HOURLY:
 
             current_day, current_month, current_year = [int(x) for x in self.dates[0].split("/")]
 
@@ -229,7 +229,7 @@ class MeteocielUC(ScrapperUC):
                 if current_day == 1 and current_month == 1:
                     current_year += 1
         else:
-            raise ValueError("MeteocielUC.to_tps : ScrapperType inconnu")
+            raise ValueError("MeteocielUC.to_tps : ScrapperTypes inconnu")
 
 
     def _get_parameters(self):
@@ -256,7 +256,7 @@ class OgimetUC(ScrapperUC):
 
         should_run = True # permet de faire agir la boucle while comme une do while
 
-        if self.scrapper_type == ScrapperType.OGIMET_DAILY:
+        if self.scrapper_type == ScrapperTypes.OGIMET_DAILY:
 
             current_month, current_year = [int(x) for x in self.dates[0].split("/")]
 
@@ -274,7 +274,7 @@ class OgimetUC(ScrapperUC):
                 if current_month == 1:
                     current_year += 1
 
-        elif self.scrapper_type == ScrapperType.OGIMET_HOURLY:
+        elif self.scrapper_type == ScrapperTypes.OGIMET_HOURLY:
             # La requête consiste à demander les n derniers jour à partir du jour j.
             # Pour obtenir les infos d'un mois complet, on se met au 31, on demande les 31 derniers jours.
             # Seuls le 1er mois et le dernier doivent faire l'objet d'un paramétrage de l'URL plus fin.
@@ -354,7 +354,7 @@ class WundergroundUC(ScrapperUC):
 
         should_run = True
 
-        if self.scrapper_type == ScrapperType.WUNDERGROUND_DAILY:
+        if self.scrapper_type == ScrapperTypes.WUNDERGROUND_DAILY:
 
             current_month, current_year = [int(x) for x in self.dates[0].split("/")]
 
@@ -372,7 +372,7 @@ class WundergroundUC(ScrapperUC):
                 if current_month == 1:
                     current_year += 1
 
-        elif self.scrapper_type == ScrapperType.WUNDERGROUND_HOURLY:
+        elif self.scrapper_type == ScrapperTypes.WUNDERGROUND_HOURLY:
             raise NotImplementedError("un jour peut être !")
         else:
             raise ValueError("WundergroundUC.to_tps : scrapper_type invalide")

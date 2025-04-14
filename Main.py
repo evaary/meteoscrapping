@@ -14,10 +14,10 @@ class Main:
     @classmethod
     def run(cls) -> None:
         """lancer les téléchargements"""
-        #   (1) Lecture du fichier config.
-        #   (2) Pour chaque UC, on créé un nom de fichier pour le CSV (résultats) et pour le JSON (erreurs).
-        #   (3) Instanciation du scrapper et téléchargement des données.
-        #   (4) Enregistrement des résultats et des erreurs.
+        # (1)   Lecture du fichier config.
+        # (2)   Pour chaque UC, on créé un nom de fichier pour le CSV (résultats) et pour le JSON (erreurs).
+        # (3)   Instanciation du scrapper et téléchargement des données.
+        # (4)   Enregistrement des résultats et des erreurs.
 
         # (1)
         try:

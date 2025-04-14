@@ -1,7 +1,7 @@
 import copy
 from typing import List
 
-from app.boite_a_bonheur.UCFParameterEnum import UCFParameter
+from app.boite_a_bonheur.UCFParameterEnum import UCFParameters
 from app.UCFChecker import UCFChecker
 from app.ucs_module import ScrapperUC, GeneralParametersUC
 
@@ -32,26 +32,26 @@ class UserConfigFile:
         ucf = UserConfigFile()
 
         try:
-            general_parameters = config_file[UCFParameter.GENERAL_PARAMETERS.json_name]
+            general_parameters = config_file[UCFParameters.GENERAL_PARAMETERS.json_name]
             GeneralParametersUC.from_json_object(general_parameters)
         except KeyError:
             pass
 
         try:
-            oucs = config_file[UCFParameter.OGIMET.json_name]
-            ucf._ogimet_ucs = list(set([ScrapperUC.from_json(ouc, UCFParameter.OGIMET) for ouc in oucs]))
+            oucs = config_file[UCFParameters.OGIMET.json_name]
+            ucf._ogimet_ucs = list(set([ScrapperUC.from_json(ouc, UCFParameters.OGIMET) for ouc in oucs]))
         except KeyError:
             pass
 
         try:
-            mucs = config_file[UCFParameter.METEOCIEL.json_name]
-            ucf._meteociel_ucs = list(set([ScrapperUC.from_json(muc, UCFParameter.METEOCIEL) for muc in mucs]))
+            mucs = config_file[UCFParameters.METEOCIEL.json_name]
+            ucf._meteociel_ucs = list(set([ScrapperUC.from_json(muc, UCFParameters.METEOCIEL) for muc in mucs]))
         except KeyError:
             pass
 
         try:
-            wucs = config_file[UCFParameter.WUNDERGROUND.json_name]
-            ucf._wunderground_ucs = list(set([ScrapperUC.from_json(wuc, UCFParameter.WUNDERGROUND) for wuc in wucs]))
+            wucs = config_file[UCFParameters.WUNDERGROUND.json_name]
+            ucf._wunderground_ucs = list(set([ScrapperUC.from_json(wuc, UCFParameters.WUNDERGROUND) for wuc in wucs]))
         except KeyError:
             pass
 

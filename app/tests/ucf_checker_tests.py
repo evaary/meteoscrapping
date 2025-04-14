@@ -1,7 +1,7 @@
 from unittest import TestCase
 
 from app.UCFChecker import UCFChecker
-from app.boite_a_bonheur.UCFParameterEnum import UCFParameter
+from app.boite_a_bonheur.UCFParameterEnum import UCFParameters
 from app.exceptions.ucf_checker_exceptions import (DateFieldException,
                                                    DaysDateException,
                                                    MonthsDateException,
@@ -145,9 +145,9 @@ class UCFCheckerTester(TestCase):
             UCFChecker.check(self.CONFIG_FILES["missing_field_genprm"])
 
         config_file = UCFChecker.check(self.CONFIG_FILES["max_cpus_oob_2"])
-        gpuc = GeneralParametersUC.from_json_object(config_file[UCFParameter.GENERAL_PARAMETERS.json_name])
-        self.assertEqual(gpuc.cpus, UCFParameter.MAX_CPUS)
+        gpuc = GeneralParametersUC.from_json_object(config_file[UCFParameters.GENERAL_PARAMETERS.json_name])
+        self.assertEqual(gpuc.cpus, UCFParameters.MAX_CPUS)
 
         config_file = UCFChecker.check(self.CONFIG_FILES["fake_parallelism"])
-        gpuc = GeneralParametersUC.from_json_object(config_file[UCFParameter.GENERAL_PARAMETERS.json_name])
+        gpuc = GeneralParametersUC.from_json_object(config_file[UCFParameters.GENERAL_PARAMETERS.json_name])
         self.assertFalse(gpuc._should_download_in_parallel)

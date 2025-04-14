@@ -7,7 +7,7 @@ from typing import (Any,
 
 from app.boite_a_bonheur.MonthEnum import Months
 from app.boite_a_bonheur.ScraperTypeEnum import ScrapperTypes, ScrapperType
-from app.boite_a_bonheur.UCFParameterEnum import UCFParameterEnumMember, UCFParameter
+from app.boite_a_bonheur.UCFParameterEnum import UCFParameter, UCFParameters
 from app.tps_module import (TPBuilder,
                             TaskParameters)
 
@@ -17,8 +17,8 @@ class GeneralParametersUC:
     _INSTANCE = None
 
     def __init__(self):
-        self._should_download_in_parallel: bool = UCFParameter.DEFAULT_PARALLELISM
-        self._cpus: int = UCFParameter.DEFAULT_CPUS
+        self._should_download_in_parallel: bool = UCFParameters.DEFAULT_PARALLELISM
+        self._cpus: int = UCFParameters.DEFAULT_CPUS
         raise RuntimeError("GeneralParametersUC : appeler GeneralParametersUC.instance()")
 
     @property
@@ -33,12 +33,12 @@ class GeneralParametersUC:
     def from_json_object(cls, jsono: dict) -> "GeneralParametersUC":
 
         gpuc = GeneralParametersUC.instance()
-        gpuc._should_download_in_parallel = jsono[UCFParameter.PARALLELISM.json_name]
+        gpuc._should_download_in_parallel = jsono[UCFParameters.PARALLELISM.json_name]
 
-        user_cpus = jsono[UCFParameter.CPUS.json_name]
+        user_cpus = jsono[UCFParameters.CPUS.json_name]
         if(    user_cpus == -1
-            or user_cpus > UCFParameter.MAX_CPUS):
-            gpuc._cpus = UCFParameter.MAX_CPUS
+            or user_cpus > UCFParameters.MAX_CPUS):
+            gpuc._cpus = UCFParameters.MAX_CPUS
         elif user_cpus == 1:
             gpuc._should_download_in_parallel = False
             gpuc._cpus = user_cpus
@@ -51,8 +51,8 @@ class GeneralParametersUC:
     def instance(cls) -> "GeneralParametersUC":
         if cls._INSTANCE is None:
             cls._INSTANCE = GeneralParametersUC.__new__(cls)
-            cls._INSTANCE._should_download_in_parallel = UCFParameter.DEFAULT_PARALLELISM
-            cls._INSTANCE._cpus = UCFParameter.DEFAULT_CPUS
+            cls._INSTANCE._should_download_in_parallel = UCFParameters.DEFAULT_PARALLELISM
+            cls._INSTANCE._cpus = UCFParameters.DEFAULT_CPUS
 
         return cls._INSTANCE
 
@@ -82,22 +82,22 @@ class ScrapperUC(ABC):
     @classmethod
     def from_json(cls,
                   jsono: dict,
-                  param_name: UCFParameterEnumMember) -> "ScrapperUC":
+                  param_name: UCFParameter) -> "ScrapperUC":
 
         hourly_type : ScrapperType = None
         daily_type : ScrapperType = None
 
-        if param_name == UCFParameter.WUNDERGROUND:
+        if param_name == UCFParameters.WUNDERGROUND:
             suc = WundergroundUC.from_json_object(jsono)
             daily_type = ScrapperTypes.WUNDERGROUND_DAILY
             hourly_type = ScrapperTypes.WUNDERGROUND_HOURLY
 
-        elif param_name == UCFParameter.METEOCIEL:
+        elif param_name == UCFParameters.METEOCIEL:
             suc = MeteocielUC.from_json_object(jsono)
             daily_type = ScrapperTypes.METEOCIEL_DAILY
             hourly_type = ScrapperTypes.METEOCIEL_HOURLY
 
-        elif param_name == UCFParameter.OGIMET:
+        elif param_name == UCFParameters.OGIMET:
             suc = OgimetUC.from_json_object(jsono)
             daily_type = ScrapperTypes.OGIMET_DAILY
             hourly_type = ScrapperTypes.OGIMET_HOURLY
@@ -105,8 +105,8 @@ class ScrapperUC(ABC):
         else:
             raise ValueError("ScrapperUC.from_json : scrapper inconnu")
 
-        suc._city = jsono[UCFParameter.CITY.json_name]
-        suc._dates = jsono[UCFParameter.DATES.json_name]
+        suc._city = jsono[UCFParameters.CITY.json_name]
+        suc._dates = jsono[UCFParameters.DATES.json_name]
 
         is_hourly = len(suc.dates[0].split("/")) == 3
         suc._scrapper_type = hourly_type if is_hourly else daily_type
@@ -125,7 +125,7 @@ class ScrapperUC(ABC):
         pass
 
     @abc.abstractmethod
-    def _get_parameters(self) -> List[UCFParameterEnumMember]:
+    def _get_parameters(self) -> List[UCFParameter]:
         pass
 
     def __repr__(self):
@@ -168,9 +168,9 @@ class ScrapperUC(ABC):
 
 class MeteocielUC(ScrapperUC):
 
-    _PARAMETERS = [UCFParameter.CITY,
-                   UCFParameter.CODE,
-                   UCFParameter.DATES]
+    _PARAMETERS = [UCFParameters.CITY,
+                   UCFParameters.CODE,
+                   UCFParameters.DATES]
 
     def __init__(self):
         super().__init__()
@@ -179,7 +179,7 @@ class MeteocielUC(ScrapperUC):
     @classmethod
     def from_json_object(cls, jsono):
         muc = MeteocielUC()
-        muc._code = jsono[UCFParameter.CODE.json_name]
+        muc._code = jsono[UCFParameters.CODE.json_name]
         return muc
 
     def to_tps(self):
@@ -201,7 +201,7 @@ class MeteocielUC(ScrapperUC):
                 if f"{current_month}/{current_year}" == self.dates[-1]:
                     should_run = False
 
-                current_month = current_month % UCFParameter.MAX_MONTHS + 1
+                current_month = current_month % UCFParameters.MAX_MONTHS + 1
                 if current_month == 1:
                     current_year += 1
 
@@ -224,7 +224,7 @@ class MeteocielUC(ScrapperUC):
                 current_day = current_day % Months.from_id(current_month).ndays + 1
 
                 if current_day == 1:
-                    current_month = current_month % UCFParameter.MAX_MONTHS + 1
+                    current_month = current_month % UCFParameters.MAX_MONTHS + 1
 
                 if current_day == 1 and current_month == 1:
                     current_year += 1
@@ -238,9 +238,9 @@ class MeteocielUC(ScrapperUC):
 
 class OgimetUC(ScrapperUC):
 
-    _PARAMETERS = [UCFParameter.CITY,
-                   UCFParameter.IND,
-                   UCFParameter.DATES]
+    _PARAMETERS = [UCFParameters.CITY,
+                   UCFParameters.IND,
+                   UCFParameters.DATES]
 
     def __init__(self):
         super().__init__()
@@ -249,7 +249,7 @@ class OgimetUC(ScrapperUC):
     @classmethod
     def from_json_object(cls, jsono):
         ouc = OgimetUC()
-        ouc._ind = jsono[UCFParameter.IND.json_name]
+        ouc._ind = jsono[UCFParameters.IND.json_name]
         return ouc
 
     def to_tps(self):
@@ -270,7 +270,7 @@ class OgimetUC(ScrapperUC):
                 if f"{current_month}/{current_year}" == self.dates[-1]:
                     should_run = False
 
-                current_month = current_month % UCFParameter.MAX_MONTHS + 1
+                current_month = current_month % UCFParameters.MAX_MONTHS + 1
                 if current_month == 1:
                     current_year += 1
 
@@ -310,7 +310,7 @@ class OgimetUC(ScrapperUC):
                 if f"{current_day}/{current_month}/{current_year}" == self.dates[-1]:
                     should_run = False
 
-                current_month = current_month % UCFParameter.MAX_MONTHS + 1
+                current_month = current_month % UCFParameters.MAX_MONTHS + 1
                 if current_month == 1:
                     current_year += 1
 
@@ -333,10 +333,10 @@ class OgimetUC(ScrapperUC):
 
 class WundergroundUC(ScrapperUC):
 
-    _PARAMETERS = [UCFParameter.CITY,
-                   UCFParameter.COUNTRY_CODE,
-                   UCFParameter.REGION,
-                   UCFParameter.DATES]
+    _PARAMETERS = [UCFParameters.CITY,
+                   UCFParameters.COUNTRY_CODE,
+                   UCFParameters.REGION,
+                   UCFParameters.DATES]
 
     def __init__(self):
         super().__init__()
@@ -346,8 +346,8 @@ class WundergroundUC(ScrapperUC):
     @classmethod
     def from_json_object(cls, jsono):
         wuc = WundergroundUC()
-        wuc._country_code = jsono[UCFParameter.COUNTRY_CODE.json_name]
-        wuc._region = jsono[UCFParameter.REGION.json_name]
+        wuc._country_code = jsono[UCFParameters.COUNTRY_CODE.json_name]
+        wuc._region = jsono[UCFParameters.REGION.json_name]
         return wuc
 
     def to_tps(self):
@@ -368,7 +368,7 @@ class WundergroundUC(ScrapperUC):
                 if f"{current_month}/{current_year}" == self.dates[-1]:
                     should_run = False
 
-                current_month = current_month % UCFParameter.MAX_MONTHS + 1
+                current_month = current_month % UCFParameters.MAX_MONTHS + 1
                 if current_month == 1:
                     current_year += 1
 

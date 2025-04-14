@@ -2,7 +2,7 @@ from multiprocessing import cpu_count
 from typing import List, Dict
 
 
-class UCFParameterEnumMember:
+class UCFParameter:
     def __init__(self, json_name: str, field_name: str):
         self._json_name = json_name
         self._field_name = field_name
@@ -19,10 +19,10 @@ class UCFParameterEnumMember:
         return hash(self._json_name) + hash(self._field_name)
 
     def __repr__(self):
-        return f"<UCFParameterEnumMember {self._json_name} {self._field_name}>"
+        return f"<UCFParameter {self._json_name} {self._field_name}>"
 
     def __eq__(self, other):
-        if other is None or not isinstance(other, UCFParameterEnumMember):
+        if other is None or not isinstance(other, UCFParameter):
             return False
 
         if self._json_name != other._json_name:
@@ -34,36 +34,36 @@ class UCFParameterEnumMember:
         return True
 
 
-class UCFParameter:
+class UCFParameters:
 
-    UCF = UCFParameterEnumMember("config.json", "")
+    UCF = UCFParameter("config.json", "")
 
-    GENERAL_PARAMETERS = UCFParameterEnumMember("parametres_generaux", "")
-    PARALLELISM = UCFParameterEnumMember("parallelisme", "_should_download_in_parallel")
-    CPUS = UCFParameterEnumMember("cpus", "_cpus")
+    GENERAL_PARAMETERS = UCFParameter("parametres_generaux", "")
+    PARALLELISM = UCFParameter("parallelisme", "_should_download_in_parallel")
+    CPUS = UCFParameter("cpus", "_cpus")
 
-    OGIMET = UCFParameterEnumMember("ogimet", "_ogimet_ucs")
-    IND = UCFParameterEnumMember("ind", "_ind")
+    OGIMET = UCFParameter("ogimet", "_ogimet_ucs")
+    IND = UCFParameter("ind", "_ind")
 
-    METEOCIEL = UCFParameterEnumMember("meteociel", "_meteociel_ucs")
-    CODE = UCFParameterEnumMember("code", "_code")
+    METEOCIEL = UCFParameter("meteociel", "_meteociel_ucs")
+    CODE = UCFParameter("code", "_code")
 
-    WUNDERGROUND = UCFParameterEnumMember("wunderground", "_wunderground_ucs")
-    COUNTRY_CODE = UCFParameterEnumMember("code_pays", "_country_code")
-    REGION = UCFParameterEnumMember("region", "_region")
+    WUNDERGROUND = UCFParameter("wunderground", "_wunderground_ucs")
+    COUNTRY_CODE = UCFParameter("code_pays", "_country_code")
+    REGION = UCFParameter("region", "_region")
 
-    DATES = UCFParameterEnumMember("dates", "_dates")
-    CITY = UCFParameterEnumMember("ville", "_city")
+    DATES = UCFParameter("dates", "_dates")
+    CITY = UCFParameter("ville", "_city")
 
-    GENERAL_PARAMETERS_FIELDS : List[UCFParameterEnumMember] = [PARALLELISM, CPUS]
+    GENERAL_PARAMETERS_FIELDS : List[UCFParameter] = [PARALLELISM, CPUS]
 
-    SPECIFIC_FIELDS : Dict[UCFParameterEnumMember, List[UCFParameterEnumMember]] = {WUNDERGROUND: [REGION, COUNTRY_CODE],
-                                                                                    METEOCIEL: [CODE],
-                                                                                    OGIMET: [IND]}
-    COMMON_FIELDS : List[UCFParameterEnumMember]  = [CITY]
-    SCRAPPERS : List[UCFParameterEnumMember]  = [METEOCIEL,
-                                                 OGIMET,
-                                                 WUNDERGROUND]
+    SPECIFIC_FIELDS : Dict[UCFParameter, List[UCFParameter]] = {WUNDERGROUND: [REGION, COUNTRY_CODE],
+                                                                METEOCIEL: [CODE],
+                                                                OGIMET: [IND]}
+    COMMON_FIELDS : List[UCFParameter]  = [CITY]
+    SCRAPPERS : List[UCFParameter]  = [ METEOCIEL,
+                                        OGIMET,
+                                        WUNDERGROUND]
     # valeurs par défaut
     DEFAULT_WAITING = 2
     DEFAULT_PARALLELISM = True

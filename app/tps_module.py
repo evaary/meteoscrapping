@@ -6,7 +6,7 @@ from app.boite_a_bonheur.Criteria import Criteria
 from app.boite_a_bonheur.MonthEnum import Months
 from app.boite_a_bonheur.ScraperTypeEnum import (ScrapperTypes,
                                                  ScrapperType)
-from app.boite_a_bonheur.UCFParameterEnum import UCFParameter
+from app.boite_a_bonheur.UCFParameterEnum import UCFParameters
 
 
 class TPBuilder:
@@ -32,7 +32,7 @@ class TPBuilder:
 
     def with_year(self, param: int) -> "TPBuilder":
 
-        if param < UCFParameter.MIN_YEARS:
+        if param < UCFParameters.MIN_YEARS:
             raise ValueError(f"TPBuilder.with_year : paramètre invalide {param}")
 
         self._year = param
@@ -42,8 +42,8 @@ class TPBuilder:
 
     def with_month(self, param: int) -> "TPBuilder":
 
-        if param not in range(UCFParameter.MIN_MONTHS_DAYS_VALUE,
-                              UCFParameter.MAX_MONTHS + 1):
+        if param not in range(UCFParameters.MIN_MONTHS_DAYS_VALUE,
+                              UCFParameters.MAX_MONTHS + 1):
             raise ValueError(f"TPBuilder.with_month : paramètre invalide {param}")
 
         self._month = param
@@ -58,8 +58,8 @@ class TPBuilder:
         if self._scrapper_type not in ScrapperTypes.hourly_scrappers():
             raise ValueError(f"TPBuilder.with_day : type de scrapper incompatible ({self._scrapper_type})")
 
-        if param not in range(UCFParameter.MIN_MONTHS_DAYS_VALUE,
-                              UCFParameter.MAX_DAYS + 1):
+        if param not in range(UCFParameters.MIN_MONTHS_DAYS_VALUE,
+                              UCFParameters.MAX_DAYS + 1):
             raise ValueError(f"TPBuilder.with_day : paramètre invalide {param}")
 
         self._day = param
@@ -129,8 +129,8 @@ class TPBuilder:
         if self._scrapper_type != ScrapperTypes.OGIMET_HOURLY:
             raise ValueError(f"TPBuilder.with_ndays : spécifique ogimet heure par heure.")
 
-        if param not in range(UCFParameter.MIN_MONTHS_DAYS_VALUE,
-                              UCFParameter.MAX_DAYS + 1):
+        if param not in range(UCFParameters.MIN_MONTHS_DAYS_VALUE,
+                              UCFParameters.MAX_DAYS + 1):
             raise ValueError(f"TPBuilder.with_ndays : paramètre invalide {param}")
 
         self._ndays = param
@@ -244,7 +244,7 @@ class TPBuilder:
 class TaskParameters(abc.ABC):
 
     def __init__(self, builder: TPBuilder):
-        self._waiting = UCFParameter.DEFAULT_WAITING
+        self._waiting = UCFParameters.DEFAULT_WAITING
         self._year = builder.year
         self._month = builder.month
         self._day = builder.day

@@ -1,8 +1,8 @@
 import os
 from json import JSONDecodeError
 from app.boite_a_bonheur.utils import from_json
-from app.boite_a_bonheur.UCFParameterEnum import (UCFParameter,
-                                                  UCFParameterEnumMember)
+from app.boite_a_bonheur.UCFParameterEnum import (UCFParameters,
+                                                  UCFParameter)
 from app.exceptions.ucf_checker_exceptions import (DateFieldException,
                                                    DaysDateException,
                                                    MonthsDateException,
@@ -30,7 +30,7 @@ class UCFChecker:
 
     @staticmethod
     def check_dates_field(uc : dict,
-                          scrapper_name: UCFParameterEnumMember) -> None:
+                          scrapper_name: UCFParameter) -> None:
         """Détermine si le champ dates est valide ou pas."""
         # (1)   Le champ dates est obligatoire.
         # (2)   Les dates doivent être 1 ou 2 str non vides.
@@ -43,19 +43,19 @@ class UCFChecker:
         #
         # (7)   Les dates doivent être ordonnées
 
-        if scrapper_name not in UCFParameter.SCRAPPERS:
+        if scrapper_name not in UCFParameters.SCRAPPERS:
             raise ValueError("UCFChecker.check_date_field : {x} doit être {m}, {o}, ou {w}".format(x=scrapper_name.json_name,
-                                                                                                   m=UCFParameter.METEOCIEL.json_name,
-                                                                                                   o=UCFParameter.OGIMET.json_name,
-                                                                                                   w=UCFParameter.WUNDERGROUND.json_name))
+                                                                                                   m=UCFParameters.METEOCIEL.json_name,
+                                                                                                   o=UCFParameters.OGIMET.json_name,
+                                                                                                   w=UCFParameters.WUNDERGROUND.json_name))
         # (1)
         try:
-            dates: List[str] = uc[UCFParameter.DATES.json_name]
+            dates: List[str] = uc[UCFParameters.DATES.json_name]
         except KeyError:
-            raise RequiredFieldException(scrapper_name, UCFParameter.DATES)
+            raise RequiredFieldException(scrapper_name, UCFParameters.DATES)
         # (2)
         if not isinstance(dates, list):
-            raise NotAJsonListException(UCFParameter.DATES)
+            raise NotAJsonListException(UCFParameters.DATES)
 
         if not(len(dates) <= 2):
             raise DateFieldException()
@@ -77,21 +77,21 @@ class UCFChecker:
         except ValueError:
             raise DateFieldException()
         # (5)
-        if dates_sizes.pop() == 3 and scrapper_name == UCFParameter.WUNDERGROUND:
+        if dates_sizes.pop() == 3 and scrapper_name == UCFParameters.WUNDERGROUND:
             raise UnavailableScrapperException(scrapper_name, "par heure")
         # (6)
         for date in dates:
             *day, month, year = (int(x) for x in date.split("/"))
 
-            if year < UCFParameter.MIN_YEARS:
+            if year < UCFParameters.MIN_YEARS:
                 raise YearsDateException()
 
-            if month not in range(UCFParameter.MIN_MONTHS_DAYS_VALUE,
-                                  UCFParameter.MAX_MONTHS + 1):
+            if month not in range(UCFParameters.MIN_MONTHS_DAYS_VALUE,
+                                  UCFParameters.MAX_MONTHS + 1):
                 raise MonthsDateException()
 
-            if day and day[0] not in range(UCFParameter.MIN_MONTHS_DAYS_VALUE,
-                                           UCFParameter.MAX_DAYS + 1):
+            if day and day[0] not in range(UCFParameters.MIN_MONTHS_DAYS_VALUE,
+                                           UCFParameters.MAX_DAYS + 1):
                 raise DaysDateException()
         # (7)
         if len(dates) == 2:
@@ -134,11 +134,11 @@ class UCFChecker:
             raise NotAJsonFileException(path_to_config)
         # (2)
         if not isinstance(config_file, dict):
-            raise NotAJsonObjectException(UCFParameter.UCF)
+            raise NotAJsonObjectException(UCFParameters.UCF)
         # (3)
-        scrapper_presence = {UCFParameter.METEOCIEL: True,
-                             UCFParameter.OGIMET: True,
-                             UCFParameter.WUNDERGROUND: True}
+        scrapper_presence = {UCFParameters.METEOCIEL: True,
+                             UCFParameters.OGIMET: True,
+                             UCFParameters.WUNDERGROUND: True}
 
         for array_field in scrapper_presence.keys():
             try:
@@ -152,8 +152,8 @@ class UCFChecker:
 
         # (5)
         try:
-            if not isinstance(config_file[UCFParameter.GENERAL_PARAMETERS.json_name], dict):
-                raise NotAJsonObjectException(UCFParameter.GENERAL_PARAMETERS)
+            if not isinstance(config_file[UCFParameters.GENERAL_PARAMETERS.json_name], dict):
+                raise NotAJsonObjectException(UCFParameters.GENERAL_PARAMETERS)
         except KeyError:
             pass
 
@@ -163,27 +163,27 @@ class UCFChecker:
     def check_general_parameters(config: dict):
 
         try:
-            gpuc = config[UCFParameter.GENERAL_PARAMETERS.json_name]
+            gpuc = config[UCFParameters.GENERAL_PARAMETERS.json_name]
         except KeyError:
             return
 
         try:
-            should_download_in_parallel = gpuc[UCFParameter.PARALLELISM.json_name]
+            should_download_in_parallel = gpuc[UCFParameters.PARALLELISM.json_name]
             if not isinstance(should_download_in_parallel, bool):
-                raise GeneralParametersFieldException(UCFParameter.PARALLELISM)
+                raise GeneralParametersFieldException(UCFParameters.PARALLELISM)
         except KeyError:
-            raise RequiredFieldException(UCFParameter.GENERAL_PARAMETERS,
-                                         UCFParameter.PARALLELISM)
+            raise RequiredFieldException(UCFParameters.GENERAL_PARAMETERS,
+                                         UCFParameters.PARALLELISM)
 
         try:
-            max_cpus = int(gpuc[UCFParameter.CPUS.json_name])
+            max_cpus = int(gpuc[UCFParameters.CPUS.json_name])
             if max_cpus < -1 or max_cpus == 0:
-                raise GeneralParametersFieldException(UCFParameter.CPUS)
+                raise GeneralParametersFieldException(UCFParameters.CPUS)
         except KeyError:
-            raise RequiredFieldException(UCFParameter.GENERAL_PARAMETERS,
-                                         UCFParameter.CPUS)
+            raise RequiredFieldException(UCFParameters.GENERAL_PARAMETERS,
+                                         UCFParameters.CPUS)
         except ValueError:
-            raise GeneralParametersFieldException(UCFParameter.CPUS)
+            raise GeneralParametersFieldException(UCFParameters.CPUS)
 
     @staticmethod
     def check_scrappers(config: dict) -> None:
@@ -193,7 +193,7 @@ class UCFChecker:
         # Au moins un des champs présents ne doit pas être vide.
 
         all_configs = []
-        for scrapper_name in UCFParameter.SCRAPPERS:
+        for scrapper_name in UCFParameters.SCRAPPERS:
             try:
                 json_obj_list = config[scrapper_name.json_name]
             except KeyError:
@@ -210,7 +210,7 @@ class UCFChecker:
     @classmethod
     def check_ucs(cls, config: dict) -> None:
 
-        for scrapper_name in UCFParameter.SCRAPPERS:
+        for scrapper_name in UCFParameters.SCRAPPERS:
             try:
                 ucs = config[scrapper_name.json_name]
             except KeyError:
@@ -222,23 +222,23 @@ class UCFChecker:
     @classmethod
     def check_uc(cls,
                  uc: dict,
-                 scrapper_name: UCFParameterEnumMember):
+                 scrapper_name: UCFParameter):
         """Détermine si un UC du fichier de configuration est valide ou pas"""
         # (1)   On vérifie que les champs str spécifiques au scrapper sont présents et bien remplis.
         # (2)   On vérifie que les champs str communs sont présents et bien remplis.
         # (3)   On vérifie que le champ dates est présent et bien remplis.
-        if scrapper_name not in UCFParameter.SCRAPPERS:
+        if scrapper_name not in UCFParameters.SCRAPPERS:
             raise ValueError("UCFChecker.check_individual_uc : scrapper_name doit être un scrapper")
 
         # (1)
-        for x in UCFParameter.SPECIFIC_FIELDS[scrapper_name]:
+        for x in UCFParameters.SPECIFIC_FIELDS[scrapper_name]:
             try:
                 if not cls.is_valid_str(uc[x.json_name]):
                     raise InvalidStrFieldException(scrapper_name, x)
             except KeyError:
                 raise RequiredFieldException(scrapper_name, x)
         # (2)
-        for x in UCFParameter.COMMON_FIELDS:
+        for x in UCFParameters.COMMON_FIELDS:
             try:
                 if not cls.is_valid_str(uc[x.json_name]):
                     raise InvalidStrFieldException(scrapper_name, x)

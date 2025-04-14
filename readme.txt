@@ -76,25 +76,30 @@ Informations importantes
 
 Performances
 
-    meteociel heure par heure
+    meteociel heure
     { "code":"7249", "ville":"orleans", "dates":["1/1/2019", "31/12/2020"] }
-    => a généré un CSV de 17 521 lignes en 3 040s, sans fichier d'erreur
+    séquentiel : 17 521 lignes en 3 065s, sans fichier d'erreur
+    parallèle  : 17 521 lignes en   774s, sans fichier d'erreur
 
-    ogimet heure par heure
+    ogimet heure
     { "ind":"07149", "ville":"paris_orly", "dates":["1/1/2015", "31/12/2020"] }
-    => a généré un CSV de 52 561 lignes en 3 476s, sans fichier d'erreur
+    séquentiel : 52 417 lignes en 2 739s, sans fichier d'erreur
+    parallèle  : 52 417 lignes en   722s, sans fichier d'erreur
 
-    ogimet jour par jour
+    ogimet jour
     { "ind":"07149", "ville":"paris_orly", "dates":["1/2015", "12/2020"] }
-    => a généré un CSV de 2191 lignes en 3245s, sans fichier d'erreur
+    séquentiel : 2 191 lignes en 2 431s, sans fichier d'erreur
+    parallèle  : 2 191 lignes en 1 318s, sans fichier d'erreur
 
-    wunderground jour par jour
+    wunderground jour
     { "code_pays":"it", "region":"LIBD", "ville":"matera", "dates":["1/2013", "12/2023"] }
-    => a généré un CSV de 4 018 lignes en 916s, sans fichier d'erreur
+    séquentiel : ne fonctionne pas
+    parallèle  : ne fonctionne pas
 
-    meteociel jour par jour
+    meteociel jour
     { "code":"7249", "ville":"orleans", "dates":["1/1975", "12/2023"] }
-    => a généré un CSV de 17 897 lignes en 2 364s, sans fichier d'erreur
+    séquentiel : 17 898 lignes en 2 336s, sans fichier d'erreur
+    parallèle  : 17 898 lignes en   627s, sans fichier d'erreur
 
 
 Structure du fichier config.json:

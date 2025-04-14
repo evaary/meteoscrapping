@@ -254,7 +254,7 @@ class OgimetUC(ScrapperUC):
 
     def to_tps(self):
 
-        should_run = True
+        should_run = True # permet de faire agir la boucle while comme une do while
 
         if self.scrapper_type == ScrapperType.OGIMET_DAILY:
 
@@ -278,25 +278,33 @@ class OgimetUC(ScrapperUC):
             # La requête consiste à demander les n derniers jour à partir du jour j.
             # Pour obtenir les infos d'un mois complet, on se met au 31, on demande les 31 derniers jours.
             # Seuls le 1er mois et le dernier doivent faire l'objet d'un paramétrage de l'URL plus fin.
+            #
+            # Bizarrement, on ne peut pas requêter une page qui contient le 1er janvier sans perdre toutes les données.
+            # Si le 1er janvier est inclus dans la demande de l'utilisateur, on force son exclusion.
+
             current_day, current_month, current_year = [int(x) for x in self.dates[0].split("/")]
             end_day, end_month, end_year = [int(x) for x in self.dates[-1].split("/")]
-            has_single_date = len(self._dates) == 1
+            has_single_date = len(self.dates) == 1
 
             if (current_month, current_year) == (end_month, end_year):
-                n_days = 1 if has_single_date else end_day
-                last_day = end_day
+                n_days = end_day - current_day + 1
                 current_day = end_day
             else:
-                last_day = MonthEnum.from_id(current_month).ndays
-                n_days = last_day - current_day + 1
+                n_days = MonthEnum.from_id(current_month).ndays - current_day + 1
+                current_day = MonthEnum.from_id(current_month).ndays
 
             while should_run:
+
+                if(     MonthEnum.from_id(current_month) == MonthEnum.JANVIER
+                   and  current_day - n_days == 0
+                   and not has_single_date):
+                    n_days -= 1
 
                 yield TPBuilder(self.scrapper_type).with_ind(self._ind)\
                                                     .with_city(self._city)\
                                                     .with_year(current_year)\
                                                     .with_month(current_month)\
-                                                    .with_day(last_day)\
+                                                    .with_day(current_day)\
                                                     .with_ndays(n_days)\
                                                     .build()
                 if f"{current_day}/{current_month}/{current_year}" == self.dates[-1]:
@@ -307,13 +315,15 @@ class OgimetUC(ScrapperUC):
                     current_year += 1
 
                 if (current_month, current_year) == (end_month, end_year):
-                    n_days = min(end_day, MonthEnum.from_id(current_month).ndays)
-                    last_day = min(end_day, MonthEnum.from_id(current_month).ndays)
-                    current_day = end_day
+                    current_day = min(end_day, MonthEnum.from_id(current_month).ndays)
                 else:
-                    last_day = MonthEnum.from_id(current_month).ndays
-                    n_days = MonthEnum.from_id(current_month).ndays
-                    current_day = 0
+                    current_day = MonthEnum.from_id(current_month).ndays
+
+                n_days = current_day
+
+                if(     current_month == 1
+                    and current_day - n_days == 0):
+                    n_days -= 1
         else:
             raise ValueError("OgimetUC.to_tps : scrapper_type invalide")
 

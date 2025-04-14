@@ -3,7 +3,7 @@ import copy
 from string import Template
 
 from app.boite_a_bonheur.Criteria import Criteria
-from app.boite_a_bonheur.MonthEnum import MonthEnum
+from app.boite_a_bonheur.MonthEnum import Months
 from app.boite_a_bonheur.ScraperTypeEnum import (ScrapperType,
                                                  ScrapperTypeEnumMember)
 from app.boite_a_bonheur.UCFParameterEnum import UCFParameter
@@ -47,13 +47,13 @@ class TPBuilder:
             raise ValueError(f"TPBuilder.with_month : paramètre invalide {param}")
 
         self._month = param
-        self._month_as_str = MonthEnum.format_date_time(param)
+        self._month_as_str = Months.format_date_time(param)
 
         return self
 
     def with_day(self, param: int) -> "TPBuilder":
 
-        MonthEnum.from_id(self._month)  # IndexError si month n'est pas valorisée avant
+        Months.from_id(self._month)  # IndexError si month n'est pas valorisée avant
 
         if self._scrapper_type not in ScrapperType.hourly_scrappers():
             raise ValueError(f"TPBuilder.with_day : type de scrapper incompatible ({self._scrapper_type})")
@@ -63,7 +63,7 @@ class TPBuilder:
             raise ValueError(f"TPBuilder.with_day : paramètre invalide {param}")
 
         self._day = param
-        self._day_as_str = MonthEnum.format_date_time(param)
+        self._day_as_str = Months.format_date_time(param)
 
         return self
 
@@ -253,7 +253,7 @@ class TaskParameters(abc.ABC):
         self._day_as_str = builder.day_as_str
         self._city = builder.city
         self._url = ""
-        self._criteria = None
+        self._criteria : Criteria = None
         self._scrapper_type = builder.scrapper_type
         try:
             self._ndays = builder.ndays
@@ -352,10 +352,10 @@ class MeteocielTP(TaskParameters):
             self._criteria = self._CRITERIA_DAILY
 
         elif builder.scrapper_type == ScrapperType.METEOCIEL_HOURLY:
-            month_enum_value = MonthEnum.from_id(builder.month)
+            month_enum_value = Months.from_id(builder.month)
             self._url = self._BASE_URL_HOURLY.substitute(code=builder.code,
                                                          jour=builder.day,
-                                                         mois=MonthEnum.meteociel_hourly_numero(month_enum_value),
+                                                         mois=Months.meteociel_hourly_numero(month_enum_value),
                                                          annee=builder.year)
             self._criteria = self._CRITERIA_HOURLY
 
@@ -377,10 +377,10 @@ class OgimetTP(TaskParameters):
 
         if builder.scrapper_type == ScrapperType.OGIMET_DAILY:
             self._url = self._BASE_URL.substitute(ind=builder.ind,
-                                                  ndays=MonthEnum.from_id(builder.month).ndays,
+                                                  ndays=Months.from_id(builder.month).ndays,
                                                   ano=builder.year,
                                                   mes=builder.month,
-                                                  day=MonthEnum.from_id(builder.month).ndays,
+                                                  day=Months.from_id(builder.month).ndays,
                                                   decoded="no")
 
         elif builder.scrapper_type == ScrapperType.OGIMET_HOURLY:

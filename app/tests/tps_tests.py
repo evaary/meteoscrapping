@@ -1,7 +1,7 @@
 from unittest import TestCase
 
 from app.UserConfigFile import UserConfigFile
-from app.boite_a_bonheur.MonthEnum import MonthEnum
+from app.boite_a_bonheur.MonthEnum import Months
 
 
 class TPsTester(TestCase):
@@ -236,10 +236,10 @@ class TPsTester(TestCase):
         tests_fev_2021 = [url for url in urls if "mois2=1" in url]
 
         refs_jan_2021 = [f"https://www.meteociel.com/temps-reel/obs_villes.php?code2=bouh&annee2=2021&mois2=0&jour2={x}"
-                        for x in range(1, MonthEnum.from_id(1).ndays + 1)]
+                        for x in range(1, Months.from_id(1).ndays + 1)]
 
         refs_fev_2021 = [f"https://www.meteociel.com/temps-reel/obs_villes.php?code2=bouh&annee2=2021&mois2=1&jour2={x}"
-                        for x in range(1, MonthEnum.from_id(2).ndays + 1)]
+                        for x in range(1, Months.from_id(2).ndays + 1)]
 
         diffs_jan_2021 = set(refs_jan_2021).difference(set(tests_jan_2021))
         diffs_fev_2021 = set(refs_fev_2021).difference(set(tests_fev_2021))
@@ -259,10 +259,10 @@ class TPsTester(TestCase):
         tests_mai_2021 = [url for url in urls if "mois2=4" in url]
 
         refs_mar_2021 = [f"https://www.meteociel.com/temps-reel/obs_villes.php?code2=bouh&annee2=2021&mois2=2&jour2={x}"
-                        for x in range(15, MonthEnum.from_id(3).ndays + 1)]
+                        for x in range(15, Months.from_id(3).ndays + 1)]
 
         refs_avr_2021 = [f"https://www.meteociel.com/temps-reel/obs_villes.php?code2=bouh&annee2=2021&mois2=3&jour2={x}"
-                        for x in range(1, MonthEnum.from_id(4).ndays + 1)]
+                        for x in range(1, Months.from_id(4).ndays + 1)]
 
         refs_mai_2021 = [f"https://www.meteociel.com/temps-reel/obs_villes.php?code2=bouh&annee2=2021&mois2=4&jour2={x}"
                         for x in range(1, 16)]

@@ -1,7 +1,7 @@
 from typing import List
 
 
-class MonthEnumMember:
+class Month:
     def __init__(self,
                  numero: int,
                  ndays: int,
@@ -23,35 +23,35 @@ class MonthEnumMember:
         return self._name
 
     def __eq__(self, other):
-        if other is None or not isinstance(other, MonthEnumMember):
+        if other is None or not isinstance(other, Month):
             return False
 
         return self._numero == other.numero
 
     def __copy__(self):
-        return MonthEnumMember(self._numero, self._ndays, self._name)
+        return Month(self._numero, self._ndays, self._name)
 
     def __repr__(self):
         return self._name
 
 
-class MonthEnum:
+class Months:
 
-    JANVIER = MonthEnumMember(1, 31, "JANVIER")
-    FEVRIER = MonthEnumMember(2, 28, "FEVRIER")
-    MARS = MonthEnumMember(3, 31, "MARS")
-    AVRIL = MonthEnumMember(4, 30, "AVRIL")
-    MAI = MonthEnumMember(5, 31, "MAI")
-    JUIN = MonthEnumMember(6, 30, "JUIN")
-    JUILLET = MonthEnumMember(7, 31, "JUILLET")
-    AOUT = MonthEnumMember(8, 31, "AOUT")
-    SEPTEMBRE = MonthEnumMember(9, 30, "SEPTEMBRE")
-    OCTOBRE = MonthEnumMember(10, 31, "OCTOBRE")
-    NOVEMBRE = MonthEnumMember(11, 30, "NOVEMBRE")
-    DECEMBRE = MonthEnumMember(12, 31, "DECEMBRE")
+    JANVIER = Month(1, 31, "JANVIER")
+    FEVRIER = Month(2, 28, "FEVRIER")
+    MARS = Month(3, 31, "MARS")
+    AVRIL = Month(4, 30, "AVRIL")
+    MAI = Month(5, 31, "MAI")
+    JUIN = Month(6, 30, "JUIN")
+    JUILLET = Month(7, 31, "JUILLET")
+    AOUT = Month(8, 31, "AOUT")
+    SEPTEMBRE = Month(9, 30, "SEPTEMBRE")
+    OCTOBRE = Month(10, 31, "OCTOBRE")
+    NOVEMBRE = Month(11, 30, "NOVEMBRE")
+    DECEMBRE = Month(12, 31, "DECEMBRE")
 
     @classmethod
-    def values(cls) -> List[MonthEnumMember]:
+    def values(cls) -> List[Month]:
         return [cls.JANVIER,
                 cls.FEVRIER,
                 cls.MARS,
@@ -66,11 +66,11 @@ class MonthEnum:
                 cls.DECEMBRE]
 
     @classmethod
-    def from_id(cls, numero: int) -> MonthEnumMember:
+    def from_id(cls, numero: int) -> Month:
         return [x for x in cls.values() if x.numero == numero][0]
 
     @staticmethod
-    def meteociel_hourly_numero(x: MonthEnumMember) -> int:
+    def meteociel_hourly_numero(x: Month) -> int:
         """
         La numérotation des mois sur météociel (données heure par heure) est décalée.
         Cette méthode associe la numérotation usuelle à gauche de la flèche et celle de météociel, à droite.

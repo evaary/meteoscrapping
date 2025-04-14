@@ -5,7 +5,7 @@ from typing import (Any,
                     List,
                     Generator)
 
-from app.boite_a_bonheur.MonthEnum import MonthEnum
+from app.boite_a_bonheur.MonthEnum import Months
 from app.boite_a_bonheur.ScraperTypeEnum import ScrapperType, ScrapperTypeEnumMember
 from app.boite_a_bonheur.UCFParameterEnum import UCFParameterEnumMember, UCFParameter
 from app.tps_module import (TPBuilder,
@@ -114,7 +114,7 @@ class ScrapperUC(ABC):
         if is_hourly:
             for index, date in enumerate(suc._dates):
                 day, month, year = (int(x) for x in date.split("/"))
-                max_day = MonthEnum.from_id(month).ndays
+                max_day = Months.from_id(month).ndays
                 if day > max_day:
                     suc._dates[index] = f"{max_day}/{month}/{year}"
 
@@ -221,7 +221,7 @@ class MeteocielUC(ScrapperUC):
                 if f"{current_day}/{current_month}/{current_year}" == self.dates[-1]:
                     should_run = False
 
-                current_day = current_day % MonthEnum.from_id(current_month).ndays + 1
+                current_day = current_day % Months.from_id(current_month).ndays + 1
 
                 if current_day == 1:
                     current_month = current_month % UCFParameter.MAX_MONTHS + 1
@@ -290,12 +290,12 @@ class OgimetUC(ScrapperUC):
                 n_days = end_day - current_day + 1
                 current_day = end_day
             else:
-                n_days = MonthEnum.from_id(current_month).ndays - current_day + 1
-                current_day = MonthEnum.from_id(current_month).ndays
+                n_days = Months.from_id(current_month).ndays - current_day + 1
+                current_day = Months.from_id(current_month).ndays
 
             while should_run:
 
-                if(     MonthEnum.from_id(current_month) == MonthEnum.JANVIER
+                if(     Months.from_id(current_month) == Months.JANVIER
                    and  current_day - n_days == 0
                    and not has_single_date):
                     n_days -= 1
@@ -315,9 +315,9 @@ class OgimetUC(ScrapperUC):
                     current_year += 1
 
                 if (current_month, current_year) == (end_month, end_year):
-                    current_day = min(end_day, MonthEnum.from_id(current_month).ndays)
+                    current_day = min(end_day, Months.from_id(current_month).ndays)
                 else:
-                    current_day = MonthEnum.from_id(current_month).ndays
+                    current_day = Months.from_id(current_month).ndays
 
                 n_days = current_day
 

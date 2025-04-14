@@ -12,7 +12,7 @@ from app.exceptions.scrapping_exceptions import (ScrapException,
 from app.ucs_module import ScrapperUC, GeneralParametersUC
 from app.tps_module import TaskParameters
 from app.boite_a_bonheur.ScraperTypeEnum import ScrapperType
-from app.boite_a_bonheur.MonthEnum import MonthEnum
+from app.boite_a_bonheur.MonthEnum import Months
 from requests_html import (Element,
                            HTMLSession)
 from concurrent.futures import ProcessPoolExecutor
@@ -294,7 +294,7 @@ class MeteocielDaily(MeteoScrapper):
         df = df[[x for x in df.columns if x not in self.UNWANTED_COLUMNS]]
         # (3)
         f_num_extract = np.vectorize(self._extract_numeric_value)
-        f_rework_dates = np.vectorize(lambda day: f"{tp.year_as_str}-{tp.month_as_str}-{MonthEnum.format_date_time(int(day))}")
+        f_rework_dates = np.vectorize(lambda day: f"{tp.year_as_str}-{tp.month_as_str}-{Months.format_date_time(int(day))}")
 
         # (4)
         df["date"] = f_num_extract(df["date"])
@@ -313,8 +313,8 @@ class MeteocielDaily(MeteoScrapper):
             return float(re.findall(self.REGEX_FOR_NUMERICS, str_value)[0])
 
     def _expected_dates(self, tp):
-        return [f"{tp.year_as_str}-{tp.month_as_str}-{MonthEnum.format_date_time(x)}"
-                for x in range(1, MonthEnum.from_id(tp.month).ndays + 1)]
+        return [f"{tp.year_as_str}-{tp.month_as_str}-{Months.format_date_time(x)}"
+                for x in range(1, Months.from_id(tp.month).ndays + 1)]
 
 
 class MeteocielHourly(MeteoScrapper):
@@ -456,7 +456,7 @@ class MeteocielHourly(MeteoScrapper):
                  if col not in self.UNWANTED_COLUMNS]]
         # (3)
         f_num_extract = np.vectorize(self._extract_numeric_value)
-        f_rework_dates = np.vectorize(lambda heure: f"{tp.year_as_str}-{tp.month_as_str}-{tp.day_as_str} {MonthEnum.format_date_time(int(heure))}:00:00")
+        f_rework_dates = np.vectorize(lambda heure: f"{tp.year_as_str}-{tp.month_as_str}-{tp.day_as_str} {Months.format_date_time(int(heure))}:00:00")
 
         # (4)
         numerics = [x for x in df.columns if x not in self.NOT_NUMERIC]
@@ -481,7 +481,7 @@ class MeteocielHourly(MeteoScrapper):
             return float(re.findall(self.REGEX_FOR_NUMERICS, str_value)[0])
 
     def _expected_dates(self, tp):
-        return [f"{tp.year_as_str}-{tp.month_as_str}-{tp.day_as_str} {MonthEnum.format_date_time(x)}:00:00"
+        return [f"{tp.year_as_str}-{tp.month_as_str}-{tp.day_as_str} {Months.format_date_time(x)}:00:00"
                 for x in range(0, 24)]
 
 
@@ -629,8 +629,8 @@ class OgimetDaily(MeteoScrapper):
         return df
 
     def _expected_dates(self, tp):
-        return [f"{tp.year_as_str}-{tp.month_as_str}-{MonthEnum.format_date_time(x)}"
-                for x in range(1, MonthEnum.from_id(tp.month).ndays + 1)]
+        return [f"{tp.year_as_str}-{tp.month_as_str}-{Months.format_date_time(x)}"
+                for x in range(1, Months.from_id(tp.month).ndays + 1)]
 
 
 class OgimetHourly(MeteoScrapper):
@@ -703,7 +703,7 @@ class OgimetHourly(MeteoScrapper):
         done = []
         while len(values) > 0:
             # (2)
-            remaining_dates = [f"{tp.month_as_str}/{MonthEnum.format_date_time(tp.day - x)}/{tp.year_as_str}"
+            remaining_dates = [f"{tp.month_as_str}/{Months.format_date_time(tp.day - x)}/{tp.year_as_str}"
                                for x in range(0, tp.ndays)]
             remaining_dates = [x for x in values if x in remaining_dates]
 
@@ -768,10 +768,10 @@ class OgimetHourly(MeteoScrapper):
         return df
 
     def _expected_dates(self, tp):
-        days = [f"{tp.year_as_str}-{tp.month_as_str}-{MonthEnum.format_date_time(tp.day - x)}"
+        days = [f"{tp.year_as_str}-{tp.month_as_str}-{Months.format_date_time(tp.day - x)}"
                 for x in range(0, tp.ndays)]
 
-        hours = [MonthEnum.format_date_time(x) for x in range(0, 24)]
+        hours = [Months.format_date_time(x) for x in range(0, 24)]
 
         return [f"{day} {hour}:00:00" for day in days for hour in hours]
 
@@ -879,7 +879,7 @@ class WundergroundDaily(MeteoScrapper):
         df = df.drop([0], axis="index")
 
         # (6)
-        df["date"] = [f"{tp.year_as_str}/{tp.month_as_str}/{MonthEnum.format_date_time(int(day))}"
+        df["date"] = [f"{tp.year_as_str}/{tp.month_as_str}/{Months.format_date_time(int(day))}"
                       for day in df.date]
 
         df["date"] = pd.to_datetime(df["date"])
@@ -895,5 +895,5 @@ class WundergroundDaily(MeteoScrapper):
         return df
 
     def _expected_dates(self, tp):
-        return [f"{tp.year_as_str}-{tp.month_as_str}-{MonthEnum.format_date_time(x)}"
-                for x in range(1, MonthEnum.from_id(tp.month).ndays + 1)]
+        return [f"{tp.year_as_str}-{tp.month_as_str}-{Months.format_date_time(x)}"
+                for x in range(1, Months.from_id(tp.month).ndays + 1)]

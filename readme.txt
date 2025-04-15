@@ -1,4 +1,4 @@
-version 1.2 - 14/04/2025 - wunderground indisponible
+version 1.3 - 15/04/2025 - wunderground indisponible
 Un programme de webscrapping pour récupérer des données météorologiques depuis ogimet, wunderground et meteociel.
 
 Exemples de tableaux récupérés:
@@ -11,7 +11,7 @@ Exemples de tableaux récupérés:
 Utilisation:
 
     télécharger l'exécutable
-        - fichier zip : https://drive.google.com/file/d/13ONiTK26p9k57edvKJxhf_dM22y2zoYU/view?usp=sharing
+        - fichier zip : https://drive.google.com/file/d/1ahE-aXgSw0nOY49UUNKuyjMBElC_yhnY/view?usp=sharing
         - dézipper
 
     créer un fichier "config.json" à côté l'éxecutable (nom "config.json" impératif)

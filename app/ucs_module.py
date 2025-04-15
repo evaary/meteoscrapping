@@ -111,12 +111,22 @@ class ScrapperUC(ABC):
         is_hourly = len(suc.dates[0].split("/")) == 3
         suc._scrapper_type = hourly_type if is_hourly else daily_type
 
+        # Lors de la création des TPs, on change les jours / mois en int,
+        # donc une date du type 01/02/2020 deviendra 1/2/2020 dans l'évaluation
+        # du should_run. Or il faut le même format de dates lors de la comparaison
+        # sinon boucle infinie.
         if is_hourly:
             for index, date in enumerate(suc._dates):
                 day, month, year = (int(x) for x in date.split("/"))
                 max_day = Months.from_id(month).ndays
                 if day > max_day:
                     suc._dates[index] = f"{max_day}/{month}/{year}"
+                else:
+                    suc._dates[index] = f"{day}/{month}/{year}"
+        else:
+            for index, date in enumerate(suc._dates):
+                month, year = (int(x) for x in date.split("/"))
+                suc._dates[index] = f"{month}/{year}"
 
         return suc
 
@@ -230,7 +240,6 @@ class MeteocielUC(ScrapperUC):
                     current_year += 1
         else:
             raise ValueError("MeteocielUC.to_tps : ScrapperTypes inconnu")
-
 
     def _get_parameters(self):
         return self._PARAMETERS

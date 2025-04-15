@@ -35,7 +35,7 @@ class UserConfigFile:
             general_parameters = config_file[UCFParameters.GENERAL_PARAMETERS.json_name]
             GeneralParametersUC.from_json_object(general_parameters)
         except KeyError:
-            pass
+            GeneralParametersUC.instance()
 
         try:
             oucs = config_file[UCFParameters.OGIMET.json_name]

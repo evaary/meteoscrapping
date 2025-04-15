@@ -26,8 +26,11 @@
 
     "meteociel":
     [
+        { "code":"bouh", "ville":"m_with_0", "dates":["02/2021"] },
         { "code":"bouh", "ville":"one_month", "dates":["2/2021"] },
         { "code":"bouh", "ville":"months", "dates":["1/2021", "3/2021"] },
+
+        { "code":"bouh", "ville":"d_with_0", "dates":["01/02/2021"] },
         { "code":"bouh", "ville":"one_day", "dates":["15/2/2021"] },
         { "code":"bouh", "ville":"full_months", "dates":["1/1/2021", "31/2/2021"] },
         { "code":"bouh", "ville":"partial_months", "dates":["15/3/2021", "15/5/2021"] },
